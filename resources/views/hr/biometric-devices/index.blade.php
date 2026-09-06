@@ -13,12 +13,13 @@
                         <p class="page-subtitle">Manage fingerprint attendance devices</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-light border" data-bs-toggle="modal"
-                            data-bs-target="#deviceGuideModal">
+                        <button type="button" class="btn btn-light border" data-toggle="modal"
+                            data-target="#deviceGuideModal" data-bs-toggle="modal" data-bs-target="#deviceGuideModal">
                             <i class="fa fa-question-circle text-primary me-1"></i> Setup Guide
                         </button>
                         @can('hr.biometric.devices.create')
-                            <button type="button" class="btn btn-create" id="addDeviceBtn">
+                            <button type="button" class="btn btn-create" id="addDeviceBtn" data-toggle="modal"
+                                data-target="#deviceModal">
                                 <i class="fa fa-plus"></i> Add Device
                             </button>
                         @endcan
@@ -26,14 +27,16 @@
                 </div>
 
                 <!-- Device Guidance Modal -->
-                <div class="modal fade" id="deviceGuideModal" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
+                <div class="modal fade" id="deviceGuideModal" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-lg" role="document">
                         <div class="modal-content border-0 shadow">
                             <div class="modal-header gradient text-white">
                                 <h5 class="modal-title font-weight-bold"><i class="fa fa-info-circle me-2"></i> Biometric
                                     Device Guide</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
+                                <button type="button" class="close text-white" data-dismiss="modal"
+                                    data-bs-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
                             </div>
                             <div class="modal-body p-4">
                                 <div class="row g-4">
@@ -191,7 +194,8 @@
                                     <i class="fa fa-fingerprint" style="font-size: 48px; color: #ccc;"></i>
                                     <p class="mt-3 text-muted">No biometric devices configured yet.</p>
                                     @can('hr.biometric.devices.create')
-                                        <button class="btn btn-primary mt-2" id="addDeviceBtnEmpty">
+                                        <button type="button" class="btn btn-primary mt-2" id="addDeviceBtnEmpty"
+                                            data-toggle="modal" data-target="#deviceModal">
                                             <i class="fa fa-plus"></i> Add Your First Device
                                         </button>
                                     @endcan
@@ -205,17 +209,19 @@
     </div>
 
     <!-- Device Modal -->
-    <div class="modal fade" id="deviceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+    <div class="modal fade" id="deviceModal" tabindex="-1" role="dialog" aria-labelledby="deviceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header gradient">
                     <h5 class="modal-title" id="deviceModalLabel">
                         <i class="fa fa-fingerprint"></i>
                         <span id="modalTitle">Add Device</span>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
-                <form id="deviceForm" data-ajax-validate="true">
+                <form id="deviceForm" method="POST" action="{{ route('hr.biometric-devices.store') }}">
                     @csrf
                     <input type="hidden" id="device_id" name="device_id">
                     <input type="hidden" id="_method" name="_method" value="POST">
@@ -274,8 +280,9 @@
                     </div>
 
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal"
+                            data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="deviceFormSubmitBtn">
                             <i class="fa fa-check"></i> Save Device
                         </button>
                     </div>
@@ -283,9 +290,9 @@
             </div>
         </div>
     </div>
+@endsection
 
-    <!-- Scripts -->
-
+@section('js')
     <script>
         $(document).ready(function() {
             // Save Global Settings
@@ -313,7 +320,8 @@
             });
 
             // Open Add Modal
-            $('#addDeviceBtn, #addDeviceBtnEmpty').click(function() {
+            $(document).on('click', '#addDeviceBtn, #addDeviceBtnEmpty', function(e) {
+                e.preventDefault();
                 $('#device_id').val('');
                 $('#_method').val('POST');
                 $('#deviceForm')[0].reset();
@@ -323,7 +331,8 @@
             });
 
             // Open Edit Modal
-            $('.edit-device-btn').click(function() {
+            $(document).on('click', '.edit-device-btn', function(e) {
+                e.preventDefault();
                 const id = $(this).data('id');
                 $('#device_id').val(id);
                 $('#_method').val('PUT');
@@ -342,11 +351,13 @@
             $('#deviceForm').submit(function(e) {
                 e.preventDefault();
 
+                const submitBtn = $('#deviceFormSubmitBtn');
+                submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+
                 const deviceId = $('#device_id').val();
                 const method = $('#_method').val();
                 const url = deviceId ?
-                    '{{ route('hr.biometric-devices.store') }}/'.replace('biometric-devices',
-                        `biometric-devices/${deviceId}`) :
+                    `{{ url('hr/biometric-devices') }}/${deviceId}` :
                     '{{ route('hr.biometric-devices.store') }}';
 
                 const formData = new FormData(this);
@@ -362,8 +373,11 @@
                     },
                     success: function(response) {
                         $('#deviceModal').modal('hide');
-                        Swal.fire('Success!', response.message, 'success').then(() => location
-                            .reload());
+                        Swal.fire(
+                            response.warning ? 'Notice' : 'Success!',
+                            response.message,
+                            response.warning ? 'warning' : 'success'
+                        ).then(() => location.reload());
                     },
                     error: function(xhr) {
                         const errors = xhr.responseJSON?.errors || {};
@@ -374,32 +388,41 @@
                         }
 
                         Swal.fire('Error!', errorMsg, 'error');
+                    },
+                    complete: function() {
+                        submitBtn.prop('disabled', false).html('<i class="fa fa-check"></i> Save Device');
                     }
                 });
             });
 
             // Test Connection
-            $('.test-connection-btn').click(function() {
+            $(document).on('click', '.test-connection-btn', function() {
                 const deviceId = $(this).data('id');
-                $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Testing...');
+                const btn = $(this);
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Testing...');
 
-                $.post(`{{ route('hr.biometric-devices.index') }}/${deviceId}/test`, {
+                $.post(`{{ url('hr/biometric-devices') }}/${deviceId}/test`, {
                         _token: '{{ csrf_token() }}'
                     })
                     .done(response => {
-                        Swal.fire(response.success ? 'Connected!' : 'Failed', response.message,
-                            response.success ? 'success' : 'error');
+                        Swal.fire(
+                            response.success ? 'Connected!' : 'Connection Failed',
+                            response.message,
+                            response.success ? 'success' : 'warning'
+                        );
                     })
-                    .fail(() => {
-                        Swal.fire('Error!', 'Failed to test connection', 'error');
+                    .fail(xhr => {
+                        const errorMsg = xhr.responseJSON?.message ||
+                            (xhr.status ? `HTTP ${xhr.status}: ${xhr.statusText}` : 'Failed to test connection');
+                        Swal.fire('Error!', errorMsg, 'error');
                     })
                     .always(() => {
-                        $(this).prop('disabled', false).html('<i class="fa fa-plug"></i> Test');
+                        btn.prop('disabled', false).html('<i class="fa fa-plug"></i> Test');
                     });
             });
 
             // Sync Employees
-            $('.sync-employees-btn').click(function() {
+            $(document).on('click', '.sync-employees-btn', function() {
                 const deviceId = $(this).data('id');
                 const btn = $(this);
 
@@ -414,7 +437,7 @@
                         btn.prop('disabled', true).html(
                             '<i class="fa fa-spinner fa-spin"></i> Syncing...');
 
-                        $.post(`{{ route('hr.biometric-devices.index') }}/${deviceId}/sync-employees`, {
+                        $.post(`{{ url('hr/biometric-devices') }}/${deviceId}/sync-employees`, {
                                 _token: '{{ csrf_token() }}'
                             })
                             .done(response => {
@@ -434,13 +457,13 @@
             });
 
             // Pull Attendance
-            $('.pull-attendance-btn').click(function() {
+            $(document).on('click', '.pull-attendance-btn', function() {
                 const deviceId = $(this).data('id');
                 const btn = $(this);
 
                 btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Pulling...');
 
-                $.post(`{{ route('hr.biometric-devices.index') }}/${deviceId}/pull-attendance`, {
+                $.post(`{{ url('hr/biometric-devices') }}/${deviceId}/pull-attendance`, {
                         _token: '{{ csrf_token() }}'
                     })
                     .done(response => {
@@ -457,7 +480,7 @@
             });
 
             // Delete Device
-            $('.delete-device-btn').click(function() {
+            $(document).on('click', '.delete-device-btn', function() {
                 const deviceId = $(this).data('id');
 
                 Swal.fire({
@@ -470,7 +493,7 @@
                 }).then(result => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: `{{ route('hr.biometric-devices.index') }}/${deviceId}`,
+                            url: `{{ url('hr/biometric-devices') }}/${deviceId}`,
                             type: 'DELETE',
                             data: {
                                 _token: '{{ csrf_token() }}'

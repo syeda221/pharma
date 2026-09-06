@@ -62,10 +62,11 @@ class BiometricDeviceController extends Controller
             ]);
         } else {
             return response()->json([
-                'success' => false,
-                'message' => 'Device added but connection failed: ' . $testResult['message'],
+                'success' => true,
+                'warning' => true,
+                'message' => 'Device added! (Note: Connection test failed: ' . $testResult['message'] . ')',
                 'device' => $device,
-            ], 422);
+            ]);
         }
     }
 

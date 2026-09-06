@@ -4,12 +4,51 @@ namespace App\Services;
 
 use App\Models\BiometricDevice;
 use Exception;
+use Fsuuaas\Zkteco\Lib\ZKTeco;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 
 class BiometricDeviceService
 {
+    /**
+     * Check if device uses ZKTeco protocol
+     */
+    public function isZkteco(BiometricDevice $device): bool
+    {
+        if ((int) $device->port === 4370) {
+            return true;
+        }
+
+        $model = strtolower($device->model ?? '');
+        $zkKeywords = ['zk', 'k60', 'k40', 'k50', 'uface', 'silk', 'inbio', 'f18', 'mb', 'speedface', 'iclock'];
+        foreach ($zkKeywords as $kw) {
+            if (str_contains($model, $kw)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get ZKTeco UDP client with custom socket timeout
+     */
+    protected function getZkClient(BiometricDevice $device, int $timeoutSeconds = 4): ?ZKTeco
+    {
+        try {
+            $zk = new ZKTeco($device->ip_address, (int) ($device->port ?: 4370));
+            if ($zk->_zkclient) {
+                socket_set_option($zk->_zkclient, SOL_SOCKET, SO_RCVTIMEO, ['sec' => $timeoutSeconds, 'usec' => 0]);
+                socket_set_option($zk->_zkclient, SOL_SOCKET, SO_SNDTIMEO, ['sec' => $timeoutSeconds, 'usec' => 0]);
+            }
+            return $zk;
+        } catch (Exception $e) {
+            Log::error("ZKTeco client init failed for {$device->ip_address}: " . $e->getMessage());
+            return null;
+        }
+    }
+
     protected function getClient(BiometricDevice $device)
     {
         // Try to decrypt or use as is
@@ -35,6 +74,35 @@ class BiometricDeviceService
      */
     public function connect(BiometricDevice $device): bool
     {
+        if ($this->isZkteco($device)) {
+            return $this->connectZkteco($device);
+        }
+
+        return $this->connectHikvision($device);
+    }
+
+    protected function connectZkteco(BiometricDevice $device): bool
+    {
+        try {
+            $zk = $this->getZkClient($device, 4);
+            if (! $zk) {
+                return false;
+            }
+
+            if ($zk->connect()) {
+                $zk->disconnect();
+                return true;
+            }
+
+            return false;
+        } catch (Exception $e) {
+            Log::error("ZKTeco Connect Failed for {$device->ip_address}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    protected function connectHikvision(BiometricDevice $device): bool
+    {
         try {
             $client = $this->getClient($device);
             $response = $client->get('ISAPI/System/deviceInfo');
@@ -52,9 +120,60 @@ class BiometricDeviceService
      */
     public function testConnection(BiometricDevice $device): array
     {
+        if ($this->isZkteco($device)) {
+            return $this->testZkConnection($device);
+        }
+
+        return $this->testHikvisionConnection($device);
+    }
+
+    protected function testZkConnection(BiometricDevice $device): array
+    {
         try {
-            if ($this->connect($device)) {
-                return ['success' => true, 'message' => 'Connection Successful'];
+            $zk = $this->getZkClient($device, 4);
+            if (! $zk) {
+                return [
+                    'success' => false,
+                    'message' => 'Could not initialize UDP socket connection.',
+                ];
+            }
+
+            if ($zk->connect()) {
+                $version = trim(str_replace("\0", '', (string) $zk->version()));
+                $name = trim(str_replace(["\0", '~DeviceName='], '', (string) $zk->deviceName()));
+                $serial = trim(str_replace(["\0", '~SerialNumber='], '', (string) $zk->serialNumber()));
+                $zk->disconnect();
+
+                $details = array_filter([
+                    $name ?: 'ZKTeco Device',
+                    $serial ? "S/N: {$serial}" : null,
+                    $version ? "Ver: {$version}" : null,
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Connection Successful! (' . implode(' | ', $details) . ')',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => "Connection Failed: Device at {$device->ip_address}:{$device->port} is not reachable. Please check device power, network cable, or IP address.",
+            ];
+        } catch (Exception $e) {
+            Log::error("ZKTeco testConnection failed for {$device->ip_address}: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    protected function testHikvisionConnection(BiometricDevice $device): array
+    {
+        try {
+            if ($this->connectHikvision($device)) {
+                return ['success' => true, 'message' => 'Connection Successful (Hikvision ISAPI)'];
             }
 
             return ['success' => false, 'message' => 'Connection Failed (Check Credentials/Network)'];
@@ -64,9 +183,54 @@ class BiometricDeviceService
     }
 
     /**
-     * Get Attendance Logs via ISAPI (trying both JSON and XML formats)
+     * Get Attendance Logs from device (ZKTeco or Hikvision)
      */
     public function getAttendanceLogs(BiometricDevice $device): array
+    {
+        if ($this->isZkteco($device)) {
+            return $this->getAttendanceLogsZkteco($device);
+        }
+
+        return $this->getAttendanceLogsHikvision($device);
+    }
+
+    /**
+     * Get Attendance Logs via ZKTeco UDP Protocol
+     */
+    protected function getAttendanceLogsZkteco(BiometricDevice $device): array
+    {
+        try {
+            $zk = $this->getZkClient($device, 8);
+            if (! $zk || ! $zk->connect()) {
+                Log::error("ZKTeco getAttendanceLogs: Failed to connect to {$device->ip_address}");
+                return [];
+            }
+
+            $rawAttendance = $zk->getAttendance();
+            $zk->disconnect();
+
+            $logs = [];
+            foreach ($rawAttendance as $item) {
+                $logs[] = [
+                    'id' => (string) ($item['id'] ?? '0'),
+                    'timestamp' => (string) ($item['timestamp'] ?? ''),
+                    'state' => (int) ($item['state'] ?? 1),
+                    'uid' => (string) ($item['uid'] ?? 0),
+                ];
+            }
+
+            Log::info("ZKTeco total logs fetched from {$device->ip_address}: " . count($logs));
+            return $logs;
+        } catch (Exception $e) {
+            Log::error("ZKTeco attendance pull failed for {$device->ip_address}: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get Attendance Logs via Hikvision ISAPI (trying both JSON and XML formats)
+     */
+    protected function getAttendanceLogsHikvision(BiometricDevice $device): array
     {
         try {
             // Try JSON format first (since it worked for user push)
@@ -278,6 +442,21 @@ class BiometricDeviceService
      */
     public function syncTime(BiometricDevice $device): bool
     {
+        if ($this->isZkteco($device)) {
+            try {
+                $zk = $this->getZkClient($device, 4);
+                if (! $zk || ! $zk->connect()) {
+                    return false;
+                }
+                $result = $zk->setTime(date('Y-m-d H:i:s'));
+                $zk->disconnect();
+                return (bool) $result;
+            } catch (Exception $e) {
+                Log::error("ZKTeco Time Sync Failed for {$device->ip_address}: " . $e->getMessage());
+                return false;
+            }
+        }
+
         try {
             $client = $this->getClient($device);
             $time = date('Y-m-d\TH:i:s');
@@ -299,10 +478,41 @@ class BiometricDeviceService
     }
 
     /**
-     * Add/Update user on device via Hikvision ISAPI (JSON format)
+     * Add/Update user on device (ZKTeco or Hikvision ISAPI)
      */
     public function addUserToDevice(BiometricDevice $device, string $userId, string $name, string $password = ''): bool
     {
+        if ($this->isZkteco($device)) {
+            try {
+                $zk = $this->getZkClient($device, 6);
+                if (! $zk || ! $zk->connect()) {
+                    Log::error("ZKTeco Add User: Failed to connect to {$device->ip_address}");
+                    return false;
+                }
+
+                $uid = is_numeric($userId) ? (int) $userId : crc32($userId) % 65535;
+                if ($uid <= 0) {
+                    $uid = 1;
+                }
+                $safeName = substr(trim($name), 0, 24);
+                $safePassword = $password ? substr($password, 0, 8) : '';
+
+                $result = $zk->setUser(
+                    $uid,
+                    (string) $userId,
+                    $safeName,
+                    $safePassword
+                );
+
+                $zk->disconnect();
+                Log::info("ZKTeco user {$userId} ({$safeName}) added/updated on {$device->ip_address}");
+                return (bool) $result;
+            } catch (Exception $e) {
+                Log::error("ZKTeco Add User Failed for {$userId}: " . $e->getMessage());
+                return false;
+            }
+        }
+
         try {
             $client = new Client([
                 'base_uri' => "http://{$device->ip_address}:{$device->port}/",
@@ -453,6 +663,21 @@ class BiometricDeviceService
 
     public function clearLogs(BiometricDevice $device): bool
     {
+        if ($this->isZkteco($device)) {
+            try {
+                $zk = $this->getZkClient($device, 4);
+                if (! $zk || ! $zk->connect()) {
+                    return false;
+                }
+                $result = $zk->clearAttendance();
+                $zk->disconnect();
+                return (bool) $result;
+            } catch (Exception $e) {
+                Log::error("ZKTeco Clear Logs Failed for {$device->ip_address}: " . $e->getMessage());
+                return false;
+            }
+        }
+
         return false;
     }
 

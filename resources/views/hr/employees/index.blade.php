@@ -1,10 +1,6 @@
 @extends('admin_panel.layout.app')
 
 @section('content')
-    <!-- Script for Face API -->
-    <script src="{{ asset('assets/vendors/face-api/js/face-api.min.js') }}"></script>
-
-
     @include('hr.partials.hr-styles')
 
     <div class="main-content">
@@ -17,7 +13,7 @@
                         <p class="page-subtitle">Manage your organization's employee database</p>
                     </div>
                     @can('hr.employees.create')
-                        <button type="button" class="btn btn-create" id="createBtn">
+                        <button type="button" class="btn btn-create" id="createBtn" data-toggle="modal" data-target="#employeeModal">
                             <i class="fa fa-user-plus"></i> Add Employee
                         </button>
                     @endcan
@@ -188,6 +184,11 @@
                             <div class="empty-state" style="grid-column: 1/-1;">
                                 <i class="fa fa-users"></i>
                                 <p>No employees found. Add your first employee!</p>
+                                @can('hr.employees.create')
+                                    <button type="button" class="btn btn-create mt-2" id="createBtnEmpty" data-toggle="modal" data-target="#employeeModal">
+                                        <i class="fa fa-user-plus"></i> Add Employee
+                                    </button>
+                                @endcan
                             </div>
                         @endforelse
                     </div>
@@ -208,7 +209,9 @@
                         <i class="fa fa-user-plus"></i>
                         <span>Add Employee</span>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="close text-white" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <form id="employeeForm" action="{{ route('hr.employees.store') }}" method="POST"
                     enctype="multipart/form-data" data-ajax-validate="true">
@@ -445,7 +448,7 @@
                         </div>
                     </div>
                     <div class="modal-footer-modern">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+                        <button type="button" class="btn btn-cancel" data-dismiss="modal" data-bs-dismiss="modal">
                             <i class="fa fa-times me-2"></i>Cancel
                         </button>
                         <button type="submit" class="btn btn-save">
@@ -458,7 +461,99 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Face Registration Modal -->
+    <div class="modal fade" id="faceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="faceModalLabel">Register Face</h5>
+                    <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-center">
+                    <input type="hidden" id="face_employee_id">
+                    <div
+                        style="position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 15px;">
+                        <video id="face-video" autoplay playsinline style="width: 100%; display: block;"></video>
+                        <canvas id="face-canvas" style="display: none;"></canvas>
+                        <div
+                            style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); width: 220px; height: 280px; border: 3px dashed rgba(255,255,255,0.7); border-radius: 50%; pointer-events: none;">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-center align-items-center mb-3" style="min-height: 30px;">
+                        <div id="status-indicator" class="status-dot"></div>
+                    </div>
+                    <style>
+                        .status-dot {
+                            width: 16px;
+                            height: 16px;
+                            border-radius: 50%;
+                            background: #e9ecef;
+                            transition: all 0.3s ease;
+                        }
+
+                        .status-dot.yellow {
+                            background: #ffc107;
+                            box-shadow: 0 0 12px #ffc107;
+                            animation: pulse-dot 1.5s infinite;
+                        }
+
+                        .status-dot.green {
+                            background: #198754;
+                            box-shadow: 0 0 12px #198754;
+                            transform: scale(1.1);
+                        }
+
+                        .status-dot.red {
+                            background: #dc3545;
+                            box-shadow: 0 0 12px #dc3545;
+                            animation: shake-dot 0.4s;
+                        }
+
+                        @keyframes pulse-dot {
+                            0% {
+                                opacity: 0.5;
+                                transform: scale(0.8);
+                            }
+
+                            50% {
+                                opacity: 1;
+                                transform: scale(1.2);
+                            }
+
+                            100% {
+                                opacity: 0.5;
+                                transform: scale(0.8);
+                            }
+                        }
+
+                        @keyframes shake-dot {
+                            0%,
+                            100% {
+                                transform: translateX(0);
+                            }
+
+                            25% {
+                                transform: translateX(-4px);
+                            }
+
+                            75% {
+                                transform: translateX(4px);
+                            }
+                        }
+                    </style>
+                    <button type="button" class="btn btn-primary w-100" id="btn-capture-face" disabled>
+                        <i class="fa fa-camera"></i> Capture & Save
+                    </button>
+                    <small class="text-muted mt-2 d-block">Wait for camera to load, then ensure only one face is
+                        visible.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Styles for casual leave -->
     <style>
         .casual-day-option.selected {
             background: #007bff !important;
@@ -471,8 +566,11 @@
             background: #e3f0ff !important;
         }
     </style>
-    <!-- jQuery and Bootstrap are already loaded in the main layout -->
+@endsection
 
+@section('js')
+    <!-- Script for Face API -->
+    <script src="{{ asset('assets/vendors/face-api/js/face-api.min.js') }}"></script>
 
     <script>
         // Badge click handler for casual leave days
@@ -512,7 +610,7 @@
             });
 
             // Create Employee - using event delegation to ensure it works
-            $(document).on('click', '#createBtn', function(e) {
+            $(document).on('click', '#createBtn, #createBtnEmpty', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('Create button clicked!');
@@ -874,7 +972,6 @@
                         '<i class="fa fa-camera"></i> Capture & Save');
                 }
             });
-
             // Stop Camera on Close
             $('#faceModal').on('hidden.bs.modal', function() {
                 if (faceStream) {
@@ -890,98 +987,6 @@
         });
     </script>
 
-
-
-    <!-- Face Registration Modal -->
-    <div class="modal fade" id="faceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="faceModalLabel">Register Face</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <input type="hidden" id="face_employee_id">
-                    <div
-                        style="position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; margin-bottom: 15px;">
-                        <video id="face-video" autoplay playsinline style="width: 100%; display: block;"></video>
-                        <canvas id="face-canvas" style="display: none;"></canvas>
-                        <div
-                            style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); width: 220px; height: 280px; border: 3px dashed rgba(255,255,255,0.7); border-radius: 50%; pointer-events: none;">
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-center align-items-center mb-3" style="min-height: 30px;">
-                        <div id="status-indicator" class="status-dot"></div>
-                    </div>
-                    <style>
-                        .status-dot {
-                            width: 16px;
-                            height: 16px;
-                            border-radius: 50%;
-                            background: #e9ecef;
-                            transition: all 0.3s ease;
-                        }
-
-                        .status-dot.yellow {
-                            background: #ffc107;
-                            box-shadow: 0 0 12px #ffc107;
-                            animation: pulse-dot 1.5s infinite;
-                        }
-
-                        .status-dot.green {
-                            background: #198754;
-                            box-shadow: 0 0 12px #198754;
-                            transform: scale(1.1);
-                        }
-
-                        .status-dot.red {
-                            background: #dc3545;
-                            box-shadow: 0 0 12px #dc3545;
-                            animation: shake-dot 0.4s;
-                        }
-
-                        @keyframes pulse-dot {
-                            0% {
-                                opacity: 0.5;
-                                transform: scale(0.8);
-                            }
-
-                            50% {
-                                opacity: 1;
-                                transform: scale(1.2);
-                            }
-
-                            100% {
-                                opacity: 0.5;
-                                transform: scale(0.8);
-                            }
-                        }
-
-                        @keyframes shake-dot {
-
-                            0%,
-                            100% {
-                                transform: translateX(0);
-                            }
-
-                            25% {
-                                transform: translateX(-4px);
-                            }
-
-                            75% {
-                                transform: translateX(4px);
-                            }
-                        }
-                    </style>
-                    <button type="button" class="btn btn-primary w-100" id="btn-capture-face" disabled>
-                        <i class="fa fa-camera"></i> Capture & Save
-                    </button>
-                    <small class="text-muted mt-2 d-block">Wait for camera to load, then ensure only one face is
-                        visible.</small>
-                </div>
-            </div>
-        </div>
-    </div>
     <!-- Isolated Face Logic -->
     <script>
         $(document).ready(function() {
@@ -1172,7 +1177,7 @@
             });
 
             // Stop Camera on Close
-            document.getElementById('faceModal').addEventListener('hidden.bs.modal', function() {
+            $('#faceModal').on('hidden.bs.modal', function() {
                 if (faceStream) {
                     faceStream.getTracks().forEach(track => track.stop());
                     faceStream = null;
