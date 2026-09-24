@@ -1211,11 +1211,6 @@
         $('.product-card').on('click', function() {
             let hasVariants = $(this).data('has-variants') === 1;
             let stockPieces = parseFloat($(this).data('stock-pieces'));
-            
-            if (stockPieces <= 0) {
-                Swal.fire('Out of Stock', 'This product has no stock available.', 'warning');
-                return;
-            }
 
             if (hasVariants) {
                 // Open variants selection popup modal
@@ -1261,13 +1256,13 @@
                             <td class="text-end fw-bold">Rs ${price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             <td class="text-center">
                                 <div class="qty-controls mx-auto" style="width: 100px;">
-                                    <button type="button" class="qty-btn modal-qty-minus" ${isOut ? 'disabled' : ''}>-</button>
-                                    <input type="number" class="qty-input modal-qty-val" value="${isOut ? 0 : 1}" min="1" max="${v.stock_pieces}" ${isOut ? 'disabled' : ''}>
-                                    <button type="button" class="qty-btn modal-qty-plus" ${isOut ? 'disabled' : ''}>+</button>
+                                    <button type="button" class="qty-btn modal-qty-minus">-</button>
+                                    <input type="number" class="qty-input modal-qty-val" value="1" min="1">
+                                    <button type="button" class="qty-btn modal-qty-plus">+</button>
                                 </div>
                             </td>
                             <td class="text-center">
-                                <button type="button" class="btn btn-primary btn-sm variant-add-btn add-to-cart-modal-btn" ${isOut ? 'disabled' : ''}>
+                                <button type="button" class="btn btn-primary btn-sm variant-add-btn add-to-cart-modal-btn">
                                     <i class="fas fa-plus me-1"></i> Add
                                 </button>
                             </td>
@@ -1325,11 +1320,6 @@
             let piecesPerBox = parseFloat($row.data('pieces-per-box')) || 1;
             let variantData = $row.data('variant-data');
             let qty = parseInt($row.find('.modal-qty-val').val()) || 1;
-
-            if (qty > stockPieces) {
-                Swal.fire('Limit Exceeded', 'You cannot add more than the available stock.', 'warning');
-                return;
-            }
 
             let activePriceMode = $('input[name="pos_price_mode"]:checked').val() || 'retail';
             let price = (activePriceMode === 'wholesale' && wholesalePrice > 0) ? wholesalePrice : retailPrice;
@@ -1546,12 +1536,7 @@
         function addToCart(id, name, price, stockPieces, qty, sizeMode, piecesPerBox, variantData, retailPrice = 0, wholesalePrice = 0, weightPerPiece = 0) {
             let cartItem = cart.find(item => item.id === id);
             if (cartItem) {
-                if (cartItem.qty + qty <= stockPieces) {
-                    cartItem.qty += qty;
-                } else {
-                    cartItem.qty = stockPieces;
-                    Swal.fire('Limit Exceeded', 'Adjusted to maximum available stock.', 'warning');
-                }
+                cartItem.qty += qty;
             } else {
                 cart.push({
                     id: id,
@@ -1622,7 +1607,7 @@
                         <div class="cart-item-details">
                             <div class="qty-controls">
                                 <button type="button" class="qty-btn btn-qty-minus">-</button>
-                                <input type="number" class="qty-input cart-qty-val" value="${item.qty}" min="1" max="${item.stock}">
+                                <input type="number" class="qty-input cart-qty-val" value="${item.qty}" min="1">
                                 <button type="button" class="qty-btn btn-qty-plus">+</button>
                             </div>
                             <div class="d-flex flex-column align-items-end gap-1">
@@ -1713,12 +1698,8 @@
         $(document).on('click', '.btn-qty-plus', function() {
             let index = $(this).closest('.cart-item').data('index');
             let item = cart[index];
-            if (item.qty < item.stock) {
-                item.qty++;
-                renderCart();
-            } else {
-                Swal.fire('Limit Exceeded', 'You cannot add more than the available stock.', 'warning');
-            }
+            item.qty++;
+            renderCart();
         });
 
         $(document).on('click', '.btn-qty-minus', function() {
@@ -1736,11 +1717,6 @@
             let val = parseInt($(this).val()) || 1;
             
             if (val <= 0) val = 1;
-            if (val > item.stock) {
-                Swal.fire('Limit Exceeded', 'Adjusted to maximum available stock.', 'warning');
-                val = item.stock;
-            }
-            
             item.qty = val;
             renderCart();
         });

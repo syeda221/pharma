@@ -1878,8 +1878,14 @@ class SaleController extends Controller
             }
 
             if (! $stock) {
-                // Create if missing? Or fail? User said "Validate warehouse stock".
-                throw new \Exception('Stock not found for product: '.$item->product_name);
+                // Auto-create stock record if missing so sale can proceed smoothly
+                $stock = WarehouseStock::create([
+                    'warehouse_id' => $targetWhId,
+                    'product_id' => $item->product_id,
+                    'total_pieces' => 0,
+                    'quantity' => 0,
+                    'price' => 0,
+                ]);
             }
 
             // Calculate stock deduction quantity (for Kg products, total_pieces in WarehouseStock = total Kg)
@@ -1921,12 +1927,7 @@ class SaleController extends Controller
             }
 
             if ($type === 'out') {
-                // Deduct
-                if ($stock->total_pieces < $qtyPieces) {
-                    $availFormatted = number_format($stock->total_pieces, 3);
-                    $unitLabel = ($productMode === 'by_kg' || $productMode === 'by_gm') ? 'Kg' : 'Pcs';
-                    throw new \Exception('Insufficient stock for '.$item->product_name.'. Available: '.$availFormatted.' '.$unitLabel);
-                }
+                // Deduct stock directly into negative if stock is 0 or less
                 $stock->total_pieces -= $qtyPieces;
                 // Update approx boxes for display
                 $ppb = $item->product->pieces_per_box ?? 1;

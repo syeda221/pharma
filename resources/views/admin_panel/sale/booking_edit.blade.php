@@ -1170,9 +1170,7 @@
                   .done(function(warehouses) {
                       console.log('Warehouses fetched:', warehouses);
 
-                      var validWarehouses = (Array.isArray(warehouses) ? warehouses : []).filter(function(w) {
-                          return w.stock > 0;
-                      });
+                      var validWarehouses = Array.isArray(warehouses) ? warehouses : [];
 
                       if (validWarehouses.length > 0) {
                           var options = '<option value="">Select Warehouse</option>';
@@ -1187,7 +1185,7 @@
                               $whSelect.val(validWarehouses[0].warehouse_id).trigger('change');
                           }
                       } else {
-                          $whSelect.html('<option value="">Out of Stock in All Warehouses</option>');
+                          $whSelect.html('<option value="">No Warehouse Found</option>');
                       }
                   })
                   .fail(function(xhr) {

@@ -1646,10 +1646,15 @@ class ProductController extends Controller
     /**
      * Match a sale item to a specific variant based on size and color stored in color field.
      */
-    private function matchSaleItemToVariant($saleItem, $variant)
+    private function matchSaleItemToVariant($saleItem, $variant, $totalVariantsCount = 1)
     {
-        $itemColor = $saleItem->color;
-        if (empty($itemColor)) {
+        $itemColor = $saleItem->color ?? null;
+        if (empty($itemColor) || $itemColor === '-' || $itemColor === 'null') {
+            $vColor = strtolower(trim($variant['color'] ?? '-'));
+            $vSize = strtolower(trim($variant['size'] ?? '-'));
+            if ($totalVariantsCount <= 1 || (($vColor === '' || $vColor === '-') && ($vSize === '' || $vSize === '-'))) {
+                return true;
+            }
             return false;
         }
 
@@ -1670,7 +1675,12 @@ class ProductController extends Controller
 
         if (empty($itemVariant)) {
             // Simple string comparison
-            return strtolower(trim($itemColor)) === strtolower(trim($variant['color'] ?? ''));
+            $vColor = strtolower(trim($variant['color'] ?? '-'));
+            $vSize = strtolower(trim($variant['size'] ?? '-'));
+            if ($totalVariantsCount <= 1 && ($vColor === '-' || $vColor === '') && ($vSize === '-' || $vSize === '')) {
+                return true;
+            }
+            return strtolower(trim($itemColor)) === $vColor;
         }
 
         // Compare name, color and size

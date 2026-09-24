@@ -169,7 +169,7 @@ class ReportingController extends Controller
                     $parentAdjustments = (float) $adjQuery->sum('qty');
 
                     // Parent Opening stock
-                    $parentOpening = max(0, $parentClosing - $parentPurchased + $parentSold - $parentReturnedQty + $parentPReturned - $parentAdjustments);
+                    $parentOpening = $parentClosing - $parentPurchased + $parentSold - $parentReturnedQty + $parentPReturned - $parentAdjustments;
                 } else {
                     // Fetch all sales and returns for this product to distribute
                     $salesQuery = DB::table('sale_items')->where('product_id', $product->id);
@@ -314,10 +314,11 @@ class ReportingController extends Controller
                             $initial = (float) $vRawStock;
                         }
 
+                        $variantsCount = count($parsedVariants);
                         // Purchased for variant
                         $purchased = 0; $purchaseAmount = 0;
                         foreach ($purchasesList as $pItem) {
-                            if ($this->matchSaleItemToVariant($pItem, $v)) {
+                            if ($this->matchSaleItemToVariant($pItem, $v, $variantsCount)) {
                                 $pUnit = strtolower(trim($pItem->unit ?? ''));
                                 $pPPB = (float) ($pItem->pieces_per_box > 0 ? $pItem->pieces_per_box : $ppb);
                                 if ($pPPB <= 0) $pPPB = 1;
@@ -343,7 +344,7 @@ class ReportingController extends Controller
                         // Purchase Returned for variant
                         $pReturned = 0; $pReturnAmount = 0;
                         foreach ($purchaseReturnsList as $prItem) {
-                            if ($this->matchSaleItemToVariant($prItem, $v)) {
+                            if ($this->matchSaleItemToVariant($prItem, $v, $variantsCount)) {
                                 $pReturned += (float) $prItem->qty;
                                 $pReturnAmount += (float) $prItem->line_total;
                             }
@@ -352,7 +353,7 @@ class ReportingController extends Controller
                         // Sold for variant
                         $sold = 0; $saleAmount = 0;
                         foreach ($salesList as $sItem) {
-                            if ($this->matchSaleItemToVariant($sItem, $v)) {
+                            if ($this->matchSaleItemToVariant($sItem, $v, $variantsCount)) {
                                 $sold += (float) $sItem->total_pieces;
                                 $saleAmount += (float) $sItem->total;
                             }
@@ -367,7 +368,7 @@ class ReportingController extends Controller
                                 $rColor = !empty($saleColors) ? $saleColors[0] : '';
                             }
                             $rItemCopy = (object)['qty' => $rItem->qty, 'color' => $rColor];
-                            if ($this->matchSaleItemToVariant($rItemCopy, $v)) {
+                            if ($this->matchSaleItemToVariant($rItemCopy, $v, $variantsCount)) {
                                 $returnedQty += (float) $rItem->qty;
                             }
                         }
@@ -381,7 +382,7 @@ class ReportingController extends Controller
                         }
 
                         // Balance in Total Pieces = Initial + Purchased - Sold + Returned - Purchased Returned + Adjustments
-                        $balance = max(0, $initial + $purchased - $sold + $returnedQty - $pReturned + $adjustments);
+                        $balance = $initial + $purchased - $sold + $returnedQty - $pReturned + $adjustments;
                     }
 
                     // Weighted Average Purchase Price
@@ -398,15 +399,51 @@ class ReportingController extends Controller
                     $totalSoldAmount   += $saleAmount;
 
                     if ($isCartonMode) {
-                        $cartons = (int) floor($balance / $ppb);
-                        $loose   = (int) round($balance - ($cartons * $ppb));
-                        $formattedStock = ($loose > 0) ? "{$cartons} Ctn + {$loose} Pcs" : "{$cartons} Ctn";
-                        $cartonDisplay = ($loose > 0) ? "{$cartons} Ctn + {$loose} Pcs <span class='text-muted small'>({$ppb} pcs/ctn)</span>" : "{$cartons} Ctn <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                        if ($balance < 0) {
+                            $absBal = abs($balance);
+                            $cartons = (int) floor($absBal / $ppb);
+                            $loose   = (int) round($absBal - ($cartons * $ppb));
+                            if ($cartons > 0 && $loose > 0) {
+                                $formattedStock = "-{$cartons} Ctn - {$loose} Pcs";
+                                $cartonDisplay  = "-{$cartons} Ctn - {$loose} Pcs <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                            } elseif ($cartons > 0) {
+                                $formattedStock = "-{$cartons} Ctn";
+                                $cartonDisplay  = "-{$cartons} Ctn <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                            } else {
+                                $formattedStock = "-{$loose} Pcs";
+                                $cartonDisplay  = "-{$loose} Pcs <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                            }
+                            $cartons = -$cartons;
+                            $loose   = -$loose;
+                        } else {
+                            $cartons = (int) floor($balance / $ppb);
+                            $loose   = (int) round($balance - ($cartons * $ppb));
+                            $formattedStock = ($loose > 0) ? "{$cartons} Ctn + {$loose} Pcs" : "{$cartons} Ctn";
+                            $cartonDisplay = ($loose > 0) ? "{$cartons} Ctn + {$loose} Pcs <span class='text-muted small'>({$ppb} pcs/ctn)</span>" : "{$cartons} Ctn <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                        }
                     } elseif ($ppb > 1 && $product->size_mode === 'by_size') {
-                        $cartons = (int) floor($balance / $ppb);
-                        $loose   = (int) round($balance - ($cartons * $ppb));
-                        $formattedStock = ($loose > 0) ? "{$cartons} Box . {$loose} Pcs" : "{$cartons} Boxes";
-                        $cartonDisplay = ($loose > 0) ? "{$cartons} Box + {$loose} Pcs" : "{$cartons} Box";
+                        if ($balance < 0) {
+                            $absBal = abs($balance);
+                            $cartons = (int) floor($absBal / $ppb);
+                            $loose   = (int) round($absBal - ($cartons * $ppb));
+                            if ($cartons > 0 && $loose > 0) {
+                                $formattedStock = "-{$cartons} Box . -{$loose} Pcs";
+                                $cartonDisplay  = "-{$cartons} Box - {$loose} Pcs";
+                            } elseif ($cartons > 0) {
+                                $formattedStock = "-{$cartons} Boxes";
+                                $cartonDisplay  = "-{$cartons} Box";
+                            } else {
+                                $formattedStock = "-{$loose} Pcs";
+                                $cartonDisplay  = "-{$loose} Pcs";
+                            }
+                            $cartons = -$cartons;
+                            $loose   = -$loose;
+                        } else {
+                            $cartons = (int) floor($balance / $ppb);
+                            $loose   = (int) round($balance - ($cartons * $ppb));
+                            $formattedStock = ($loose > 0) ? "{$cartons} Box . {$loose} Pcs" : "{$cartons} Boxes";
+                            $cartonDisplay = ($loose > 0) ? "{$cartons} Box + {$loose} Pcs" : "{$cartons} Box";
+                        }
                     } else {
                         $cartons = '-';
                         $loose   = $balance;
@@ -524,15 +561,51 @@ class ReportingController extends Controller
                 $ppb = (float) ($product->pieces_per_box ?? 1);
                 if ($ppb <= 0) $ppb = 1;
                 if ($isCartonMode) {
-                    $cartons = (int) floor($balance / $ppb);
-                    $loose   = (int) round($balance - ($cartons * $ppb));
-                    $formattedStock = ($loose > 0) ? "{$cartons} Ctn + {$loose} Pcs" : "{$cartons} Ctn";
-                    $cartonDisplay = ($loose > 0) ? "{$cartons} Ctn + {$loose} Pcs <span class='text-muted small'>({$ppb} pcs/ctn)</span>" : "{$cartons} Ctn <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                    if ($balance < 0) {
+                        $absBal = abs($balance);
+                        $cartons = (int) floor($absBal / $ppb);
+                        $loose   = (int) round($absBal - ($cartons * $ppb));
+                        if ($cartons > 0 && $loose > 0) {
+                            $formattedStock = "-{$cartons} Ctn - {$loose} Pcs";
+                            $cartonDisplay  = "-{$cartons} Ctn - {$loose} Pcs <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                        } elseif ($cartons > 0) {
+                            $formattedStock = "-{$cartons} Ctn";
+                            $cartonDisplay  = "-{$cartons} Ctn <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                        } else {
+                            $formattedStock = "-{$loose} Pcs";
+                            $cartonDisplay  = "-{$loose} Pcs <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                        }
+                        $cartons = -$cartons;
+                        $loose   = -$loose;
+                    } else {
+                        $cartons = (int) floor($balance / $ppb);
+                        $loose   = (int) round($balance - ($cartons * $ppb));
+                        $formattedStock = ($loose > 0) ? "{$cartons} Ctn + {$loose} Pcs" : "{$cartons} Ctn";
+                        $cartonDisplay = ($loose > 0) ? "{$cartons} Ctn + {$loose} Pcs <span class='text-muted small'>({$ppb} pcs/ctn)</span>" : "{$cartons} Ctn <span class='text-muted small'>({$ppb} pcs/ctn)</span>";
+                    }
                 } elseif ($ppb > 1 && $product->size_mode === 'by_size') {
-                    $cartons = (int) floor($balance / $ppb);
-                    $loose   = (int) round($balance - ($cartons * $ppb));
-                    $formattedStock = ($loose > 0) ? "{$cartons} Box . {$loose} Pcs" : "{$cartons} Boxes";
-                    $cartonDisplay = ($loose > 0) ? "{$cartons} Box + {$loose} Pcs" : "{$cartons} Box";
+                    if ($balance < 0) {
+                        $absBal = abs($balance);
+                        $cartons = (int) floor($absBal / $ppb);
+                        $loose   = (int) round($absBal - ($cartons * $ppb));
+                        if ($cartons > 0 && $loose > 0) {
+                            $formattedStock = "-{$cartons} Box . -{$loose} Pcs";
+                            $cartonDisplay  = "-{$cartons} Box - {$loose} Pcs";
+                        } elseif ($cartons > 0) {
+                            $formattedStock = "-{$cartons} Boxes";
+                            $cartonDisplay  = "-{$cartons} Box";
+                        } else {
+                            $formattedStock = "-{$loose} Pcs";
+                            $cartonDisplay  = "-{$loose} Pcs";
+                        }
+                        $cartons = -$cartons;
+                        $loose   = -$loose;
+                    } else {
+                        $cartons = (int) floor($balance / $ppb);
+                        $loose   = (int) round($balance - ($cartons * $ppb));
+                        $formattedStock = ($loose > 0) ? "{$cartons} Box . {$loose} Pcs" : "{$cartons} Boxes";
+                        $cartonDisplay = ($loose > 0) ? "{$cartons} Box + {$loose} Pcs" : "{$cartons} Box";
+                    }
                 } else {
                     $cartons = '-';
                     $loose   = $balance;
@@ -2776,10 +2849,15 @@ class ReportingController extends Controller
     /**
      * Match a sale item to a specific variant based on size and color stored in color field.
      */
-    private function matchSaleItemToVariant($saleItem, $variant)
+    private function matchSaleItemToVariant($saleItem, $variant, $totalVariantsCount = 1)
     {
-        $itemColor = $saleItem->color;
-        if (empty($itemColor)) {
+        $itemColor = $saleItem->color ?? null;
+        if (empty($itemColor) || $itemColor === '-' || $itemColor === 'null') {
+            $vColor = strtolower(trim($variant['color'] ?? '-'));
+            $vSize = strtolower(trim($variant['size'] ?? '-'));
+            if ($totalVariantsCount <= 1 || (($vColor === '' || $vColor === '-') && ($vSize === '' || $vSize === '-'))) {
+                return true;
+            }
             return false;
         }
 
@@ -2800,7 +2878,12 @@ class ReportingController extends Controller
 
         if (empty($itemVariant)) {
             // Simple string comparison
-            return strtolower(trim($itemColor)) === strtolower(trim($variant['color'] ?? ''));
+            $vColor = strtolower(trim($variant['color'] ?? '-'));
+            $vSize = strtolower(trim($variant['size'] ?? '-'));
+            if ($totalVariantsCount <= 1 && ($vColor === '-' || $vColor === '') && ($vSize === '-' || $vSize === '')) {
+                return true;
+            }
+            return strtolower(trim($itemColor)) === $vColor;
         }
 
         // 1. Compare barcodes if present on both sides

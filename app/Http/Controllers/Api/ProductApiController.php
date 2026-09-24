@@ -251,10 +251,15 @@ class ProductApiController extends Controller
         return $variants;
     }
 
-    private function matchSaleItemToVariant($saleItem, $variant)
+    private function matchSaleItemToVariant($saleItem, $variant, $totalVariantsCount = 1)
     {
-        $itemColor = $saleItem->color;
-        if (empty($itemColor)) {
+        $itemColor = $saleItem->color ?? null;
+        if (empty($itemColor) || $itemColor === '-' || $itemColor === 'null') {
+            $vColor = strtolower(trim($variant['color'] ?? '-'));
+            $vSize = strtolower(trim($variant['size'] ?? '-'));
+            if ($totalVariantsCount <= 1 || (($vColor === '' || $vColor === '-') && ($vSize === '' || $vSize === '-'))) {
+                return true;
+            }
             return false;
         }
 
@@ -274,7 +279,12 @@ class ProductApiController extends Controller
         }
 
         if (empty($itemVariant)) {
-            return strtolower(trim($itemColor)) === strtolower(trim($variant['color'] ?? ''));
+            $vColor = strtolower(trim($variant['color'] ?? '-'));
+            $vSize = strtolower(trim($variant['size'] ?? '-'));
+            if ($totalVariantsCount <= 1 && ($vColor === '-' || $vColor === '') && ($vSize === '-' || $vSize === '')) {
+                return true;
+            }
+            return strtolower(trim($itemColor)) === $vColor;
         }
 
         $vColor = strtolower(trim($variant['color'] ?? '-'));
