@@ -623,7 +623,7 @@
                             <th style="width:52px;">Image</th>
                             <th>Item Details</th>
                             <th>Stock</th>
-                            <th>Purchase Price</th>
+                            <th>Base Price</th>
                             <th>Sale Price</th>
                             <th style="width:90px;">Status</th>
                             <th class="text-center" style="width:180px;">Actions</th>

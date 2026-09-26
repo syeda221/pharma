@@ -118,7 +118,7 @@
                     {{-- Left Title --}}
                     <div class="d-flex align-items-center me-3">
                         <span class="fw-bold text-dark fs-6 text-nowrap" style="letter-spacing: -0.2px;">
-                            <i class="fas fa-chart-pie text-primary me-2"></i>Profit & Loss Analysis
+                            <i class="fas fa-chart-pie text-primary me-2"></i>Equity Ledger
                         </span>
                     </div>
 
@@ -190,7 +190,7 @@
                 <div class="row g-2">
                     <div class="col-12 mb-1">
                         <span class="fw-bold text-dark fs-6">
-                            <i class="fas fa-chart-pie text-primary me-2"></i>Profit & Loss
+                            <i class="fas fa-chart-pie text-primary me-2"></i>Equity Ledger
                         </span>
                     </div>
 
@@ -308,7 +308,7 @@
 
     <div id="loader" style="display:none; text-align:center; padding: 20px;">
         <div class="spinner-border text-primary" role="status"></div>
-        <div class="small text-muted mt-2">Calculating Profit & Loss Data…</div>
+        <div class="small text-muted mt-2">Calculating Equity Ledger Data…</div>
     </div>
 
     {{-- Content Layout --}}

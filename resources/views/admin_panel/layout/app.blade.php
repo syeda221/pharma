@@ -1055,7 +1055,7 @@
                                         
                                         @can('profit.loss.report.view')
                                             <li><a href="{{ route('report.profit_loss') }}"><i class="fa-solid fa-chart-line"></i>
-                                                    Profit & Loss</a></li>
+                                                    Equity Ledger</a></li>
                                         @endcan
                                         
                                         @can('recovery.report.view')

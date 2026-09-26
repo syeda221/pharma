@@ -785,7 +785,7 @@
     <div class="db-nav-pills">
         <a href="{{ route('report.sale') }}"           class="db-pill"><i class="fa-solid fa-receipt"              style="color: var(--green);"></i>  Sales Report</a>
         <a href="{{ route('report.purchase') }}"       class="db-pill"><i class="fa-solid fa-cart-shopping"        style="color: var(--blue);"></i>   Purchase Report</a>
-        <a href="{{ route('report.profit_loss') }}"    class="db-pill"><i class="fa-solid fa-chart-line"           style="color: var(--cyan);"></i>   Profit & Loss</a>
+        <a href="{{ route('report.profit_loss') }}"    class="db-pill"><i class="fa-solid fa-chart-line"           style="color: var(--cyan);"></i>   Equity Ledger</a>
         <a href="{{ route('report.executive') }}"      class="db-pill"><i class="fa-solid fa-briefcase"            style="color: var(--purple);"></i>  Executive Report</a>
         <a href="{{ route('report.recovery') }}"       class="db-pill"><i class="fa-solid fa-file-invoice-dollar"  style="color: var(--amber);"></i>  Recovery Report</a>
         <a href="{{ route('report.payable') }}"        class="db-pill"><i class="fa-solid fa-hand-holding-dollar"  style="color: var(--red);"></i>    Payable Report</a>

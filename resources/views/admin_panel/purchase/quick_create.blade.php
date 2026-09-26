@@ -196,7 +196,7 @@
                                         <th style="width: 18%;">Size <span class="text-danger">*</span></th>
                                         <th style="width: 18%;">Color <span class="text-danger">*</span></th>
                                         <th style="width: 12%;">Qty <span class="text-danger">*</span></th>
-                                        <th style="width: 15%;">Purchase Price <span class="text-danger">*</span></th>
+                                        <th style="width: 15%;">Base Price <span class="text-danger">*</span></th>
                                         <th style="width: 15%;">Sale Price <span class="text-danger">*</span></th>
                                         <th style="width: 15%;">Line Total</th>
                                         <th style="width: 7%; text-align: center;">Actions</th>

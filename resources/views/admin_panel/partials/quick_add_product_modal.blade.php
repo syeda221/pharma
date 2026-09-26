@@ -54,7 +54,7 @@
                             <input type="number" class="form-control" name="alert_carton_quantity" min="0" placeholder="e.g. 5">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold small text-muted">Purchase Price /pc</label>
+                            <label class="form-label fw-bold small text-muted">Base Price /pc</label>
                             <input type="number" step="0.01" class="form-control" name="purchase_price_per_piece" value="0" placeholder="0.00">
                         </div>
                         <div class="col-md-6">

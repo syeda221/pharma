@@ -439,7 +439,7 @@
                                             <th class="col-product">Product & Variant</th>
                                             <th class="col-unit" style="width: 100px;">Unit</th>
                                             <th class="col-qty" style="width: 110px;">Qty</th>
-                                            <th class="col-price" style="width: 130px;">Purchase Price</th>
+                                            <th class="col-price" style="width: 130px;">Base Price</th>
                                             <th class="col-disc" style="width: 90px;">Disc %</th>
                                             <th class="col-disc-amt" style="width: 110px;">Disc Amt</th>
                                             <th class="col-amount" style="width: 130px;">Amount</th>

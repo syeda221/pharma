@@ -419,7 +419,7 @@
                                              <input type="number" class="form-control-pro fw-bold text-info" name="wholesale_price" id="wholesale_price" step="0.01" value="{{ $product->wholesale_price ?? 0 }}" placeholder="0.00">
                                          </div>
                                          <div class="col-md-2">
-                                             <label class="form-label-pro text-secondary">Purchase Price <span class="unit-label text-muted fw-normal">(pc)</span></label>
+                                             <label class="form-label-pro text-secondary">Base Price <span class="unit-label text-muted fw-normal">(pc)</span></label>
                                              <input type="number" class="form-control-pro text-muted" name="purchase_price_per_piece" id="purchase_price_per_piece" step="0.01" value="{{ $product->purchase_price_per_piece }}" placeholder="0.00">
                                          </div>
                                          <div class="col-md-2 factor-col-main d-none">
@@ -1440,7 +1440,7 @@
                         </div>
                     </div>
                     <div class="mob-field-group">
-                        <div class="mob-label">Purchase Price <span class="req">*</span></div>
+                        <div class="mob-label">Base Price <span class="req">*</span></div>
                         <input type="number" class="mob-input mob-sync" data-field="variant_purchase_price[]" value="${escapeHtml(purchVal)}" placeholder="0.00" step="any" required>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">

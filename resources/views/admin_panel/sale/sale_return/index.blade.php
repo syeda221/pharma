@@ -23,7 +23,7 @@
                                             <th>Warehouse</th>
                                             <th>Return Date</th>
                                             <th>Return Amount</th>
-                                            <th>Original Purchase</th>
+                                            <th>Base Price</th>
                                             <th>Total Returned</th>
                                             <th>New Net Amount</th>
                                             <th>New Due</th>

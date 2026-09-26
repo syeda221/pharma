@@ -475,7 +475,7 @@
                                     <th class="col-product">Product</th>
                                     <th class="col-unit">Unit</th>
                                     <th class="col-qty">Qty</th>
-                                    <th class="col-price">Purchase Price</th>
+                                    <th class="col-price">Base Price</th>
                                     <th class="col-disc">Disc %</th>
                                     <th class="col-disc-amt">Disc Amt</th>
                                     <th class="col-amount">Amount</th>

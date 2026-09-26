@@ -644,7 +644,7 @@
                                                         <th class="text-uppercase text-muted p-1 text-center piece-wt-only-col" style="width: 90px; font-size: 10px;">Piece Wt (g)</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 90px; font-size: 10px;">Sale Price</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 90px; font-size: 10px;">Wholesale</th>
-                                                        <th class="text-uppercase text-muted p-1" style="width: 90px; font-size: 10px;">Purch Price</th>
+                                                        <th class="text-uppercase text-muted p-1" style="width: 90px; font-size: 10px;">Base Price</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 55px; font-size: 10px;">Alert</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 100px; font-size: 10px;">Barcode</th>
                                                         <th class="text-uppercase text-muted p-1 text-center" style="width: 50px; font-size: 10px;">Action</th>
@@ -1536,7 +1536,7 @@
                         </div>
                     </div>
                     <div class="mob-field-group">
-                        <div class="mob-label">Purchase Price <span class="req">*</span></div>
+                        <div class="mob-label">Base Price <span class="req">*</span></div>
                         <input type="number" class="mob-input mob-sync" data-field="variant_purchase_price[]" value="${purchVal}" placeholder="0.00" step="any" required>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
