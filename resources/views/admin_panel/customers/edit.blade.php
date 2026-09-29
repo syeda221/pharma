@@ -194,7 +194,9 @@
                             <label class="modern-label">Customer Type <span class="text-danger">*</span></label>
                             <select class="modern-control" name="customer_type" required>
                                 @foreach(\App\Models\CustomerType::orderBy('name')->get() as $type)
-                                    <option value="{{ $type->name }}" {{ $customer->customer_type == $type->name ? 'selected' : '' }}>{{ $type->name }}</option>
+                                    <option value="{{ $type->name }}" {{ $customer->customer_type == $type->name ? 'selected' : '' }}>
+                                        {{ $type->name }} (Med: {{ number_format($type->discount_medical ?? 0, 0) }}% | Doc: {{ number_format($type->discount_doctor > 0 ? $type->discount_doctor : ($type->discount_percentage ?? 0), 0) }}% | Dist: {{ number_format($type->discount_distribution ?? 0, 0) }}%)
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -219,24 +221,24 @@
                         </div>
 
                         <!-- Financials / Address Line 2 -->
-                        <div class="input-group-modern" style="grid-column: span 3;">
+                        <div class="input-group-modern" style="grid-column: span 4;">
                             <label class="modern-label">Address</label>
                             <input type="text" class="modern-control" name="address"
                                 placeholder="Shop No, Street Area, City"
                                 value="{{ $customer->address }}">
                         </div>
-                        <div class="input-group-modern" style="grid-column: span 3;">
-                            <label class="modern-label text-danger">Opening Balance (Dr)</label>
+                        <div class="input-group-modern" style="grid-column: span 2;">
+                            <label class="modern-label text-danger">Opening Bal (Dr)</label>
                             <input type="number" step="0.01" class="modern-control" name="opening_balance"
                                 value="{{ $customer->opening_balance ?? 0 }}" style="border-color: #fca5a5; background: #fff1f2;">
                         </div>
-                        <div class="input-group-modern" style="grid-column: span 3;">
-                            <label class="modern-label text-success">Credit Limit <small class="text-muted fw-normal">(0 = Ulmtd)</small></label>
+                        <div class="input-group-modern" style="grid-column: span 2;">
+                            <label class="modern-label text-success">Credit Limit</label>
                             <input type="number" step="0.01" class="modern-control" name="balance_range"
                                 value="{{ $customer->balance_range ?? 0 }}" style="border-color: #86efac; background: #f0fdf4;">
                         </div>
-                        <div class="input-group-modern" style="grid-column: span 3;">
-                            <label class="modern-label text-primary">Payment Reminder Day</label>
+                        <div class="input-group-modern" style="grid-column: span 2;">
+                            <label class="modern-label text-primary">Reminder Day</label>
                             <select class="modern-control" name="reminder_day" style="border-color: #93c5fd; background: #eff6ff;">
                                 <option value="">No Reminder</option>
                                 <option value="Monday" {{ $customer->reminder_day == 'Monday' ? 'selected' : '' }}>Monday</option>
@@ -247,6 +249,11 @@
                                 <option value="Saturday" {{ $customer->reminder_day == 'Saturday' ? 'selected' : '' }}>Saturday</option>
                                 <option value="Sunday" {{ $customer->reminder_day == 'Sunday' ? 'selected' : '' }}>Sunday</option>
                             </select>
+                        </div>
+                        <div class="input-group-modern" style="grid-column: span 2;">
+                            <label class="modern-label text-primary">Custom Disc % <small class="text-muted fw-normal">(Override)</small></label>
+                            <input type="number" step="0.01" min="0" max="100" class="modern-control" name="custom_discount_percentage"
+                                value="{{ $customer->custom_discount_percentage }}" placeholder="Type default" style="border-color: #93c5fd; background: #f0f9ff;">
                         </div>
 
                         {{-- ============ COMMENTED OUT FIELDS ============ --}}

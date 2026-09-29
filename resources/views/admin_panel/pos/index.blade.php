@@ -539,6 +539,85 @@
             min-height: 600px;
         }
     }
+
+    /* Modern Segmented Control for 3-Tier Discount */
+    .tier-segmented-control {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 3px 4px 3px 8px;
+        border-radius: 30px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        width: 100%;
+    }
+    .tier-control-label {
+        font-size: 0.68rem;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .tier-pills-wrap {
+        display: inline-flex;
+        background: #e2e8f0;
+        padding: 2px;
+        border-radius: 24px;
+        gap: 2px;
+    }
+    .tier-pill-btn {
+        border: none;
+        background: transparent;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 0.70rem;
+        font-weight: 600;
+        color: #475569;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
+        line-height: 1.3;
+    }
+    .tier-pill-btn:hover:not(.active) {
+        color: #0f172a;
+        background: rgba(255, 255, 255, 0.65);
+    }
+    .tier-pct-badge {
+        background: rgba(0, 0, 0, 0.07);
+        padding: 1px 5px;
+        border-radius: 12px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: inherit;
+    }
+    .tier-pill-btn.active[data-tier="medical"] {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+    }
+    .tier-pill-btn.active[data-tier="doctor"] {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+    }
+    .tier-pill-btn.active[data-tier="distribution"] {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(79, 70, 229, 0.35);
+    }
+    .tier-pill-btn.active .tier-pct-badge {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+    }
 </style>
 
 <div class="main-content">
@@ -632,6 +711,7 @@
                     @csrf
                     <!-- Store action mirror -->
                     <input type="hidden" name="action" value="post">
+                    <input type="hidden" name="discount_tier" id="posSelectedDiscountTier" value="doctor">
                     
                     <div class="pos-cart-header">
                         <div class="d-flex align-items-center gap-2">
@@ -669,7 +749,7 @@
                             <span id="summarySubtotal">Rs 0.00</span>
                         </div>
                         <div class="summary-row align-items-center">
-                            <span>Discount (Rs):</span>
+                            <span>Discount (Rs): <span id="posDiscountBadge" class="badge bg-success text-white d-none ms-1" style="font-size: 10px; font-weight: 600;"></span></span>
                             <div class="d-flex align-items-center gap-1">
                                 <input type="number" step="0.01" min="0" id="summaryDiscount" class="form-control form-control-sm text-end bg-light" value="0" style="width: 80px; height: 26px !important; padding: 2px 8px;">
                                 <button type="button" class="btn btn-dark btn-sm py-0 px-2" id="btnDiscountDistribute" style="height: 24px; font-size: 10px; line-height: 20px;" title="Distribute Discount"><i class="fas fa-divide"></i> Distribute</button>
@@ -705,9 +785,38 @@
                                     <select class="form-select select2" name="customer" id="customerSelect" style="width: 100%;">
                                         <option value="" selected disabled>Select</option>
                                         @foreach ($customers as $c)
-                                            <option value="{{ $c->id }}">{{ $c->customer_name }}</option>
+                                            @php
+                                                $tiers = $c->discount_tiers;
+                                            @endphp
+                                            <option value="{{ $c->id }}" 
+                                                    data-discount="{{ $c->discount_percentage }}" 
+                                                    data-type="{{ $c->customer_type }}"
+                                                    data-med="{{ $tiers['medical'] ?? 0 }}"
+                                                    data-doc="{{ $tiers['doctor'] ?? 0 }}"
+                                                    data-dist="{{ $tiers['distribution'] ?? 0 }}">
+                                                {{ $c->customer_name }}
+                                            </option>
                                         @endforeach
                                     </select>
+
+                                    {{-- POS 3-Tier Discount Segmented Control --}}
+                                    <div id="posDiscountTierGroup" class="tier-segmented-control mt-2 d-none">
+                                        <span class="tier-control-label"><i class="fas fa-layer-group text-primary"></i> Tier</span>
+                                        <div class="tier-pills-wrap">
+                                            <button type="button" class="tier-pill-btn pos-tier-btn" data-tier="medical" title="Apply Medical Discount">
+                                                <i class="fas fa-clinic-medical"></i> Medical
+                                                <span class="tier-pct-badge" id="posMedVal">0%</span>
+                                            </button>
+                                            <button type="button" class="tier-pill-btn pos-tier-btn active" data-tier="doctor" title="Apply Doctor Discount">
+                                                <i class="fas fa-user-md"></i> Doctor
+                                                <span class="tier-pct-badge" id="posDocVal">0%</span>
+                                            </button>
+                                            <button type="button" class="tier-pill-btn pos-tier-btn" data-tier="distribution" title="Apply Distribution Discount">
+                                                <i class="fas fa-truck-moving"></i> Distribution
+                                                <span class="tier-pct-badge" id="posDistVal">0%</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -846,6 +955,16 @@
                 @csrf
                 <input type="hidden" name="opening_balance" value="0">
                 <div class="modal-body p-3">
+                    <div class="form-group mb-3">
+                        <label>Customer Type <span class="text-danger">*</span></label>
+                        <select name="customer_type" class="form-control" required>
+                            @foreach(\App\Models\CustomerType::orderBy('name')->get() as $type)
+                                <option value="{{ $type->name }}" {{ $type->name === 'Doctor' ? '' : ($type->name === 'Main Customer' ? 'selected' : '') }}>
+                                    {{ $type->name }} {{ $type->discount_percentage > 0 ? '('.number_format($type->discount_percentage, 0).'%)' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="form-group mb-3">
                         <label>Customer Name <span class="text-danger">*</span></label>
                         <input type="text" name="customer_name" class="form-control" required>
@@ -1140,6 +1259,107 @@
             dropdownParent: $('#registeredCustomerGroup')
         });
 
+        let currentCustomerDiscountPercent = 0;
+        let isCustomerDiscountManualOverride = false;
+        let currentCustomerTiers = { medical: 0, doctor: 0, distribution: 0 };
+
+        function applyCustomerDiscountAuto() {
+            let isWalkin = $('#isWalkinInput').val() === '1';
+            if (isWalkin) {
+                currentCustomerDiscountPercent = 0;
+                isCustomerDiscountManualOverride = false;
+                $('#posDiscountBadge').addClass('d-none');
+                $('#posDiscountTierGroup').addClass('d-none');
+                return;
+            }
+
+            let $selectedOpt = $('#customerSelect').find(':selected');
+            if (!$selectedOpt.val()) {
+                currentCustomerDiscountPercent = 0;
+                $('#posDiscountBadge').addClass('d-none');
+                $('#posDiscountTierGroup').addClass('d-none');
+                return;
+            }
+
+            let med = parseFloat($selectedOpt.data('med')) || 0;
+            let doc = parseFloat($selectedOpt.data('doc')) || (parseFloat($selectedOpt.data('discount')) || 0);
+            let dist = parseFloat($selectedOpt.data('dist')) || 0;
+
+            currentCustomerTiers = { medical: med, doctor: doc, distribution: dist };
+
+            $('#posMedVal').text(parseFloat(med) + '%');
+            $('#posDocVal').text(parseFloat(doc) + '%');
+            $('#posDistVal').text(parseFloat(dist) + '%');
+
+            $('#posDiscountTierGroup').removeClass('d-none');
+
+            // Pick active tier
+            let activeTier = 'doctor';
+            let disc = doc;
+            if (doc > 0) {
+                activeTier = 'doctor';
+                disc = doc;
+            } else if (med > 0) {
+                activeTier = 'medical';
+                disc = med;
+            } else if (dist > 0) {
+                activeTier = 'distribution';
+                disc = dist;
+            }
+
+            $('.pos-tier-btn').removeClass('active');
+            $('.pos-tier-btn[data-tier="' + activeTier + '"]').addClass('active');
+            $('#posSelectedDiscountTier').val(activeTier);
+
+            currentCustomerDiscountPercent = disc;
+
+            if (currentCustomerDiscountPercent > 0) {
+                let typeName = activeTier.charAt(0).toUpperCase() + activeTier.slice(1);
+                $('#posDiscountBadge').text(currentCustomerDiscountPercent + '% (' + typeName + ')').removeClass('d-none');
+            } else {
+                $('#posDiscountBadge').addClass('d-none');
+            }
+        }
+
+        $(document).on('click', '.pos-tier-btn', function() {
+            let tier = $(this).data('tier');
+            $('.pos-tier-btn').removeClass('active');
+            $(this).addClass('active');
+            $('#posSelectedDiscountTier').val(tier);
+
+            let disc = currentCustomerTiers[tier] || 0;
+            currentCustomerDiscountPercent = disc;
+            isCustomerDiscountManualOverride = false;
+
+            let typeName = tier.charAt(0).toUpperCase() + tier.slice(1);
+            if (currentCustomerDiscountPercent > 0) {
+                $('#posDiscountBadge').text(currentCustomerDiscountPercent + '% (' + typeName + ')').removeClass('d-none');
+            } else {
+                $('#posDiscountBadge').addClass('d-none');
+            }
+
+            updateBillSummary();
+
+            if (typeof Swal !== 'undefined') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 1200
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: typeName + ' discount (' + disc + '%) applied!'
+                });
+            }
+        });
+
+        $('#customerSelect').on('change', function() {
+            isCustomerDiscountManualOverride = false;
+            applyCustomerDiscountAuto();
+            updateBillSummary();
+        });
+
         // New Customer form submission
         $('#newCustomerForm').on('submit', function(e) {
             e.preventDefault();
@@ -1158,7 +1378,11 @@
                         $('#newCustomerForm')[0].reset();
                         
                         let customerData = response.data || response.customer || response;
-                        let newOption = new Option(customerData.customer_name, customerData.id, true, true);
+                        let discVal = parseFloat(customerData.discount_percentage || customerData.custom_discount_percentage || 0);
+                        let discText = discVal > 0 ? ' (' + discVal.toFixed(0) + '% Disc)' : '';
+                        let newOption = new Option(customerData.customer_name + discText, customerData.id, true, true);
+                        $(newOption).data('discount', discVal);
+                        $(newOption).data('type', customerData.customer_type || '');
                         $('#customerSelect').append(newOption).trigger('change');
                     } else {
                         Swal.fire('Error', 'Failed to create customer.', 'error');
@@ -1182,6 +1406,11 @@
             $('#registeredCustomerGroup').addClass('d-none');
             $('#customerSelect').val('').trigger('change');
             $('#walkinNameInput').val('Walking Customer');
+            currentCustomerDiscountPercent = 0;
+            isCustomerDiscountManualOverride = false;
+            $('#posDiscountBadge').addClass('d-none');
+            $('#summaryDiscount').val('0.00');
+            updateBillSummary();
         });
 
         $('#btnToggleRegistered').on('click', function() {
@@ -1191,6 +1420,8 @@
             $('#registeredCustomerGroup').removeClass('d-none');
             $('#walkinNameGroup').addClass('d-none');
             $('#walkinNameInput').val('');
+            applyCustomerDiscountAuto();
+            updateBillSummary();
         });
 
         // Filter Grid Products via Search Input
@@ -1741,7 +1972,13 @@
         });
 
         // Live Discount and Cash calculation
-        $(document).on('input', '#summaryDiscount, .receipt-amount', function() {
+        $(document).on('input', '#summaryDiscount', function() {
+            isCustomerDiscountManualOverride = true;
+            $('#posDiscountBadge').addClass('d-none');
+            updateBillSummary();
+        });
+
+        $(document).on('input', '.receipt-amount', function() {
             updateBillSummary();
         });
 
@@ -1761,6 +1998,12 @@
                 }
             });
             
+            // Auto calculate customer discount percentage if active and not manually overridden
+            if (currentCustomerDiscountPercent > 0 && !isCustomerDiscountManualOverride) {
+                let autoDisc = (subtotal * currentCustomerDiscountPercent) / 100;
+                $('#summaryDiscount').val(autoDisc.toFixed(2));
+            }
+
             let typedDiscount = parseFloat($('#summaryDiscount').val()) || 0;
             
             // If item discounts changed since last calculation, adjust the total discount box to reflect this change

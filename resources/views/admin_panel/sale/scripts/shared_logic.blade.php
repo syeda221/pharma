@@ -128,6 +128,8 @@
         const btnText = isWholesale ? 'W' : 'R';
         const btnClass = isWholesale ? 'btn-outline-info' : 'btn-outline-success';
         const btnTitle = isWholesale ? 'Wholesale Mode' : 'Retail Mode';
+        const custDisc = parseFloat($('#discountPercent').val()) || 0;
+        const defaultDiscStr = custDisc > 0 ? custDisc : '';
 
         const rowHtml = `
   <tr>
@@ -210,6 +212,7 @@
         <input type="number"
                class="form-control discount-value text-end"
                name="item_disc[]"
+               value="${defaultDiscStr}"
                placeholder="0">
         <input type="hidden" class="discount-type-hidden" name="discount_type[]" value="percent">
         <button type="button"
@@ -277,8 +280,10 @@
              $row.find('.size-w').val(pRes.width || '-');
              $row.find('.size-mode-text').val(pRes.size_mode || '-');
 
-            // Set default discount
-            $row.find('.discount-value').val(pRes.sale_discount_percent || 0);
+            // Set discount (Customer discount percentage takes precedence, fallback to product discount)
+            const custDisc = parseFloat($('#discountPercent').val()) || 0;
+            const defaultDisc = custDisc > 0 ? custDisc : (parseFloat(pRes.sale_discount_percent) || 0);
+            $row.find('.discount-value').val(defaultDisc > 0 ? defaultDisc : '');
 
             $row.data('size_mode', pRes.size_mode);
             $row.data('pieces_per_box', pRes.pieces_per_box || 1);
@@ -468,30 +473,21 @@
             tNet += net;
         });
 
-        const isWalkin = $('#is_walkin').val() === '1';
-        
-        let orderDisc = 0;
-        if (isWalkin) {
-            orderDisc = toNum($('#walkinDiscountRs').val());
-            $('#discountPercent').val(0); // clear percent
-        } else {
-            const orderPct = toNum($('#discountPercent').val());
-            orderDisc = (tNet * orderPct) / 100;
-        }
+        let orderDisc = toNum($('#walkinDiscountRs').val());
 
         const prev = toNum($('#previousBalance').val());
         const receipts = toNum($('#receiptsTotal').text());
-        const payable = Math.max(0, tNet - orderDisc + prev - receipts);
         const currentInvoiceTotal = Math.max(0, tNet - orderDisc);
+        const payable = Math.max(0, currentInvoiceTotal + prev - receipts);
 
         $('#tQty').text(tQty.toFixed(0));
         $('#tGross').text(tGross.toFixed(2));
         $('#tLineDisc').text(tLineDisc.toFixed(2));
-        $('#tSub').text(tNet.toFixed(2));
+        $('#tSub').text(currentInvoiceTotal.toFixed(2));
         $('#tOrderDisc').text(orderDisc.toFixed(2));
         $('#tPrev').text(prev.toFixed(2));
         $('#tPayable').text(payable.toFixed(2));
-        $('#totalAmount').text(tNet.toFixed(2));
+        $('#totalAmount').text(tGross.toFixed(2));
         $('#walkinNetTotal').text(currentInvoiceTotal.toFixed(2));
         $('#bottomPaymentsTotal').text(receipts.toFixed(2));
         $('#receiptsTotalBadge').text(receipts.toFixed(2));
@@ -996,7 +992,10 @@
             $row.find('.size-w').val(data.width || '-');
             $row.find('.size-mode-text').val(data.size_mode || '-');
             
-            $row.find('.discount-value').val(data.sale_discount_percent || 0);
+            // Set discount (Customer discount percentage takes precedence, fallback to product discount)
+            const custDisc = parseFloat($('#discountPercent').val()) || 0;
+            const defaultDisc = custDisc > 0 ? custDisc : (parseFloat(data.sale_discount_percent) || 0);
+            $row.find('.discount-value').val(defaultDisc > 0 ? defaultDisc : '');
             
             $row.data('size_mode', data.size_mode);
             $row.data('pieces_per_box', data.pieces_per_box || 1);

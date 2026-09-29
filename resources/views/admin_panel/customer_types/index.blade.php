@@ -263,11 +263,12 @@
             <table id="default-datatable" class="table">
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 90px;">Id</th>
+                        <th class="text-center" style="width: 80px;">Id</th>
                         <th class="text-start">Type Name</th>
+                        <th class="text-center" style="width: 260px;">Discount Tiers (%)</th>
                         <th class="text-start">Description</th>
-                        <th class="text-start" style="width: 150px;">Status</th>
-                        <th class="text-end pe-4" style="width: 180px;">Action</th>
+                        <th class="text-start" style="width: 140px;">Status</th>
+                        <th class="text-end pe-4" style="width: 160px;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -275,6 +276,19 @@
                         <tr>
                             <td class="text-center id"><span class="customertype-id-badge">#{{ $type->id }}</span></td>
                             <td class="text-start name fw-semibold text-dark">{{ $type->name }}</td>
+                            <td class="text-center discount_pct">
+                                <div class="d-flex justify-content-center gap-1 flex-wrap">
+                                    <span class="badge bg-info text-white px-2 py-1" title="Medical Discount" style="font-size: 0.75rem;">
+                                        <i class="fas fa-clinic-medical me-1"></i>Med: {{ number_format($type->discount_medical ?? 0, 1) }}%
+                                    </span>
+                                    <span class="badge bg-success text-white px-2 py-1" title="Doctor Discount" style="font-size: 0.75rem;">
+                                        <i class="fas fa-user-md me-1"></i>Doc: {{ number_format($type->discount_doctor > 0 ? $type->discount_doctor : ($type->discount_percentage ?? 0), 1) }}%
+                                    </span>
+                                    <span class="badge bg-primary text-white px-2 py-1" title="Distribution Discount" style="font-size: 0.75rem;">
+                                        <i class="fas fa-boxes me-1"></i>Dist: {{ number_format($type->discount_distribution ?? 0, 1) }}%
+                                    </span>
+                                </div>
+                            </td>
                             <td class="text-start description text-muted">{{ $type->description ?: 'N/A' }}</td>
                             <td class="text-start">
                                 @if($type->is_static)
@@ -284,12 +298,16 @@
                                 @endif
                             </td>
                             <td class="text-end pe-4">
-                                @if($type->is_static)
-                                    <span class="text-muted small"><i class="fas fa-shield-alt text-warning me-1"></i> System Protected</span>
-                                @else
-                                    @can('customer_types.edit')
-                                        <button class="btn btn-primary btn-sm edit-btn" data-id="{{ $type->id }}">Edit</button>
-                                    @endcan
+                                @can('customer_types.edit')
+                                    <button class="btn btn-primary btn-sm edit-btn" 
+                                            data-id="{{ $type->id }}" 
+                                            data-static="{{ $type->is_static ? 1 : 0 }}" 
+                                            data-med="{{ $type->discount_medical ?? 0 }}"
+                                            data-doc="{{ $type->discount_doctor > 0 ? $type->discount_doctor : ($type->discount_percentage ?? 0) }}"
+                                            data-dist="{{ $type->discount_distribution ?? 0 }}"
+                                            data-discount="{{ $type->discount_percentage ?? 0 }}">Edit</button>
+                                @endcan
+                                @if(!$type->is_static)
                                     @can('customer_types.delete')
                                         <button class="btn btn-danger btn-sm delete-btn" data-url="{{ route('customer-types.destroy', $type->id) }}" data-msg="Are you sure you want to delete this customer type?" data-method="get" onclick="logoutAndDeleteFunction(this)">Delete</button>
                                     @endcan
@@ -314,14 +332,26 @@
                         @endif
                     </div>
                     <div class="customertype-mcard-title mb-1 name">{{ $type->name }}</div>
+                    <div class="d-flex flex-column gap-1 mb-2">
+                        <span class="small text-muted fw-bold">Discount Tiers:</span>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <span class="badge bg-info text-white">Med: {{ number_format($type->discount_medical ?? 0, 1) }}%</span>
+                            <span class="badge bg-success text-white">Doc: {{ number_format($type->discount_doctor > 0 ? $type->discount_doctor : ($type->discount_percentage ?? 0), 1) }}%</span>
+                            <span class="badge bg-primary text-white">Dist: {{ number_format($type->discount_distribution ?? 0, 1) }}%</span>
+                        </div>
+                    </div>
                     <div class="customertype-mcard-desc description">{{ $type->description ?: 'N/A' }}</div>
                     <div class="customertype-mcard-actions">
-                        @if($type->is_static)
-                            <span class="text-muted small"><i class="fas fa-shield-alt text-warning me-1"></i> Protected</span>
-                        @else
-                            @can('customer_types.edit')
-                                <button class="btn btn-primary btn-sm edit-btn" data-id="{{ $type->id }}">Edit</button>
-                            @endcan
+                        @can('customer_types.edit')
+                            <button class="btn btn-primary btn-sm edit-btn" 
+                                    data-id="{{ $type->id }}" 
+                                    data-static="{{ $type->is_static ? 1 : 0 }}" 
+                                    data-med="{{ $type->discount_medical ?? 0 }}"
+                                    data-doc="{{ $type->discount_doctor > 0 ? $type->discount_doctor : ($type->discount_percentage ?? 0) }}"
+                                    data-dist="{{ $type->discount_distribution ?? 0 }}"
+                                    data-discount="{{ $type->discount_percentage ?? 0 }}">Edit</button>
+                        @endcan
+                        @if(!$type->is_static)
                             @can('customer_types.delete')
                                 <button class="btn btn-danger btn-sm delete-btn" data-url="{{ route('customer-types.destroy', $type->id) }}" data-msg="Are you sure you want to delete this customer type?" data-method="get" onclick="logoutAndDeleteFunction(this)">Delete</button>
                             @endcan
@@ -336,7 +366,7 @@
 
 {{-- Add/Edit Customer Type Modal --}}
 <div class="modal fade" id="customerTypeModal" tabindex="-1" aria-labelledby="customerTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
             <div class="modal-header bg-white px-4 py-3 border-bottom">
                 <h5 class="modal-title fw-bold text-dark" id="customerTypeModalLabel"><i class="fas fa-tags text-primary me-2"></i><span id="modalTitleText">Add Customer Type</span></h5>
@@ -349,12 +379,55 @@
                     
                     <div class="mb-3">
                         <label for="name" class="form-label fw-semibold text-dark small">Customer Type Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control px-3 py-2" id="name" placeholder="Enter type name (e.g. Retailer)..." required style="border-radius: 10px; border: 1.5px solid #cbd5e1;" />
+                        <input type="text" name="name" class="form-control px-3 py-2" id="name" placeholder="Enter type name (e.g. Doctor, Staff, Wholesale, Retailer)..." required style="border-radius: 10px; border: 1.5px solid #cbd5e1;" />
+                    </div>
+
+                    {{-- 3-Tier Discount Structure --}}
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <label class="form-label fw-bold text-dark mb-2 d-flex align-items-center gap-2">
+                            <i class="fas fa-percentage text-primary"></i> 3-Tier Discount Options (%)
+                        </label>
+                        <p class="text-muted small mb-3">Is customer type ke liye teeno discount rates set karein. Sale screen par aap 1-click toggle se koi bhi discount apply kar sakenge:</p>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="discount_medical" class="form-label fw-semibold text-dark small d-flex align-items-center gap-1">
+                                    <i class="fas fa-clinic-medical text-info"></i> Medical Discount
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" min="0" max="100" name="discount_medical" class="form-control text-end fw-bold" id="discount_medical" placeholder="0.00" value="0" style="border-radius: 8px 0 0 8px;" />
+                                    <span class="input-group-text bg-info text-white fw-bold" style="border-radius: 0 8px 8px 0;">%</span>
+                                </div>
+                                <small class="text-muted" style="font-size: 0.72rem;">Medical store / pharmacy rate</small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="discount_doctor" class="form-label fw-semibold text-dark small d-flex align-items-center gap-1">
+                                    <i class="fas fa-user-md text-success"></i> Doctor Discount
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" min="0" max="100" name="discount_doctor" class="form-control text-end fw-bold" id="discount_doctor" placeholder="0.00" value="0" style="border-radius: 8px 0 0 8px;" />
+                                    <span class="input-group-text bg-success text-white fw-bold" style="border-radius: 0 8px 8px 0;">%</span>
+                                </div>
+                                <small class="text-muted" style="font-size: 0.72rem;">Doctor / Clinic default rate</small>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="discount_distribution" class="form-label fw-semibold text-dark small d-flex align-items-center gap-1">
+                                    <i class="fas fa-boxes text-primary"></i> Distribution Discount
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" min="0" max="100" name="discount_distribution" class="form-control text-end fw-bold" id="discount_distribution" placeholder="0.00" value="0" style="border-radius: 8px 0 0 8px;" />
+                                    <span class="input-group-text bg-primary text-white fw-bold" style="border-radius: 0 8px 8px 0;">%</span>
+                                </div>
+                                <small class="text-muted" style="font-size: 0.72rem;">Distributor / Wholesale rate</small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="description" class="form-label fw-semibold text-dark small">Description</label>
-                        <textarea name="description" class="form-control px-3 py-2" id="description" rows="3" placeholder="Enter description..." style="border-radius: 10px; border: 1.5px solid #cbd5e1;"></textarea>
+                        <textarea name="description" class="form-control px-3 py-2" id="description" rows="2" placeholder="Enter description..." style="border-radius: 10px; border: 1.5px solid #cbd5e1;"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer bg-light px-4 py-3 border-top">
@@ -394,12 +467,24 @@
     $(document).on('click', '.edit-btn', function() {
         var tr = $(this).closest("tr, .customertype-mcard");
         var id = $(this).data('id');
+        var isStatic = $(this).data('static');
+        var medDisc = $(this).data('med') || 0;
+        var docDisc = $(this).data('doc') || $(this).data('discount') || 0;
+        var distDisc = $(this).data('dist') || 0;
         var name = tr.find(".name").text().trim();
         var description = tr.find(".description").text().trim();
         if (description === 'N/A') description = '';
 
         $('#edit_id').val(id);
         $('#name').val(name);
+        if (isStatic == 1) {
+            $('#name').prop('readonly', true);
+        } else {
+            $('#name').prop('readonly', false);
+        }
+        $('#discount_medical').val(medDisc);
+        $('#discount_doctor').val(docDisc);
+        $('#discount_distribution').val(distDisc);
         $('#description').val(description);
         $('#modalTitleText').text('Edit Customer Type');
         $("#customerTypeModal").modal("show");
@@ -407,7 +492,10 @@
 
     $('#reset').on('click', function() {
         $('#edit_id').val('');
-        $('#name').val('');
+        $('#name').val('').prop('readonly', false);
+        $('#discount_medical').val(0);
+        $('#discount_doctor').val(0);
+        $('#discount_distribution').val(0);
         $('#description').val('');
         $('#modalTitleText').text('Add Customer Type');
     });

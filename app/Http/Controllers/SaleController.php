@@ -1413,11 +1413,11 @@ class SaleController extends Controller
 
             // Update Sale Totals
             $sale->total_bill_amount = $total_bill;
-            $sale->total_extradiscount = $request->total_extra_cost ?? 0;
-            $sale->total_net = $total_bill - $sale->total_extradiscount;
+            $sale->total_extradiscount = (float) ($request->total_extra_cost ?? $request->discountAmount ?? $request->discount_amount ?? 0);
+            $sale->total_net = max(0, $total_bill - $sale->total_extradiscount);
             $sale->total_items = $total_items;
 
-            $sale->cash = $request->cash ?? 0;
+            $sale->cash = (float) ($request->cash ?? 0);
             $sale->change = ($sale->cash - $sale->total_net);
             $sale->change_account_id = $request->input('change_account_id') ?: null;
 

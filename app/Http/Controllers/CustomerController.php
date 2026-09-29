@@ -46,6 +46,8 @@ class CustomerController extends Controller
         $data = $customer->toArray();
         $data['previous_balance'] = $customer->previous_balance;
         $data['balance_range'] = $customer->balance_range ?? 0;
+        $data['discount_percentage'] = $customer->discount_percentage;
+        $data['discount_tiers'] = $customer->discount_tiers;
 
         // Map status to remarks if needed by frontend
         $data['remarks'] = $customer->status ?? '';
@@ -129,6 +131,10 @@ class CustomerController extends Controller
             'balance_range'    => 'nullable|numeric',
             'address'          => 'nullable',
             'customer_type'    => 'nullable',
+            'custom_discount_percentage' => 'nullable|numeric|min:0|max:100',
+            'custom_discount_medical' => 'nullable|numeric|min:0|max:100',
+            'custom_discount_doctor' => 'nullable|numeric|min:0|max:100',
+            'custom_discount_distribution' => 'nullable|numeric|min:0|max:100',
             'sales_officer_id' => 'nullable|exists:sales_officers,id',
             'payment_reminder_date' => 'nullable|date',
             'reminder_day'     => 'nullable|string',

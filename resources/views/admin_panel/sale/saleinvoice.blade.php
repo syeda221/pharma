@@ -1406,89 +1406,47 @@
                     <table class="totals-table">
 
                         @php
-
-                            $grossTotal =
-                                collect($saleItems)->sum('total');
-
-                            $totalDisc =
-                                collect($saleItems)->sum('discount_amount');
-
-                            $netBill =
-                                $sale->total_net;
-
-                            $paidAmount =
-                                (float)($sale->cash ?? 0);
-
-                            $finalBal =
-                                $previousBalance
-                                +
-                                $netBill
-                                -
-                                $paidAmount;
-
+                            $lineDisc = collect($saleItems)->sum('discount_amount');
+                            $orderDisc = (float)($sale->total_extradiscount ?? 0);
+                            $totalDisc = $lineDisc + $orderDisc;
+                            $grossTotal = collect($saleItems)->sum('total') + $lineDisc;
+                            $netBill = $sale->total_net;
+                            $paidAmount = (float)($sale->cash ?? 0);
+                            $finalBal = $previousBalance + $netBill - $paidAmount;
                         @endphp
 
-
                         @if ($totalCartonsCount > 0)
-
                             <tr>
-
                                 <td class="text-muted fw-bold">
                                     Total Cartons
                                 </td>
-
                                 <td class="text-end fw-bold" style="color: var(--primary-color);">
-
                                     @if ($totalLooseCount > 0)
                                         {{ $totalCartonsCount }} Cartons + {{ $totalLooseCount }} Pcs
                                     @else
                                         {{ $totalCartonsCount }} Cartons
                                     @endif
-
                                 </td>
-
                             </tr>
-
                         @endif
 
-
                         @if ($totalDisc > 0)
-
                             <tr>
-
                                 <td class="text-muted">
-                                    Gross Total
+                                    Sub Total (Gross)
                                 </td>
-
                                 <td class="text-end text-muted">
-
-                                    {{
-                                        number_format(
-                                            $grossTotal + $totalDisc,
-                                            2
-                                        )
-                                    }}
-
+                                    {{ number_format($grossTotal, 2) }}
                                 </td>
-
                             </tr>
-
-
                             <tr>
-
                                 <td class="text-muted">
                                     Total Discount
                                 </td>
-
-                                <td class="text-end text-danger">
-
-                                    -
-                                    {{ number_format($totalDisc, 2) }}
-
+                                <td class="text-end text-danger fw-bold">
+                                    - {{ number_format($totalDisc, 2) }}
                                 </td>
-
                             </tr>
-
                         @endif
 
 
@@ -2300,51 +2258,24 @@
 
 
         <!-- Totals -->
+        @php
+            $thLineDisc = collect($saleItems)->sum('discount_amount');
+            $thOrderDisc = (float)($sale->total_extradiscount ?? 0);
+            $thTotalDisc = $thLineDisc + $thOrderDisc;
+            $thGrossTotal = collect($saleItems)->sum('total') + $thLineDisc;
+        @endphp
 
         <div class="totals-section">
-
             <div class="tot-row">
-
-                <span>
-                    Sub Total:
-                </span>
-
-                <span>
-
-                    {{
-                        number_format(
-                            $sale->total_bill_amount,
-                            0
-                        )
-                    }}
-
-                </span>
-
+                <span>Sub Total:</span>
+                <span>{{ number_format($thGrossTotal, 0) }}</span>
             </div>
 
-
-            @if ($sale->total_extradiscount > 0)
-
+            @if ($thTotalDisc > 0)
                 <div class="tot-row">
-
-                    <span>
-                        Discount:
-                    </span>
-
-                    <span>
-
-                        -
-                        {{
-                            number_format(
-                                $sale->total_extradiscount,
-                                0
-                            )
-                        }}
-
-                    </span>
-
+                    <span>Discount:</span>
+                    <span>- {{ number_format($thTotalDisc, 0) }}</span>
                 </div>
-
             @endif
 
 
