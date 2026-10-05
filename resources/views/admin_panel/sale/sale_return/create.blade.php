@@ -1,4 +1,4 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 
 @section('content')
     <style>
@@ -319,7 +319,7 @@
                                     <th style="width: 20%;"><i class="fas fa-lock me-1"
                                             style="font-size: 0.65rem; opacity: 0.6;"></i>Product</th>
                                     <th style="width: 8%;">Size</th>
-                                    <th style="width: 8%;">Color</th>
+                                    <th style="width: 8%;">BONUS</th>
                                     <th style="width: 8%;"><i class="fas fa-lock me-1"
                                             style="font-size: 0.65rem; opacity: 0.6;"></i>Item Code</th>
                                     <th style="width: 12%;"><i class="fas fa-lock me-1"
@@ -383,7 +383,7 @@
                                                 readonly>
                                             <small class="text-muted d-block text-end" style="font-size: 0.65rem;">
                                                 @if (($item['size_mode'] ?? '') == 'by_size')
-                                                    Per M²
+                                                    Per MÂ²
                                                 @elseif(($item['size_mode'] ?? '') == 'by_cartons')
                                                     Per Box
                                                 @else
@@ -873,3 +873,4 @@
         });
     </script>
 @endsection
+

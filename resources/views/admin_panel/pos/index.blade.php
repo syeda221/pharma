@@ -1,4 +1,4 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 
 @section('content')
 <style>
@@ -1132,7 +1132,7 @@
                                 <input type="text" id="manual_size" class="form-control form-control-sm" placeholder="Optional" style="border-radius: 4px; border: 1px solid #ced4da;">
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label text-dark fw-semibold small mb-1">Color</label>
+                                <label class="form-label text-dark fw-semibold small mb-1">BONUS</label>
                                 <input type="text" id="manual_color" class="form-control form-control-sm" placeholder="Optional" style="border-radius: 4px; border: 1px solid #ced4da;">
                             </div>
                             <div class="col-md-2">
@@ -2482,3 +2482,4 @@
     });
 </script>
 @endsection
+

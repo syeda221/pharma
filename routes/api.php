@@ -39,3 +39,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [\App\Http\Controllers\Api\AuthApiController::class, 'user']);
     Route::get('/customer/orders', [\App\Http\Controllers\Api\CustomerDashboardController::class, 'getOrders']);
 });
+// Distributor Reports
+Route::get('/distributor-stocks/{distributorId}', [App\Http\Controllers\DistributorReportController::class, 'getDistributorStock']);
+Route::post('/distributor-reports', [App\Http\Controllers\DistributorReportController::class, 'storeReport']);

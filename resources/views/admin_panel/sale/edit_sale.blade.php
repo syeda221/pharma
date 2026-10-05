@@ -566,7 +566,7 @@
                                 <input type="text" class="form-control fw-bold {{ $sale->walkin_name ? '' : 'd-none' }}" name="walkin_name" id="walkinNameInput" value="{{ $sale->walkin_name ?? 'Walk-in Customer' }}" placeholder="Enter Walk-in Name...">
                                 <select class="form-select {{ $sale->walkin_name ? 'd-none' : '' }}" id="customerSelect" name="customer" style="width:100%">
                                     @if($sale->customer_relation)
-                                        <option value="{{ $sale->customer_id }}" selected>{{ $sale->customer_relation->customer_id }} — {{ $sale->customer_relation->customer_name }}</option>
+                                        <option value="{{ $sale->customer_id }}" selected>{{ $sale->customer_relation->customer_id }} - {{ $sale->customer_relation->customer_name }}</option>
                                     @else
                                         <option value=""></option>
                                     @endif
@@ -621,12 +621,12 @@
                                             <th class="col-stock" style="width: 60px;">STOCK</th>
                                             <th class="col-qty" style="width: 85px;">QTY</th>
                                             <th class="col-size" style="width: 55px;">SIZE</th>
-                                            <th class="col-color" style="width: 65px;">COLOR</th>
+                                            <th class="col-color" style="width: 65px;">BONUS</th>
                                             <th class="col-pieces" style="width: 55px;">PCS</th>
                                             <th class="col-price-p" style="width: 85px;">PRICE</th>
                                             <th class="col-disc" style="width: 85px;">DISCOUNT</th>
                                             <th class="col-amount" style="width: 95px;">AMOUNT</th>
-                                            <th class="col-action" style="width: 34px;">×</th>
+                                            <th class="col-action" style="width: 34px;">Ã—</th>
                                         </tr>
                                     </thead>
                                     <tbody id="salesTableBody">
@@ -817,7 +817,7 @@
                                                         $vCol  = (isset($variantData['color']) && $variantData['color'] !== '-') ? $variantData['color'] : '-';
                                                         $sStr = $vSize !== '-' ? " {$vSize}" : '';
                                                         $cStr = $vCol !== '-' ? " ({$vCol})" : '';
-                                                        $variantLabel = ' — ' . $variantData['name'] . $sStr . $cStr;
+                                                        $variantLabel = ' â€” ' . $variantData['name'] . $sStr . $cStr;
                                                     }
                                                 @endphp
                                                 <tr data-size_mode="{{ $sizeMode }}"
@@ -1277,7 +1277,7 @@
                             results: data.map(function(c) {
                                 return {
                                     id: c.id,
-                                    text: (c.customer_id || '') + ' — ' + c.customer_name,
+                                    text: (c.customer_id || '') + ' - ' + c.customer_name,
                                     customer: c
                                 };
                             })
@@ -1305,11 +1305,11 @@
                 },
                 templateSelection: function(item) {
                     if (!item.customer) return item.text;
-                    return item.customer.customer_id + ' — ' + item.customer.customer_name;
+                    return item.customer.customer_id + ' - ' + item.customer.customer_name;
                 }
             });
 
-            // Party type change → reset customer only on user change
+            // Party type change â†’ reset customer only on user change
             $(document).on('change', '#partyTypeSelect', function(e) {
                 if (!e.isTrigger) {
                     $('#customerSelect').val(null).trigger('change');
@@ -1317,7 +1317,7 @@
                 }
             });
 
-            // Customer selected → load details
+            // Customer selected â†’ load details
             $('#customerSelect').on('select2:select', function(e) {
                 const id = e.params.data.id;
                 if (!id) return;
@@ -1367,9 +1367,9 @@
                 ensureSaved().then(id => window.open('{{ url('sales') }}/' + id + '/dc-thermal', '_blank'));
             });
 
-            // ══════════════════════════════════════════════════════════════
+            // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             // QUICK CUSTOMER MODAL LOGIC & EVENT HANDLERS
-            // ══════════════════════════════════════════════════════════════
+            // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             window.openCustomerModal = function(initialName = '') {
                 $('#ajaxAddCustomerForm')[0].reset();
                 let currentParty = $('#partyTypeSelect').val() || 'Main Customer';
@@ -1448,7 +1448,7 @@
                             }
                             
                             // Auto select new customer
-                            let displayText = (res.customer.customer_id ? res.customer.customer_id + ' — ' : '') + res.customer.customer_name;
+                            let displayText = (res.customer.customer_id ? res.customer.customer_id + ' - ' : '') + res.customer.customer_name;
                             let newOption = new Option(displayText, res.customer.id, true, true);
                             $('#customerSelect').append(newOption).trigger('change');
                             
@@ -1485,3 +1485,4 @@
         });
     </script>
 @endsection
+

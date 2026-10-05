@@ -1,4 +1,4 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 
 @section('content')
 <style>
@@ -533,7 +533,7 @@
         border-radius: 6px;
     }
     
-    /* ── MOBILE POS SPECIFIC STYLES (< 768px) ── */
+    /* â”€â”€ MOBILE POS SPECIFIC STYLES (< 768px) â”€â”€ */
     .mobile-pos-bottom-bar {
         display: none;
         position: fixed;
@@ -671,10 +671,10 @@
                 <!-- Category Filter Pills Bar -->
                 <div class="cat-pills-scroll" id="categoryPillsRow">
                     <button type="button" class="cat-pill active" data-mode="all"><i class="fas fa-cubes me-1"></i> All Items</button>
-                    <button type="button" class="cat-pill" data-mode="by_cartons">📦 Cartons</button>
-                    <button type="button" class="cat-pill" data-mode="by_pieces">🧩 Pieces</button>
-                    <button type="button" class="cat-pill" data-mode="by_size">📐 By Size</button>
-                    <button type="button" class="cat-pill" data-mode="by_kg">⚖ Weight (Kg)</button>
+                    <button type="button" class="cat-pill" data-mode="by_cartons">ðŸ“¦ Cartons</button>
+                    <button type="button" class="cat-pill" data-mode="by_pieces">ðŸ§© Pieces</button>
+                    <button type="button" class="cat-pill" data-mode="by_size">ðŸ“ By Size</button>
+                    <button type="button" class="cat-pill" data-mode="by_kg">âš– Weight (Kg)</button>
                 </div>
                 
                 <div class="pos-grid-container">
@@ -1102,7 +1102,7 @@
                                 <input type="text" id="manual_size" class="form-control form-control-sm" placeholder="Optional" style="border-radius: 4px; border: 1px solid #ced4da;">
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label text-dark fw-semibold small mb-1">Color</label>
+                                <label class="form-label text-dark fw-semibold small mb-1">BONUS</label>
                                 <input type="text" id="manual_color" class="form-control form-control-sm" placeholder="Optional" style="border-radius: 4px; border: 1px solid #ced4da;">
                             </div>
                             <div class="col-md-2">
@@ -2346,3 +2346,4 @@
     });
 </script>
 @endsection
+

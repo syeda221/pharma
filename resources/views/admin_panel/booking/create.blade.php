@@ -1,4 +1,4 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 @section('content')
     <style>
         .searchResults {
@@ -106,7 +106,7 @@
                                 <tr class="text-center">
                                     <th>product</th>
                                     <th>Item Code</th>
-                                    <th>Color</th>
+                                    <th>BONUS</th>
 
                                     <th>Brand</th>
                                     <th>Unit</th>
@@ -550,3 +550,4 @@ $(document).ready(function () {
         });
     });
 </script>
+

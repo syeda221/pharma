@@ -815,12 +815,12 @@
                                             <th class="col-stock" style="width: 60px;">STOCK</th>
                                             <th class="col-qty" style="width: 85px;">QTY</th>
                                             <th class="col-size" style="width: 55px;">SIZE</th>
-                                            <th class="col-color" style="width: 65px;">COLOR</th>
+                                            <th class="col-color" style="width: 65px;">BONUS</th>
                                             <th class="col-pieces" style="width: 55px;">PCS</th>
                                             <th class="col-price-p" style="width: 85px;">PRICE</th>
                                             <th class="col-disc" style="width: 85px;">DISCOUNT</th>
                                             <th class="col-amount" style="width: 95px;">AMOUNT</th>
-                                            <th class="col-action" style="width: 34px;">×</th>
+                                            <th class="col-action" style="width: 34px;">Ã—</th>
                                         </tr>
                                     </thead>
                                     <tbody id="salesTableBody">
@@ -1282,7 +1282,7 @@
                             results: data.map(function(c) {
                                 return {
                                     id: c.id,
-                                    text: (c.customer_id || '') + ' — ' + c.customer_name,
+                                    text: (c.customer_id || '') + ' - ' + c.customer_name,
                                     customer: c
                                 };
                             })
@@ -1310,14 +1310,14 @@
                 },
                 templateSelection: function(item) {
                     if (!item.customer) return item.text;
-                    return item.customer.customer_id + ' — ' + item.customer.customer_name;
+                    return item.customer.customer_id + ' - ' + item.customer.customer_name;
                 }
             });
 
             // Set initial visibility state of Customer Select / Walk-in input
             $('#partyTypeSelect').trigger('change');
 
-            // Party type change → reset customer
+            // Party type change â†’ reset customer
             $(document).on('change', '#partyTypeSelect', function() {
                 $('#customerSelect').val(null).trigger('change');
                 clearCustomerInfo();
@@ -1326,7 +1326,7 @@
             // Store active customer tier data in memory
             window.currentCustomerTiers = { medical: 0, doctor: 0, distribution: 0 };
 
-            // Customer selected → load details
+            // Customer selected â†’ load details
             $('#customerSelect').on('select2:select', function(e) {
                 const id = e.params.data.id;
                 if (!id) return;
@@ -1341,10 +1341,10 @@
                     $('#rangeBalance').val(range.toFixed(2));
 
                     // Fill info card
-                    $('#ci_code').text(d.customer_id || '—');
-                    $('#ci_name').text(d.customer_name || '—');
-                    $('#ci_mobile').text(d.mobile || '—');
-                    $('#ci_address').text(d.address || '—');
+                    $('#ci_code').text(d.customer_id || '-');
+                    $('#ci_name').text(d.customer_name || '-');
+                    $('#ci_mobile').text(d.mobile || '-');
+                    $('#ci_address').text(d.address || '-');
                     $('#ci_prev_bal').text(prev.toFixed(2));
                     $('#ci_range_bal').text(range.toFixed(2));
                     $('#customerInfoCard').removeClass('d-none');
@@ -1476,7 +1476,7 @@
                 $('#discountTierButtonGroup').addClass('d-none');
                 $('#selectedDiscountTier').val('doctor');
                 window.currentCustomerTiers = { medical: 0, doctor: 0, distribution: 0 };
-                $('#ci_code, #ci_name, #ci_mobile, #ci_address').text('—');
+                $('#ci_code, #ci_name, #ci_mobile, #ci_address').text('â€”');
                 $('#ci_prev_bal, #ci_range_bal').text('0.00');
                 $('#customerInfoCard').addClass('d-none');
                 $('#salesOfficerSelect').val('');
@@ -1506,9 +1506,9 @@
                 ensureSaved().then(id => window.open('{{ url('sales') }}/' + id + '/dc-thermal', '_blank'));
             });
 
-            // ══════════════════════════════════════════════════════════════
+            // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             // QUICK CUSTOMER MODAL LOGIC & EVENT HANDLERS
-            // ══════════════════════════════════════════════════════════════
+            // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             window.openCustomerModal = function(initialName = '') {
                 $('#ajaxAddCustomerForm')[0].reset();
                 let currentParty = $('#partyTypeSelect').val() || 'Main Customer';
@@ -1588,7 +1588,7 @@
                             }
                             
                             // Auto select new customer in Select2
-                            let displayText = (res.customer.customer_id ? res.customer.customer_id + ' — ' : '') + res.customer.customer_name;
+                            let displayText = (res.customer.customer_id ? res.customer.customer_id + ' - ' : '') + res.customer.customer_name;
                             let newOption = new Option(displayText, res.customer.id, true, true);
                             $('#customerSelect').append(newOption).trigger('change');
                             
@@ -1619,9 +1619,9 @@
                 });
             });
 
-            // ══════════════════════════════════════════════════════════════
+            // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             // DYNAMIC INVOICE SERIES & PREFIX GENERATOR LOGIC (INSTANT 0ms)
-            // ══════════════════════════════════════════════════════════════
+            // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
             let currentInvoicePrefix = "{{ $activePrefix ?? 'INV' }}";
 
             function fetchNextInvoiceNo(prefix) {
@@ -1675,7 +1675,7 @@
                 let formData = $(this).serialize();
                 let btn = $('#btnSaveSeries');
 
-                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Saving…');
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Savingâ€¦');
 
                 $.ajax({
                     url: "{{ route('invoice_series.store') }}",
@@ -1784,3 +1784,4 @@
         </div>
     </div>
 @endsection
+

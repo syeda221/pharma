@@ -265,7 +265,6 @@
                     <tr>
                         <th class="text-center" style="width: 80px;">Id</th>
                         <th class="text-start">Type Name</th>
-                        <th class="text-center" style="width: 260px;">Discount Tiers (%)</th>
                         <th class="text-start">Description</th>
                         <th class="text-start" style="width: 140px;">Status</th>
                         <th class="text-end pe-4" style="width: 160px;">Action</th>
@@ -276,19 +275,6 @@
                         <tr>
                             <td class="text-center id"><span class="customertype-id-badge">#{{ $type->id }}</span></td>
                             <td class="text-start name fw-semibold text-dark">{{ $type->name }}</td>
-                            <td class="text-center discount_pct">
-                                <div class="d-flex justify-content-center gap-1 flex-wrap">
-                                    <span class="badge bg-info text-white px-2 py-1" title="Medical Discount" style="font-size: 0.75rem;">
-                                        <i class="fas fa-clinic-medical me-1"></i>Med: {{ number_format($type->discount_medical ?? 0, 1) }}%
-                                    </span>
-                                    <span class="badge bg-success text-white px-2 py-1" title="Doctor Discount" style="font-size: 0.75rem;">
-                                        <i class="fas fa-user-md me-1"></i>Doc: {{ number_format($type->discount_doctor > 0 ? $type->discount_doctor : ($type->discount_percentage ?? 0), 1) }}%
-                                    </span>
-                                    <span class="badge bg-primary text-white px-2 py-1" title="Distribution Discount" style="font-size: 0.75rem;">
-                                        <i class="fas fa-boxes me-1"></i>Dist: {{ number_format($type->discount_distribution ?? 0, 1) }}%
-                                    </span>
-                                </div>
-                            </td>
                             <td class="text-start description text-muted">{{ $type->description ?: 'N/A' }}</td>
                             <td class="text-start">
                                 @if($type->is_static)
@@ -332,14 +318,6 @@
                         @endif
                     </div>
                     <div class="customertype-mcard-title mb-1 name">{{ $type->name }}</div>
-                    <div class="d-flex flex-column gap-1 mb-2">
-                        <span class="small text-muted fw-bold">Discount Tiers:</span>
-                        <div class="d-flex gap-1 flex-wrap">
-                            <span class="badge bg-info text-white">Med: {{ number_format($type->discount_medical ?? 0, 1) }}%</span>
-                            <span class="badge bg-success text-white">Doc: {{ number_format($type->discount_doctor > 0 ? $type->discount_doctor : ($type->discount_percentage ?? 0), 1) }}%</span>
-                            <span class="badge bg-primary text-white">Dist: {{ number_format($type->discount_distribution ?? 0, 1) }}%</span>
-                        </div>
-                    </div>
                     <div class="customertype-mcard-desc description">{{ $type->description ?: 'N/A' }}</div>
                     <div class="customertype-mcard-actions">
                         @can('customer_types.edit')
@@ -382,48 +360,7 @@
                         <input type="text" name="name" class="form-control px-3 py-2" id="name" placeholder="Enter type name (e.g. Doctor, Staff, Wholesale, Retailer)..." required style="border-radius: 10px; border: 1.5px solid #cbd5e1;" />
                     </div>
 
-                    {{-- 3-Tier Discount Structure --}}
-                    <div class="mb-3 p-3 bg-light rounded-3 border">
-                        <label class="form-label fw-bold text-dark mb-2 d-flex align-items-center gap-2">
-                            <i class="fas fa-percentage text-primary"></i> 3-Tier Discount Options (%)
-                        </label>
-                        <p class="text-muted small mb-3">Is customer type ke liye teeno discount rates set karein. Sale screen par aap 1-click toggle se koi bhi discount apply kar sakenge:</p>
 
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label for="discount_medical" class="form-label fw-semibold text-dark small d-flex align-items-center gap-1">
-                                    <i class="fas fa-clinic-medical text-info"></i> Medical Discount
-                                </label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" min="0" max="100" name="discount_medical" class="form-control text-end fw-bold" id="discount_medical" placeholder="0.00" value="0" style="border-radius: 8px 0 0 8px;" />
-                                    <span class="input-group-text bg-info text-white fw-bold" style="border-radius: 0 8px 8px 0;">%</span>
-                                </div>
-                                <small class="text-muted" style="font-size: 0.72rem;">Medical store / pharmacy rate</small>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label for="discount_doctor" class="form-label fw-semibold text-dark small d-flex align-items-center gap-1">
-                                    <i class="fas fa-user-md text-success"></i> Doctor Discount
-                                </label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" min="0" max="100" name="discount_doctor" class="form-control text-end fw-bold" id="discount_doctor" placeholder="0.00" value="0" style="border-radius: 8px 0 0 8px;" />
-                                    <span class="input-group-text bg-success text-white fw-bold" style="border-radius: 0 8px 8px 0;">%</span>
-                                </div>
-                                <small class="text-muted" style="font-size: 0.72rem;">Doctor / Clinic default rate</small>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label for="discount_distribution" class="form-label fw-semibold text-dark small d-flex align-items-center gap-1">
-                                    <i class="fas fa-boxes text-primary"></i> Distribution Discount
-                                </label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" min="0" max="100" name="discount_distribution" class="form-control text-end fw-bold" id="discount_distribution" placeholder="0.00" value="0" style="border-radius: 8px 0 0 8px;" />
-                                    <span class="input-group-text bg-primary text-white fw-bold" style="border-radius: 0 8px 8px 0;">%</span>
-                                </div>
-                                <small class="text-muted" style="font-size: 0.72rem;">Distributor / Wholesale rate</small>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="mb-3">
                         <label for="description" class="form-label fw-semibold text-dark small">Description</label>
@@ -482,9 +419,6 @@
         } else {
             $('#name').prop('readonly', false);
         }
-        $('#discount_medical').val(medDisc);
-        $('#discount_doctor').val(docDisc);
-        $('#discount_distribution').val(distDisc);
         $('#description').val(description);
         $('#modalTitleText').text('Edit Customer Type');
         $("#customerTypeModal").modal("show");
@@ -493,9 +427,6 @@
     $('#reset').on('click', function() {
         $('#edit_id').val('');
         $('#name').val('').prop('readonly', false);
-        $('#discount_medical').val(0);
-        $('#discount_doctor').val(0);
-        $('#discount_distribution').val(0);
         $('#description').val('');
         $('#modalTitleText').text('Add Customer Type');
     });
@@ -513,3 +444,4 @@
     });
 </script>
 @endsection
+

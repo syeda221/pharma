@@ -1,12 +1,12 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 @section('content')
 
 <style>
-    /* ── LAYOUT RESET: make sure page uses full width cleanly ── */
+    /* â”€â”€ LAYOUT RESET: make sure page uses full width cleanly â”€â”€ */
     .erp-page { background: #f8fafc; min-height: calc(100vh - 80px); padding: 20px 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
     .erp-page .container-fluid { max-width: 100%; box-sizing: border-box; }
 
-    /* ── ERP Product Page – Premium Design System ── */
+    /* â”€â”€ ERP Product Page â€“ Premium Design System â”€â”€ */
     :root {
         --erp-primary:    #6366f1;
         --erp-primary-lt: #eef2ff;
@@ -28,7 +28,7 @@
         --erp-shadow-md:  0 8px 30px rgba(15,23,42,0.08);
     }
 
-    /* ── Stats Cards ── */
+    /* â”€â”€ Stats Cards â”€â”€ */
     .stat-card {
         background: var(--erp-card-bg);
         border-radius: var(--erp-radius);
@@ -50,7 +50,7 @@
     .stat-card .stat-value { font-size: 1.4rem; font-weight: 800; color: var(--erp-text); line-height: 1.2; }
     .stat-card .stat-sub   { font-size: .72rem; color: var(--erp-muted); margin-top: 2px; }
 
-    /* ── Main Card ── */
+    /* â”€â”€ Main Card â”€â”€ */
     .erp-card {
         background: var(--erp-card-bg);
         border-radius: var(--erp-radius);
@@ -70,7 +70,7 @@
     .erp-card-header .page-title { font-size: 1.05rem; font-weight: 800; color: var(--erp-text); margin: 0; display: flex; align-items: center; gap: 8px; }
     .erp-card-header .page-sub   { font-size: .78rem; color: var(--erp-muted); margin: 2px 0 0 0; }
     
-    /* ── Header action buttons group ── */
+    /* â”€â”€ Header action buttons group â”€â”€ */
     .erp-hdr-actions {
         display: flex;
         align-items: center;
@@ -78,7 +78,7 @@
         gap: 8px;
     }
 
-    /* ── Filter Panel ── */
+    /* â”€â”€ Filter Panel â”€â”€ */
     .filter-panel {
         background: #f8fafc;
         border-bottom: 1px solid var(--erp-border);
@@ -174,7 +174,7 @@
         display: inline-flex; align-items: center; gap: 4px;
     }
 
-    /* ── Header action buttons ── */
+    /* â”€â”€ Header action buttons â”€â”€ */
     .btn-hdr {
         border-radius: 8px; padding: 8px 14px; font-size: .82rem; font-weight: 600;
         display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
@@ -189,7 +189,7 @@
     .btn-hdr-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border-color: #6366f1; box-shadow: 0 2px 6px rgba(99,102,241,0.25); }
     .btn-hdr-primary:hover { background: #4338ca; border-color: #4338ca; color: #fff; transform: translateY(-1px); }
 
-    /* ── Table ── */
+    /* â”€â”€ Table â”€â”€ */
     .erp-table-wrap { padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     #productTable {
         width: 100% !important;
@@ -279,7 +279,7 @@
         white-space: nowrap;
     }
 
-    /* Action buttons – single row, compact */
+    /* Action buttons â€“ single row, compact */
     .action-group {
         display: flex; align-items: center; gap: 4px;
         flex-wrap: nowrap;
@@ -302,28 +302,28 @@
     .btn-act-act     { background: var(--erp-success-lt); color: var(--erp-success); border-color: #a7f3d0; }
     .btn-act-act:hover     { background: var(--erp-success); color: #fff; }
 
-    /* ── Pagination ── */
+    /* â”€â”€ Pagination â”€â”€ */
     .erp-pagination { padding: 14px 20px; border-top: 1px solid var(--erp-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
     .erp-pagination .showing { font-size: .78rem; color: var(--erp-muted); }
     .erp-pagination .page-link { border-radius: 6px !important; border-color: var(--erp-border) !important; color: var(--erp-text) !important; font-size: .8rem; padding: 5px 12px; }
     .erp-pagination .page-item.active .page-link { background: var(--erp-primary) !important; border-color: var(--erp-primary) !important; color: #fff !important; }
 
-    /* ── Actions column – force min-width so buttons never wrap ── */
+    /* â”€â”€ Actions column â€“ force min-width so buttons never wrap â”€â”€ */
     #productTable th:last-child,
     #productTable td:last-child { min-width: 190px; }
 
-    /* ── Select checkbox ── */
+    /* â”€â”€ Select checkbox â”€â”€ */
     input[type="checkbox"].row-check { width: 16px; height: 16px; accent-color: var(--erp-primary); cursor: pointer; }
 
-    /* ── DataTable override ── */
+    /* â”€â”€ DataTable override â”€â”€ */
     div.dataTables_wrapper div.dataTables_length select { width: 75px !important; }
     .dataTables_wrapper .dataTables_info,
     .dataTables_wrapper .dataTables_paginate { display: none !important; }
     .dataTables_wrapper { overflow-x: visible !important; }
 
-    /* ════════════════════════════════════════════════════
-       MOBILE RESPONSIVE  ≤ 768px
-    ════════════════════════════════════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       MOBILE RESPONSIVE  â‰¤ 768px
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     @media (max-width: 768px) {
         .erp-page { padding: 12px 0; }
         .container-fluid { padding-left: 10px !important; padding-right: 10px !important; }
@@ -388,7 +388,7 @@
         .erp-pagination nav { width: 100%; }
     }
 
-    /* ── Mobile Product Cards ── */
+    /* â”€â”€ Mobile Product Cards â”€â”€ */
     .mobile-product-cards { display: none; padding: 14px; }
 
     @media (max-width: 768px) {
@@ -443,7 +443,7 @@
     <div class="main-content-inner">
         <div class="container-fluid px-3 py-3">
 
-    {{-- ── Stats Row ── --}}
+    {{-- â”€â”€ Stats Row â”€â”€ --}}
     <div class="stat-grid mb-4" style="display:grid; grid-template-columns: repeat(4,1fr); gap:16px;">
         <div class="stat-card">
             <div class="stat-icon" style="background:#eef2ff; color:#4f46e5;"><i class="fas fa-box-open"></i></div>
@@ -485,7 +485,7 @@
         </div>
     </div>
 
-    {{-- ── Main Card ── --}}
+    {{-- â”€â”€ Main Card â”€â”€ --}}
     <div class="erp-card">
 
         {{-- Card Header --}}
@@ -513,7 +513,7 @@
         </div>
 
 
-        {{-- ── Filter Panel ── --}}
+        {{-- â”€â”€ Filter Panel â”€â”€ --}}
         <div class="filter-panel">
             <div class="filter-heading"><i class="fas fa-sliders-h"></i> Filters &amp; Search</div>
             <form method="GET" action="{{ route('product') }}" id="filterForm">
@@ -525,7 +525,7 @@
                         <div class="search-wrap">
                             <i class="fas fa-search search-icon"></i>
                             <input type="text" name="search" value="{{ request('search') }}"
-                                class="erp-finput" placeholder="Item name, code, barcode…">
+                                class="erp-finput" placeholder="Item name, code, barcodeâ€¦">
                         </div>
                     </div>
 
@@ -560,8 +560,8 @@
                         <label class="erp-flabel">Status</label>
                         <select name="status" class="erp-finput">
                             <option value="">All Status</option>
-                            <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>✅ Active</option>
-                            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>⛔ Inactive</option>
+                            <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>âœ… Active</option>
+                            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>â›” Inactive</option>
                         </select>
                     </div>
 
@@ -596,13 +596,13 @@
                     @if(request('status'))
                         <span class="filter-chip"><i class="fas fa-circle" style="font-size:.6rem;"></i> {{ ucfirst(request('status')) }}</span>
                     @endif
-                    <span style="font-size:.72rem; color:var(--erp-muted);">— <strong>{{ $products->total() }}</strong> result(s)</span>
+                    <span style="font-size:.72rem; color:var(--erp-muted);">â€” <strong>{{ $products->total() }}</strong> result(s)</span>
                 </div>
                 @endif
             </form>
         </div>
 
-        {{-- ── Success Alert ── --}}
+        {{-- â”€â”€ Success Alert â”€â”€ --}}
         @if (session()->has('success'))
         <div class="mx-4 mt-3 alert d-flex align-items-center gap-2" style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:8px; color:#065f46; font-size:.85rem; padding:10px 14px;">
             <i class="fas fa-check-circle" style="color:#059669; font-size:16px;"></i>
@@ -612,7 +612,7 @@
         @endif
 
 
-        {{-- ── Table ── --}}
+        {{-- â”€â”€ Table â”€â”€ --}}
         <div class="erp-table-wrap table-responsive">
 
                 <table id="productTable" class="table table-hover align-middle nowrap" style="width:100%">
@@ -727,7 +727,7 @@
                 </table>
         </div>{{-- /erp-table-wrap --}}
 
-        {{-- ── Mobile Product Cards (Shown only on mobile < 768px for 100% user-friendly view) ── --}}
+        {{-- â”€â”€ Mobile Product Cards (Shown only on mobile < 768px for 100% user-friendly view) â”€â”€ --}}
         <div class="mobile-product-cards">
             @foreach ($products as $product)
                 @php
@@ -821,10 +821,10 @@
         </div>{{-- /mobile-product-cards --}}
 
 
-        {{-- ── Pagination ── --}}
+        {{-- â”€â”€ Pagination â”€â”€ --}}
         <div class="erp-pagination">
             <span class="showing">
-                Showing <strong>{{ $products->firstItem() }}–{{ $products->lastItem() }}</strong>
+                Showing <strong>{{ $products->firstItem() }}â€“{{ $products->lastItem() }}</strong>
                 of <strong>{{ $products->total() }}</strong> products
             </span>
             {{ $products->appends(request()->query())->links() }}
@@ -836,9 +836,9 @@
 </div>{{-- /main-content --}}
 
 
-{{-- ══════════════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      IMPORT MODAL
-══════════════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-labelledby="importModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content border-0 shadow-lg" style="border-radius:16px; overflow:hidden;">
@@ -898,9 +898,9 @@
     </div>
 </div>
 
-{{-- ══════════════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      PRODUCT VIEW MODAL
-══════════════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div class="modal fade" id="productViewModal" tabindex="-1" aria-labelledby="productViewModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius:16px; overflow:hidden;">
@@ -920,7 +920,7 @@
                     <div class="spinner-border text-primary" role="status">
                         <span class="sr-only">Loading...</span>
                     </div>
-                    <p class="text-muted small mt-2">Fetching product details…</p>
+                    <p class="text-muted small mt-2">Fetching product detailsâ€¦</p>
                 </div>
                 <div id="modalContentRow" class="table-responsive">
                     <table class="table table-hover align-middle mb-0 text-center" style="font-size:.88rem;">
@@ -928,7 +928,7 @@
                             <tr>
                                 <th class="text-start ps-4" style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Variant Name</th>
                                 <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Size</th>
-                                <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Color</th>
+                                <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Bonus</th>
                                 <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Stock</th>
                                 <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Sale Price</th>
                                 <th style="font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#475569;">Purch Price</th>
@@ -955,17 +955,17 @@
 <script>
 $(document).ready(function () {
 
-    // ── Open Import Modal ──
+    // â”€â”€ Open Import Modal â”€â”€
     $('#openImportModalBtn').on('click', function () {
         $('#importModal').modal('show');
     });
 
-    // ── Select All ──
+    // â”€â”€ Select All â”€â”€
     $('#selectAll').click(function() {
         $('.selectProduct').prop('checked', this.checked);
     });
 
-    // ── DataTable init ── (responsive:false – we use CSS horizontal scroll instead)
+    // â”€â”€ DataTable init â”€â”€ (responsive:false â€“ we use CSS horizontal scroll instead)
     let table = $('#productTable').DataTable({
         responsive: false,
         paging:     false,
@@ -977,12 +977,12 @@ $(document).ready(function () {
         columnDefs: [{ targets: [0, 8], orderable: false, searchable: false }]
     });   // DataTable closes here
 
-    // ── Select All ──
+    // â”€â”€ Select All â”€â”€
     $('#selectAll').click(function() {
         $('.selectProduct').prop('checked', this.checked);
     });
 
-    // ── View Product Modal ──
+    // â”€â”€ View Product Modal â”€â”€
     $(document).on('click', '.viewProductBtn', function() {
         let productId = $(this).data('id');
         $('#modalContentRow').addClass('d-none');
@@ -1037,7 +1037,7 @@ $(document).ready(function () {
                 let alertDef  = product.alert_carton_quantity != null ? product.alert_carton_quantity + '' : '-';
                 let salePrice = product.size_mode === 'by_size' ? product.price_per_m2 : (product.sale_price_per_piece || product.sale_price_per_box || 0);
                 let purchPrice= product.size_mode === 'by_size' ? product.purchase_price_per_m2 : (product.purchase_price_per_piece || 0);
-                let priceLabel= product.size_mode === 'by_size' ? '/m²' : '/pc';
+                let priceLabel= product.size_mode === 'by_size' ? '/mÂ²' : '/pc';
 
                 function stockBadgeHtml(qty, alert) {
                     let isLow = qty > 0 && alert != null && qty <= alert;
@@ -1057,11 +1057,11 @@ $(document).ready(function () {
                         let vBarcode  = v.barcode || v.variant_barcode || (product.barcode_path ?? product.item_code);
                         let vUnit     = v.unit || v.variant_unit || (product.unit ? product.unit.name : 'Pcs');
 
-                        let colorBadge = (vColorVal && vColorVal !== '-') ? `<span style="background:#e2e8f0;border-radius:4px;padding:2px 6px;font-size:.72rem;">${vColorVal}</span>` : '<span style="color:#94a3b8;">—</span>';
+                        let colorBadge = (vColorVal && vColorVal !== '-') ? `<span style="background:#e2e8f0;border-radius:4px;padding:2px 6px;font-size:.72rem;">${vColorVal}</span>` : '<span style="color:#94a3b8;">â€”</span>';
                         let alertQty  = (vAlert != null && vAlert != 0) ? vAlert : '-';
                         
                         if (product.size_mode === 'by_kg' && v.conv_factor != 1 && !v.unit) vUnit = 'Pcs';
-                        let vPriceLabel = product.size_mode === 'by_size' ? '/m²' : '/' + vUnit;
+                        let vPriceLabel = product.size_mode === 'by_size' ? '/mÂ²' : '/' + vUnit;
 
                         tbody.append(`<tr>
                             <td class="text-start ps-4 fw-semibold">${vName}</td>
@@ -1077,7 +1077,7 @@ $(document).ready(function () {
                 } else {
                     colorList.forEach((color, index) => {
                         let barcode   = (product.barcode_path ?? product.item_code ?? '') + (index > 0 ? '-' + String(index+1).padStart(2,'0') : '');
-                        let colorBadge = (color && color !== '-') ? `<span style="background:#e2e8f0;border-radius:4px;padding:2px 6px;font-size:.72rem;">${color}</span>` : '<span style="color:#94a3b8;">—</span>';
+                        let colorBadge = (color && color !== '-') ? `<span style="background:#e2e8f0;border-radius:4px;padding:2px 6px;font-size:.72rem;">${color}</span>` : '<span style="color:#94a3b8;">â€”</span>';
                         tbody.append(`<tr>
                             <td class="text-start ps-4 fw-semibold">${product.item_name}</td>
                             <td>${sizeStr}</td>
@@ -1098,7 +1098,7 @@ $(document).ready(function () {
         });
     });
 
-    // ── Toggle Active ──
+    // â”€â”€ Toggle Active â”€â”€
     $(document).on('click', '.toggle-active-btn', function () {
         const btn        = $(this);
         const productId  = btn.data('id');
@@ -1150,7 +1150,7 @@ $(document).ready(function () {
         });
     });
 
-    // ── Subcategory fetch helpers ──
+    // â”€â”€ Subcategory fetch helpers â”€â”€
     $('#categorySelect').change(function() {
         var id = $(this).val();
         $('#subCategorySelect').html('<option value="">Loading...</option>');
@@ -1166,6 +1166,7 @@ $(document).ready(function () {
         }
     });
 
-});  // ── end $(document).ready ──
+});  // â”€â”€ end $(document).ready â”€â”€
 </script>
 @endsection
+

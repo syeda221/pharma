@@ -577,3 +577,7 @@ Route::get('/notifications/fetch', [\App\Http\Controllers\SystemNotificationCont
 require __DIR__.'/auth.php';
 
 require __DIR__.'/hr.php';
+
+// Distributor Reports
+Route::get('/distributor-reports', [App\Http\Controllers\DistributorReportController::class, 'index'])->middleware('auth')->name('distributor-reports.index');
+Route::get('/distributor-reports/create', [App\Http\Controllers\DistributorReportController::class, 'create'])->middleware('auth')->name('distributor-reports.create');

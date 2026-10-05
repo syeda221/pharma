@@ -195,7 +195,7 @@
                             <select class="modern-control" name="customer_type" required>
                                 @foreach(\App\Models\CustomerType::orderBy('name')->get() as $type)
                                     <option value="{{ $type->name }}" {{ $customer->customer_type == $type->name ? 'selected' : '' }}>
-                                        {{ $type->name }} (Med: {{ number_format($type->discount_medical ?? 0, 0) }}% | Doc: {{ number_format($type->discount_doctor > 0 ? $type->discount_doctor : ($type->discount_percentage ?? 0), 0) }}% | Dist: {{ number_format($type->discount_distribution ?? 0, 0) }}%)
+                                        {{ $type->name }}
                                     </option>
                                 @endforeach
                             </select>
@@ -221,7 +221,7 @@
                         </div>
 
                         <!-- Financials / Address Line 2 -->
-                        <div class="input-group-modern" style="grid-column: span 4;">
+                        <div class="input-group-modern" style="grid-column: span 6;">
                             <label class="modern-label">Address</label>
                             <input type="text" class="modern-control" name="address"
                                 placeholder="Shop No, Street Area, City"
@@ -250,17 +250,31 @@
                                 <option value="Sunday" {{ $customer->reminder_day == 'Sunday' ? 'selected' : '' }}>Sunday</option>
                             </select>
                         </div>
-                        <div class="input-group-modern" style="grid-column: span 2;">
-                            <label class="modern-label text-primary">Custom Disc % <small class="text-muted fw-normal">(Override)</small></label>
-                            <input type="number" step="0.01" min="0" max="100" class="modern-control" name="custom_discount_percentage"
-                                value="{{ $customer->custom_discount_percentage }}" placeholder="Type default" style="border-color: #93c5fd; background: #f0f9ff;">
+
+                        <!-- Section 2: Discount Tiers -->
+                        <div class="section-label">Discounts (%)</div>
+
+                        <div class="input-group-modern" style="grid-column: span 4;">
+                            <label class="modern-label text-info"><i class="fas fa-clinic-medical"></i> Medical Disc %</label>
+                            <input type="number" step="0.01" min="0" max="100" class="modern-control" name="custom_discount_medical"
+                                value="{{ $customer->custom_discount_medical ?? 0 }}" placeholder="0.00" style="border-color: #93c5fd; background: #f0f9ff;">
+                        </div>
+                        <div class="input-group-modern" style="grid-column: span 4;">
+                            <label class="modern-label text-success"><i class="fas fa-user-md"></i> Doctor Disc %</label>
+                            <input type="number" step="0.01" min="0" max="100" class="modern-control" name="custom_discount_doctor"
+                                value="{{ $customer->custom_discount_doctor ?? 0 }}" placeholder="0.00" style="border-color: #86efac; background: #f0fdf4;">
+                        </div>
+                        <div class="input-group-modern" style="grid-column: span 4;">
+                            <label class="modern-label text-primary"><i class="fas fa-boxes"></i> Dist Disc %</label>
+                            <input type="number" step="0.01" min="0" max="100" class="modern-control" name="custom_discount_distribution"
+                                value="{{ $customer->custom_discount_distribution ?? 0 }}" placeholder="0.00" style="border-color: #93c5fd; background: #eff6ff;">
                         </div>
 
                         {{-- ============ COMMENTED OUT FIELDS ============ --}}
                         {{-- Urdu Name --}}
                         {{-- <div class="input-group-modern" style="grid-column: span 2;">
                             <label class="modern-label ms-auto"
-                                style="font-family: 'Noto Nastaliq Urdu', serif;">کسٹمر کا نام</label>
+                                style="font-family: 'Noto Nastaliq Urdu', serif;">Ú©Ø³Ù¹Ù…Ø± Ú©Ø§ Ù†Ø§Ù…</label>
                             <input type="text" class="modern-control text-end" dir="rtl" name="customer_name_ur"
                                 value="{{ $customer->customer_name_ur }}"
                                 style="font-family: 'Noto Nastaliq Urdu', serif;">
@@ -352,3 +366,4 @@
         });
     </script>
 @endsection
+

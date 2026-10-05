@@ -1530,7 +1530,8 @@ class ReportingController extends Controller
     public function sale_report()
     {
         $customers = \App\Models\Customer::orderBy('customer_name')->get();
-        return view('admin_panel.reporting.sale_report', compact('customers'));
+        $zones = \App\Models\Zone::orderBy('zone')->get();
+        return view('admin_panel.reporting.sale_report', compact('customers', 'zones'));
     }
 
     public function fetchsaleReport(Request $request)
@@ -1539,6 +1540,8 @@ class ReportingController extends Controller
             $start = $request->start_date;
             $end = $request->end_date;
             $customerId = $request->customer_id;
+            $customerType = $request->customer_type;
+            $zoneId = $request->zone_id;
 
             // Use Eloquent to handle relations and new table structure
             $query = \App\Models\Sale::with(['customer_relation', 'items.product', 'returns']);
@@ -1556,6 +1559,18 @@ class ReportingController extends Controller
 
             if ($customerId && $customerId !== 'all') {
                 $query->where('customer_id', $customerId);
+            }
+
+            if ($customerType && $customerType !== 'all') {
+                $query->whereHas('customer_relation', function($q) use ($customerType) {
+                    $q->where('customer_type', $customerType);
+                });
+            }
+
+            if ($zoneId && $zoneId !== 'all') {
+                $query->whereHas('customer_relation', function($q) use ($zoneId) {
+                    $q->where('zone', $zoneId);
+                });
             }
 
             $sales = $query->orderBy('created_at', 'desc')->get();

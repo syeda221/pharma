@@ -1,4 +1,4 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 @section('content')
 <style>
     .searchResults {
@@ -132,7 +132,7 @@
                         <tr class="text-center">
                             <th>Product</th>
                             <th>Item Code</th>
-                            <th>Color</th>
+                            <th>BONUS</th>
                             <th>Brand</th>
                             <th>Unit</th>
                             <th>Price</th>
@@ -256,7 +256,7 @@
             const price = num($row.find('.price').val());
             const disc = num($row.find('.item_disc').val()); // per item discount (not total)
 
-            // total = (qty × price) – (qty × disc)
+            // total = (qty Ã— price) â€“ (qty Ã— disc)
             let total = (qty * price) - (qty * disc);
             if (total < 0) total = 0;
 
@@ -266,7 +266,7 @@
 
         function recalcSummary() {
             let billAmount = 0; // sum of all row totals
-            let itemDiscount = 0; // total of (qty × disc) from all rows
+            let itemDiscount = 0; // total of (qty Ã— disc) from all rows
             let totalQty = 0;
 
             $('#saleItems tr').each(function() {
@@ -297,7 +297,7 @@
 
 
         // Events
-        // Row inputs change → recalc
+        // Row inputs change â†’ recalc
         $(document).on('input', '#saleItems .quantity, #saleItems .price, #saleItems .item_disc', function() {
             const $row = $(this).closest('tr');
             recalcRow($row);
@@ -592,7 +592,7 @@
 <script>
     // Select2 Color Init on focus
     $(document).ready(function() {
-        // 1️⃣ Page load par saare color select2 initialize karo
+        // 1ï¸âƒ£ Page load par saare color select2 initialize karo
         $('.select2-color').each(function() {
             $(this).select2({
                 placeholder: "Select Color",
@@ -601,7 +601,7 @@
             });
         });
 
-        // 2️⃣ Jab naye row aaye to tab bhi initialize karo
+        // 2ï¸âƒ£ Jab naye row aaye to tab bhi initialize karo
         $('#saleItems').on('focus', '.select2-color', function() {
             if (!$(this).hasClass("select2-hidden-accessible")) {
                 $(this).select2({

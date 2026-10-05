@@ -87,6 +87,20 @@ class SaleController extends Controller
             $query->where('customer_id', $request->customer_id);
         }
 
+        // Apply Customer Type Filter
+        if ($request->filled('customer_type')) {
+            $query->whereHas('customer_relation', function($q) use ($request) {
+                $q->where('customer_type', $request->customer_type);
+            });
+        }
+
+        // Apply Zone Filter
+        if ($request->filled('zone_id')) {
+            $query->whereHas('customer_relation', function($q) use ($request) {
+                $q->where('zone', $request->zone_id);
+            });
+        }
+
         // Order By (Most recent / newest on top)
         $orderBy = $request->input('order_by', 'id');
         if ($orderBy === 'invoice_no') {
@@ -117,8 +131,9 @@ class SaleController extends Controller
 
         // Load all customers for filter dropdown
         $customers = Customer::orderBy('customer_name')->get();
+        $zones = \App\Models\Zone::all();
 
-        return view('admin_panel.sale.index', compact('sales', 'customers', 'stats'));
+        return view('admin_panel.sale.index', compact('sales', 'customers', 'stats', 'zones'));
     }
 
     public function addsale()

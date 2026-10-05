@@ -1,38 +1,51 @@
-<?php
+﻿<?php
 require __DIR__.'/vendor/autoload.php';
-$app = require_once __DIR__.'/bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+\ = require_once __DIR__.'/bootstrap/app.php';
+\ = \->make(Illuminate\Contracts\Console\Kernel::class);
+\->bootstrap();
 
-use App\Models\Product;
-use App\Models\WarehouseStock;
-use Illuminate\Support\Facades\DB;
+\App\Models\DistributorStock::truncate();
 
-echo "Syncing all stock from stock_movements...\n";
-
-$products = Product::all();
-$count = 0;
-foreach ($products as $p) {
-    $in = DB::table('stock_movements')->where('product_id', $p->id)->where('type', 'in')->sum('qty');
-    $out = DB::table('stock_movements')->where('product_id', $p->id)->where('type', 'out')->sum('qty');
-    
-    // In SaleController, OUT movements are inserted as negative qty. 
-    // Let's check if $out is negative. If so, we just add them.
-    // Or we just sum all 'qty' regardless of type if negative is used for out.
-    $net_from_sum = DB::table('stock_movements')->where('product_id', $p->id)->sum('qty');
-    
-    if ($net_from_sum > 0) {
-        $stock = WarehouseStock::firstOrNew([
-            'product_id' => $p->id,
-            'warehouse_id' => 1
-        ]);
-        
-        $stock->total_pieces = $net_from_sum;
-        
-        $ppb = $p->pieces_per_box > 0 ? $p->pieces_per_box : 1;
-        $stock->quantity = round($stock->total_pieces / $ppb, 2);
-        $stock->save();
-        $count++;
+// 1. Add Sales
+\ = \App\Models\SaleItem::with('sale')->get();
+foreach(\ as \) {
+    \ = \->sale;
+    if (\ && \->customer_id) {
+        \ = \App\Models\DistributorStock::firstOrCreate([
+            'distributor_id' => \->customer_id,
+            'product_id' => \->product_id
+        ], ['current_quantity' => 0]);
+        \->current_quantity += \->total_pieces;
+        \->save();
     }
 }
 
-echo "Synced $count products.\n";
+// 2. Subtract Returns
+\ = \App\Models\SaleReturnItem::with('saleReturn')->get();
+foreach(\ as \) {
+    \ = \->saleReturn;
+    if (\ && \->customer_id) {
+        \ = \App\Models\DistributorStock::where('distributor_id', \->customer_id)
+            ->where('product_id', \->product_id)->first();
+        if (\) {
+            \->current_quantity -= \->total_pieces;
+            \->save();
+        }
+    }
+}
+
+// 3. Subtract Submitted Reports
+\ = \App\Models\DistributorSalesReportItem::with('report')->get();
+foreach(\ as \) {
+    \ = \->report;
+    if (\ && \->distributor_id) {
+        \ = \App\Models\DistributorStock::where('distributor_id', \->distributor_id)
+            ->where('product_id', \->product_id)->first();
+        if (\) {
+            \->current_quantity -= \->sold_quantity;
+            \->save();
+        }
+    }
+}
+echo 'Done';
+?>

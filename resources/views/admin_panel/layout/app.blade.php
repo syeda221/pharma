@@ -1,15 +1,25 @@
-{{-- @include('admin_panel.layout.header') --}}
-
-{{-- @yield('content')
-@include('admin_panel.layout.footer') --}}
-
-
-
 <!DOCTYPE html>
 <html class="no-js" lang="zxx">
 
 <head>
     <style>
+        /* Top Header Zero Margin Reset */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .container-scroller {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .rt_nav_header,
+        .rt_nav_header.horizontal-layout,
+        .rt_nav_header.horizontal-layout .top_nav {
+            margin: 0 !important;
+            padding-top: 0 !important;
+            top: 0 !important;
+        }
+
         /* =========================================================
            ERP Mega Menu & Navbar Responsive Styling
            ========================================================= */
@@ -525,7 +535,7 @@
     @vite(['resources/js/app.js'])
 </head>
 
-<body>
+<body style="margin: 0; padding: 0;">
     <!--[if lt IE 8]>
 <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
 <![endif]-->
@@ -951,6 +961,11 @@
                                                                     class="fas fa-file-invoice-dollar"></i>
                                                                 Receipt Vouchers</a></li>
                                                     @endcan
+                                                    @can('sales.view')
+                                                        <li><a href="{{ route('distributor-reports.index') }}"><i
+                                                                    class="fas fa-chart-line"></i>
+                                                                Distributor Reports</a></li>
+                                                    @endcan
                                                 </ul>
                                             </div>
                                         @endcanany
@@ -1372,7 +1387,7 @@
         }
     </script>
 
-    {{-- ✅ ANTI-FREEZE FIX: Remove stuck Bootstrap modal backdrops & overlays --}}
+    {{-- âœ… ANTI-FREEZE FIX: Remove stuck Bootstrap modal backdrops & overlays --}}
     <script>
         (function () {
             // Run cleanup on every page load
@@ -1452,7 +1467,7 @@
     <style>
         body.modal-open { padding-right: 0 !important; overflow: auto !important; }
         .modal-backdrop.fade:not(.show) { display: none !important; pointer-events: none; }
-        /* FIX: Do NOT disable pointer-events on swal2-container — it blocks button clicks */
+        /* FIX: Do NOT disable pointer-events on swal2-container â€” it blocks button clicks */
         /* Only hide container when truly not visible (swal2-hide means it's animating out) */
         .swal2-container.swal2-hide { pointer-events: none !important; }
         /* Ensure SweetAlert2 is always on top */
@@ -1548,3 +1563,5 @@
 </body>
 
 </html>
+
+

@@ -456,6 +456,25 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    <div class="col-6 col-md-2 mt-2">
+                                        <label class="form-label mb-1">Customer Type</label>
+                                        <select class="form-select" name="customer_type" id="filter_customer_type">
+                                            <option value="">All Types</option>
+                                            <option value="doctor">Doctor</option>
+                                            <option value="company">Company</option>
+                                            <option value="normal">Normal</option>
+                                            <option value="distributor">Distributor</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6 col-md-2 mt-2">
+                                        <label class="form-label mb-1">Zone</label>
+                                        <select class="form-select" name="zone_id" id="filter_zone_id">
+                                            <option value="">All Zones</option>
+                                            @foreach($zones as $z)
+                                                <option value="{{ $z->id }}">{{ $z->zone }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                     <div class="col-12 d-flex justify-content-end gap-2 mt-2">
                                         <button type="button" class="btn btn-premium-secondary px-3" id="btnReset">
                                             <i class="fas fa-undo me-1"></i>Reset
@@ -670,6 +689,8 @@
                 $('#filter_bill_no').val('');
                 $('#filter_reference').val('');
                 $('#quick_filter').val('custom');
+                $('#filter_customer_type').val('');
+                $('#filter_zone_id').val('');
                 
                 // 2. Clear Select2 Customer Dropdown properly
                 if ($('.select2-customer').length > 0) {

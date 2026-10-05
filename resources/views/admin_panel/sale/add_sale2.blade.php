@@ -1,4 +1,4 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 @section('content')
     <style>
         .searchResults {
@@ -107,7 +107,7 @@
                                 <tr class="text-center">
                                     <th>Product</th>
                                     <th>Item Code</th>
-                                    <th>Color</th>
+                                    <th>BONUS</th>
                                     <th>Brand</th>
                                     <th>Unit</th>
                                     <th style="width: 80px;">Stock</th>
@@ -518,3 +518,4 @@
         });
     });
 </script>
+

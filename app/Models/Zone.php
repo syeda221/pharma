@@ -8,5 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class Zone extends Model
 {
     use HasFactory;
-    protected $fillable = ['zone'];
+
+    protected $guarded = [];
+
+    public function customers()
+    {
+        return $this->hasMany(Customer::class);
+    }
 }

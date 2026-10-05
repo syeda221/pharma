@@ -1,4 +1,4 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 
 @section('content')
 <style>
@@ -181,7 +181,7 @@
                 <div class="flex-grow-1" style="min-width: 180px;">
                     <div class="position-relative">
                         <i class="fas fa-search position-absolute text-muted" style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; pointer-events: none;"></i>
-                        <input type="text" class="form-control form-control-sm searchProductInput" placeholder="Search Product / Invoice / Customer…" style="height: 34px; font-size: .80rem; border-radius: 6px; padding-left: 30px;">
+                        <input type="text" class="form-control form-control-sm searchProductInput" placeholder="Search Product / Invoice / Customerâ€¦" style="height: 34px; font-size: .80rem; border-radius: 6px; padding-left: 30px;">
                     </div>
                 </div>
 
@@ -229,7 +229,7 @@
                     </div>
                     <div class="col-12 mb-2">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Search</label>
-                        <input type="text" class="form-control form-control-sm searchProductInput" placeholder="Search Product / Invoice / Customer…" style="font-size: 11px;">
+                        <input type="text" class="form-control form-control-sm searchProductInput" placeholder="Search Product / Invoice / Customerâ€¦" style="font-size: 11px;">
                     </div>
                     <div class="col-6">
                         <button type="button" class="btn btn-primary w-100 py-1.5 fw-bold rounded-2 shadow-sm btnSearchTrigger" style="font-size: 12px;">
@@ -352,7 +352,7 @@
         <div class="card-body p-0">
             <div class="loader text-center py-5" style="display:none;">
                 <div class="spinner-border text-primary" role="status"></div>
-                <div class="small text-muted mt-2 fw-bold">Loading sales data…</div>
+                <div class="small text-muted mt-2 fw-bold">Loading sales dataâ€¦</div>
             </div>
 
             <div class="sale-table-wrap">
@@ -383,7 +383,7 @@
         <div class="text-center py-4 text-muted card border-0 shadow-sm rounded-3 bg-white">
             <div class="card-body py-4">
                 <i class="fas fa-spinner fa-spin fa-2x mb-2 text-secondary"></i>
-                <p class="mb-0 small fw-bold">Loading sales data…</p>
+                <p class="mb-0 small fw-bold">Loading sales dataâ€¦</p>
             </div>
         </div>
     </div>
@@ -401,7 +401,7 @@
         // Sync Filter Inputs between Desktop & Mobile
         $('.startDateInput').on('change', function() { $('.startDateInput').val($(this).val()); });
         $('.endDateInput').on('change', function() { $('.endDateInput').val($(this).val()); });
-        $('.customerInput').on('change', function() { $('.customerInput').val($(this).val()); });
+        $('.customerTypeInput, .zoneInput, .customerInput').on('change', function() { $('.customerInput').val($(this).val()); });
         $('.searchProductInput').on('input', function() { $('.searchProductInput').val($(this).val()); });
 
         // Core Load Report Function
@@ -409,10 +409,12 @@
             let start = $('#start_date_desk').val() || $('#start_date_mob').val();
             let end   = $('#end_date_desk').val() || $('#end_date_mob').val();
             let customer = $('#customer_id_desk').val() || $('#customer_id_mob').val() || 'all';
+            let customerType = $('#customer_type_desk').val() || $('#customer_type_mob').val() || 'all';
+            let zoneId = $('#zone_id_desk').val() || $('#zone_id_mob').val() || 'all';
 
             $(".loader").show();
             $(".sale-table-wrap").hide();
-            $('#saleMobileContainer').html('<div class="text-center py-4 text-muted card border-0 shadow-sm rounded-3 bg-white"><div class="card-body py-4"><i class="fas fa-spinner fa-spin fa-2x mb-2 text-primary"></i><p class="mb-0 small fw-bold">Loading sales data…</p></div></div>');
+            $('#saleMobileContainer').html('<div class="text-center py-4 text-muted card border-0 shadow-sm rounded-3 bg-white"><div class="card-body py-4"><i class="fas fa-spinner fa-spin fa-2x mb-2 text-primary"></i><p class="mb-0 small fw-bold">Loading sales dataâ€¦</p></div></div>');
 
             $.ajax({
                 url: "{{ route('report.sale.fetch') }}",
@@ -420,7 +422,9 @@
                 data: {
                     start_date: start,
                     end_date: end,
-                    customer_id: customer
+                    customer_id: customer,
+                    customer_type: customerType,
+                    zone_id: zoneId
                 },
                 success: function(res) {
                     $(".loader").hide();

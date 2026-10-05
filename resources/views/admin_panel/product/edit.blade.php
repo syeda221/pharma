@@ -1,4 +1,4 @@
-@extends('admin_panel.layout.app')
+﻿@extends('admin_panel.layout.app')
 
 @section('content')
     {{-- 
@@ -320,7 +320,7 @@
                                                     <tr>
                                                         <th class="text-uppercase text-muted p-1" style="min-width: 140px; font-size: 10px;">Variant Name</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 80px; font-size: 10px;">Size</th>
-                                                        <th class="text-uppercase text-muted p-1" style="width: 80px; font-size: 10px;">Color</th>
+                                                        <th class="text-uppercase text-muted p-1" style="width: 80px; font-size: 10px;">Bonus</th>
                                                         <th class="text-uppercase text-muted p-1" style="width: 75px; font-size: 10px;">Unit</th>
                                                         <th class="text-uppercase text-muted p-1 text-center" style="width: 90px; font-size: 10px;">Initial Stock</th>
                                                         <th class="text-uppercase text-muted p-1 text-center conv-col" id="convFactorHeader" style="width: 95px; font-size: 10px;">Pcs / Carton</th>
@@ -667,7 +667,7 @@
                         <input type="hidden" name="variant_is_base[]" value="1">
                     </td>
                     <td class="p-1"><input type="text" class="form-control-pro form-control-sm" name="variant_size[]" value="${escapeHtml(sizeVal)}" placeholder="Size"></td>
-                    <td class="p-1"><input type="text" class="form-control-pro form-control-sm" name="variant_color[]" value="${escapeHtml(colorVal)}" placeholder="Color"></td>
+                    <td class="p-1"><input type="text" class="form-control-pro form-control-sm" name="variant_color[]" value="${escapeHtml(colorVal)}" placeholder="Bonus"></td>
                     <td class="p-1">
                         <select class="form-select form-select-sm fw-bold text-primary px-1" name="variant_unit[]" style="font-size:11px;">
                             <option value="Carton" ${uNorm==='carton'||(isCartonMode && !v)?'selected':''}>Carton</option>
@@ -846,7 +846,7 @@
                         <input type="hidden" name="variant_is_base[]" value="0">
                     </td>
                     <td class="p-1"><input type="text" class="form-control-pro form-control-sm" name="variant_size[]" value="${escapeHtml(sizeVal)}" placeholder="Size (e.g. Small, 30cm)"></td>
-                    <td class="p-1"><input type="text" class="form-control-pro form-control-sm" name="variant_color[]" value="${escapeHtml(colorVal)}" placeholder="Color"></td>
+                    <td class="p-1"><input type="text" class="form-control-pro form-control-sm" name="variant_color[]" value="${escapeHtml(colorVal)}" placeholder="Bonus"></td>
                     <td class="p-1">
                         <select class="form-select form-select-sm px-1 fw-bold text-dark" name="variant_unit[]" style="font-size:11px;">
                             <option value="Carton" ${uNorm==='carton'||(isCartonMode && !v)?'selected':''}>Carton</option>
@@ -867,7 +867,7 @@
                     </td>
                     <td class="p-0 piece-wt-only-col">
                         <div style="position:relative;">
-                            <input type="number" class="form-control-pro form-control-sm piece-wt-display" name="variant_weight_per_piece[]" step="any" value="${escapeHtml(weightVal)}" placeholder="—" readonly title="Auto = Conv Factor × 1000" style="padding-right:18px; border-radius:0; border:1px solid #dee2e6; height:30px; background:#f0fff4; color:#198754; font-weight:600;">
+                            <input type="number" class="form-control-pro form-control-sm piece-wt-display" name="variant_weight_per_piece[]" step="any" value="${escapeHtml(weightVal)}" placeholder="â€”" readonly title="Auto = Conv Factor Ã— 1000" style="padding-right:18px; border-radius:0; border:1px solid #dee2e6; height:30px; background:#f0fff4; color:#198754; font-weight:600;">
                             <span style="position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:9px;color:#198754;pointer-events:none;font-weight:700;">g</span>
                         </div>
                     </td>
@@ -1366,7 +1366,7 @@
                             <input type="text" class="mob-input mob-sync" data-field="variant_size[]" value="${escapeHtml(sizeVal)}" placeholder="XL, M...">
                         </div>
                         <div class="mob-field-group">
-                            <div class="mob-label">Color</div>
+                            <div class="mob-label">Bonus</div>
                             <input type="text" class="mob-input mob-sync" data-field="variant_color[]" value="${escapeHtml(colorVal)}" placeholder="Red, Blue...">
                         </div>
                     </div>
@@ -1388,13 +1388,13 @@
                     <div class="mob-section-label"><i class="fas fa-boxes me-1"></i>Stock & Pricing</div>
 
                     <div class="mob-field-group">
-                        <div class="mob-label">Initial Stock ${isBase ? '' : (isWeightMode ? '🔵 Auto' : '')}</div>
+                        <div class="mob-label">Initial Stock ${isBase ? '' : (isWeightMode ? 'ðŸ”µ Auto' : '')}</div>
                         <input type="number" class="mob-input mob-sync ${!isBase && isWeightMode ? 'auto-field mob-stock-auto' : ''}" data-field="variant_stock[]" value="${escapeHtml(stockVal)}" placeholder="${!isBase && isWeightMode ? 'Auto' : '0'}" ${!isBase && isWeightMode ? 'readonly' : ''} step="any">
                     </div>
 
                     ${unitDropdown && unitDropdown.value === 'by_cartons' ? `
                     <div class="mob-field-group">
-                        <div class="mob-label" style="color:#0284c7;font-weight:700;">📦 Pieces Per Carton</div>
+                        <div class="mob-label" style="color:#0284c7;font-weight:700;">ðŸ“¦ Pieces Per Carton</div>
                         <input type="number" class="mob-input conv-field mob-sync mob-conv-inp" data-field="variant_conv_factor[]" value="${escapeHtml(convVal || '0')}" placeholder="0" autocomplete="off" style="border:1.5px solid #0284c7;">
                     </div>
                     ` : ''}
@@ -1402,13 +1402,13 @@
                     ${isWeightMode && !isBase ? `
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="mob-field-group">
-                            <div class="mob-label" style="color:#059669;">🔢 Conv Factor</div>
+                            <div class="mob-label" style="color:#059669;">ðŸ”¢ Conv Factor</div>
                             <input type="text" inputmode="decimal" class="mob-input conv-field mob-sync mob-conv-inp" data-field="variant_conv_factor[]" value="${escapeHtml(convVal)}" placeholder="0.000" autocomplete="off">
                         </div>
                         <div class="mob-field-group">
-                            <div class="mob-label" style="color:#059669;">⚖ Piece Wt (g)</div>
+                            <div class="mob-label" style="color:#059669;">âš– Piece Wt (g)</div>
                             <div class="mob-suffix-wrap">
-                                <input type="number" class="mob-input mob-sync mob-piecewt" data-field="variant_weight_per_piece[]" value="${escapeHtml(pieceWtVal)}" placeholder="—" readonly style="background:#f0fdf4;color:#059669;font-weight:700;">
+                                <input type="number" class="mob-input mob-sync mob-piecewt" data-field="variant_weight_per_piece[]" value="${escapeHtml(pieceWtVal)}" placeholder="â€”" readonly style="background:#f0fdf4;color:#059669;font-weight:700;">
                                 <span class="mob-suffix">g</span>
                             </div>
                         </div>
@@ -1460,7 +1460,7 @@
                 </div>
             `;
 
-            // Event: sync mob input → desktop table
+            // Event: sync mob input â†’ desktop table
             card.querySelectorAll('.mob-sync').forEach(inp => {
                 inp.addEventListener('input', () => mobSyncToDesktop(card, idx));
             });
@@ -1468,7 +1468,7 @@
                 if (sel.tagName === 'SELECT') sel.addEventListener('change', () => mobSyncToDesktop(card, idx));
             });
 
-            // Conv factor → auto piece wt + stock + prices on mobile
+            // Conv factor â†’ auto piece wt + stock + prices on mobile
             const convInp = card.querySelector('.mob-conv-inp');
             if (convInp) {
                 convInp.addEventListener('input', () => {
@@ -1517,7 +1517,7 @@
             return card;
         }
 
-        // ---- Sync mobile card fields → desktop table row ----
+        // ---- Sync mobile card fields â†’ desktop table row ----
         function mobSyncToDesktop(card, idx) {
             const tr = variantsBody.children[idx];
             if (!tr) return;
@@ -1606,3 +1606,4 @@
         window.mobDeleteCard = mobDeleteCard;
     </script>
 @endsection
+
