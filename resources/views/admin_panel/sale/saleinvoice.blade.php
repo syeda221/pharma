@@ -622,27 +622,31 @@
 
                 <tr>
 
-                    <th class="text-start" style="width: 38%">
+                    <th class="text-start" style="width: 32%">
                         Description
                     </th>
 
-                    <th class="text-center" style="width: 14%">
+                    <th class="text-center" style="width: 10%">
+                        Bonus
+                    </th>
+
+                    <th class="text-center" style="width: 12%">
                         Shipped
                     </th>
 
-                    <th class="text-center" style="width: 10%">
+                    <th class="text-center" style="width: 9%">
                         UOM
                     </th>
 
-                    <th class="text-end" style="width: 10%">
+                    <th class="text-end" style="width: 11%">
                         Price
                     </th>
 
-                    <th class="text-end" style="width: 10%">
+                    <th class="text-end" style="width: 11%">
                         Disc
                     </th>
 
-                    <th class="text-end" style="width: 13%">
+                    <th class="text-end" style="width: 15%">
                         Net Amount
                     </th>
 
@@ -767,6 +771,15 @@
 
                             </div>
 
+                        </td>
+
+
+                        <!-- BONUS -->
+                        <td class="text-center fw-bold" style="vertical-align: middle;">
+                            @php
+                                $bonusVal = (!empty($item['bonus_val']) && $item['bonus_val'] !== '-') ? $item['bonus_val'] : ((!empty($item['color_val']) && $item['color_val'] !== '-') ? $item['color_val'] : '');
+                            @endphp
+                            {{ $bonusVal !== '' ? $bonusVal : '-' }}
                         </td>
 
 

@@ -383,11 +383,12 @@
                         } elseif (($item['size_mode'] ?? '') == 'by_size' && ($item['height'] ?? 0) > 0 && ($item['width'] ?? 0) > 0) {
                             $sizeStr = number_format($item['width'], 0) . 'x' . number_format($item['height'], 0);
                         }
-                        $colorStr = '';
-                        if (!empty($item['color_val']) && $item['color_val'] !== '-') {
-                            $colorStr = $item['color_val'];
+                        $bonusStr = '';
+                        $bVal = (!empty($item['bonus_val']) && $item['bonus_val'] !== '-') ? $item['bonus_val'] : ((!empty($item['color_val']) && $item['color_val'] !== '-') ? $item['color_val'] : '');
+                        if ($bVal) {
+                            $bonusStr = 'Bonus: ' . $bVal;
                         }
-                        $variantStr = implode(' | ', array_filter([$sizeStr, $colorStr]));
+                        $variantStr = implode(' | ', array_filter([$sizeStr, $bonusStr]));
                     @endphp
                     <tr>
                         <td style="width: 6%;">{{ $loop->iteration }}</td>

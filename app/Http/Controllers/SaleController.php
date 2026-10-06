@@ -1370,17 +1370,24 @@ class SaleController extends Controller
 
                 $colorVal = $request->color[$index] ?? null;
                 $sizeVal = $request->size_display[$index] ?? ($request->size[$index] ?? null);
+                $bonusVal = $request->bonus_display[$index] ?? ($request->bonus[$index] ?? ($request->color_display[$index] ?? null));
 
-                if ($sizeVal !== null && $sizeVal !== '' && $sizeVal !== '-') {
+                $vData = [];
+                if (!empty($colorVal)) {
+                    $b64 = base64_decode($colorVal, true);
+                    $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($colorVal, true);
+                }
+                if (!is_array($vData)) {
                     $vData = [];
-                    if (!empty($colorVal)) {
-                        $b64 = base64_decode($colorVal, true);
-                        $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($colorVal, true);
-                    }
-                    if (!is_array($vData)) {
-                        $vData = [];
-                    }
+                }
+                if ($sizeVal !== null && $sizeVal !== '' && $sizeVal !== '-') {
                     $vData['size'] = $sizeVal;
+                }
+                if ($bonusVal !== null && $bonusVal !== '' && $bonusVal !== '-') {
+                    $vData['bonus'] = $bonusVal;
+                    $vData['color'] = $bonusVal;
+                }
+                if (!empty($vData)) {
                     $colorVal = base64_encode(json_encode($vData));
                 }
 
@@ -2145,7 +2152,8 @@ class SaleController extends Controller
                 'discount_amount' => (float) $item->discount_amount,
                 'total' => (float) $item->total,
                 'variant_name' => $variant['name'] ?? '',
-                'color_val' => $variant['color'] ?? '',
+                'color_val' => $variant['bonus'] ?? ($variant['color'] ?? ''),
+                'bonus_val' => $variant['bonus'] ?? ($variant['color'] ?? ''),
                 'size_val' => $variant['size'] ?? '',
                 'variant_unit' => $variantUnit,
                 'weight_per_piece' => $variant['weight_per_piece'] ?? $item->product->weight_per_piece ?? 0,

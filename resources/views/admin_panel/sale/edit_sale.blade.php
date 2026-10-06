@@ -880,12 +880,13 @@
                                                         <input type="hidden" class="pack-qty" name="pack_qty[]" value="{{ $ppb }}">
                                                     </td>
                                                     
-                                                    <!-- Color -->
+                                                    <!-- Bonus (Editable) -->
                                                     <td class="col-color">
                                                         <input type="text"
-                                                            class="form-control color-display text-center input-readonly"
-                                                            readonly value="{{ $vCol ?? '-' }}"
-                                                            tabindex="-1" placeholder="-">
+                                                            class="form-control color-display text-center"
+                                                            name="bonus_display[]"
+                                                            value="{{ ($vCol ?? '') !== '-' ? ($vCol ?? '') : '' }}"
+                                                            placeholder="0">
                                                     </td>
 
                                                     <!-- Total Pieces -->
@@ -975,7 +976,7 @@
                                                     <input type="number" class="form-control loose-pcs-input text-end" name="loose_qty[]" placeholder="" min="0" value="">
                                                 </td>
                                                 <td class="col-size"><input type="text" class="form-control size-display text-center" name="size_display[]" placeholder="-"><input type="hidden" class="pack-qty" name="pack_qty[]" value="1"></td>
-                                                <td class="col-color"><input type="text" class="form-control color-display text-center input-readonly" readonly tabindex="-1" placeholder="-"></td>
+                                                <td class="col-color"><input type="text" class="form-control color-display text-center" name="bonus_display[]" placeholder="0"></td>
                                                 <td class="col-pieces"><input type="text" class="form-control total-pieces text-end input-readonly fw-semibold" name="total_pieces[]" readonly placeholder="0" tabindex="-1"><input type="hidden" class="sales-qty" name="qty[]" value="0"></td>
                                                 <td class="col-price-p">
                                                     <div class="d-flex align-items-center gap-1">

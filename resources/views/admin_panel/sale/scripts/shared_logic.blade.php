@@ -179,9 +179,9 @@
        <input type="hidden" class="pack-qty" name="pack_qty[]" value="1">
     </td>
 
-    <!-- Color (Display - readonly) -->
+    <!-- Bonus (Editable) -->
     <td class="col-color">
-      <input type="text" class="form-control color-display text-center input-readonly" readonly tabindex="-1" placeholder="-">
+      <input type="text" class="form-control color-display text-center" name="bonus_display[]" placeholder="0">
     </td>
 
     <!-- Total Pieces (Calculated) -->
