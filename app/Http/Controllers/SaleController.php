@@ -20,7 +20,7 @@ class SaleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Sale::with(['customer_relation', 'items.product', 'returns'])
+        $query = Sale::with(['customer_relation', 'items.product', 'returns.items'])
             ->whereIn('sale_status', ['draft', 'booked', 'posted', 'returned']);
 
         // Apply Status Filter
@@ -111,9 +111,57 @@ class SaleController extends Controller
 
         $sales = $query->get();
 
+        // Calculate actual net amount and actual sold qty per sale (excluding returns)
+        $sales->each(function ($sale) {
+            $isExchange = \Illuminate\Support\Str::startsWith($sale->reference, 'Exchange for');
+
+            // Sum of returned net amounts from sale_returns
+            $returnedAmount = $sale->returns ? (float) $sale->returns->sum('net_amount') : 0;
+            $sale->total_returned = $returnedAmount;
+
+            // Sum of returned quantity (pieces)
+            $returnedQty = 0;
+            if ($sale->returns && $sale->returns->count() > 0) {
+                foreach ($sale->returns as $ret) {
+                    if ($ret->items) {
+                        $returnedQty += (float) $ret->items->sum('qty');
+                    }
+                }
+            }
+            $sale->returned_qty = $returnedQty;
+
+            $origQty = $sale->total_items > 0 ? (float) $sale->total_items : (float) $sale->qty;
+            $sale->effective_qty = max(0, $origQty - $returnedQty);
+
+            if ($isExchange) {
+                $collected = (float)$sale->cash - (float)$sale->change;
+                $refunded = 0;
+                if ($collected <= 0) {
+                    $refundPayment = \App\Models\CustomerPayment::where('note', 'Refund Paid for POS Exchange #'.$sale->invoice_no)->first();
+                    if ($refundPayment) {
+                        $refunded = (float)$refundPayment->amount;
+                    }
+                }
+                $sale->effective_net = $collected > 0 ? $collected : ($refunded > 0 ? -$refunded : 0);
+            } else {
+                if ($sale->sale_status === 'returned' || $sale->sale_status == 1) {
+                    if ($returnedAmount > 0) {
+                        $sale->effective_net = max(0, (float)$sale->total_net - $returnedAmount);
+                    } else {
+                        // Fully returned
+                        $sale->effective_net = 0;
+                        $sale->effective_qty = 0;
+                        $sale->total_returned = (float)$sale->total_net;
+                    }
+                } else {
+                    $sale->effective_net = max(0, (float)$sale->total_net - $returnedAmount);
+                }
+            }
+        });
+
         $stats = [
             'total_count' => $sales->count(),
-            'total_net' => (float) $sales->sum('total_net'),
+            'total_net' => (float) $sales->sum('effective_net'),
             'total_discount' => (float) $sales->sum('total_extradiscount'),
             'posted_count' => $sales->where('sale_status', 'posted')->count(),
             'draft_count' => $sales->where('sale_status', 'draft')->count(),

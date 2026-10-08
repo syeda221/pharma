@@ -30,7 +30,7 @@
             $statusBadge = '<span class="badge badge-success border border-success">Sale</span>';
         }
 
-        if ($sale->returns && $sale->returns->count() > 0) {
+        if (($sale->returns && $sale->returns->count() > 0) && $sale->sale_status !== 'returned' && $sale->sale_status != 1) {
             $statusBadge .= '<br><small class="badge badge-danger border border-danger mt-1"><i class="fas fa-undo-alt me-1"></i> Partial Return</small>';
         }
 
@@ -46,6 +46,19 @@
             if ($refundPayment) {
                 $refunded = $refundPayment->amount;
             }
+        }
+
+        $origQty = $sale->total_items > 0 ? (float)$sale->total_items : (float)$sale->qty;
+        $retQty = isset($sale->returned_qty) ? $sale->returned_qty : ($sale->returns ? $sale->returns->flatMap->items->sum('qty') : 0);
+        $effQty = isset($sale->effective_qty) ? $sale->effective_qty : max(0, $origQty - $retQty);
+
+        $retNet = isset($sale->total_returned) ? $sale->total_returned : ($sale->returns ? (float)$sale->returns->sum('net_amount') : 0);
+        if (isset($sale->effective_net)) {
+            $effNet = $sale->effective_net;
+        } elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1) {
+            $effNet = $retNet > 0 ? max(0, (float)$sale->total_net - $retNet) : 0;
+        } else {
+            $effNet = max(0, (float)$sale->total_net - $retNet);
         }
     @endphp
 
@@ -73,7 +86,20 @@
             {{ \Illuminate\Support\Str::limit($pNames, 40) }}
         </td>
         <td class="text-center font-monospace">
-            {{ $sale->total_items > 0 ? $sale->total_items : $sale->qty }}
+            @if ($sale->sale_status === 'returned' || $sale->sale_status == 1)
+                @if ($effQty > 0)
+                    <span class="fw-bold">{{ number_format($effQty, 2) }}</span>
+                    <small class="text-danger d-block" style="font-size: 10px;">(-{{ number_format($retQty > 0 ? $retQty : ($origQty - $effQty), 2) }} ret)</small>
+                @else
+                    <span class="text-danger fw-bold">0.00</span>
+                    <small class="text-muted d-block text-decoration-line-through" style="font-size: 10px;">{{ number_format($origQty, 2) }}</small>
+                @endif
+            @elseif ($retQty > 0)
+                <span class="fw-bold">{{ number_format($effQty, 2) }}</span>
+                <small class="text-danger d-block" style="font-size: 10px;">(-{{ number_format($retQty, 2) }} ret)</small>
+            @else
+                {{ number_format($origQty, 2) }}
+            @endif
         </td>
         <td class="text-end fw-bold text-dark font-monospace">
             Rs. {{ number_format($gross_subtotal, 2) }}
@@ -98,18 +124,29 @@
                 <span class="text-muted">Rs. 0.00</span>
             @endif
         </td>
-        <td class="text-end text-success fw-bold font-monospace">
+        <td class="text-end fw-bold font-monospace">
             @if (isset($isExchange) && $isExchange)
                 @if ($collected > 0)
-                    Rs. {{ number_format($collected, 2) }}
+                    <span class="text-success">Rs. {{ number_format($collected, 2) }}</span>
                 @elseif ($refunded > 0)
                     <span class="text-danger">-Rs. {{ number_format($refunded, 2) }}</span>
                 @else
-                    Rs. 0.00
+                    <span class="text-muted">Rs. 0.00</span>
                 @endif
                 <br><span class="badge badge-info text-white border border-info px-1 py-0 mt-1" style="font-size: 10px;"><i class="fas fa-exchange-alt me-1"></i>Exchange</span>
+            @elseif ($sale->sale_status === 'returned' || $sale->sale_status == 1)
+                @if ($effNet > 0)
+                    <span class="text-success">Rs. {{ number_format($effNet, 2) }}</span>
+                    <small class="text-danger d-block" style="font-size: 10px;">(-Rs. {{ number_format($retNet > 0 ? $retNet : ((float)$sale->total_net - $effNet), 2) }} ret)</small>
+                @else
+                    <span class="text-danger">Rs. 0.00</span>
+                    <small class="text-muted d-block text-decoration-line-through" style="font-size: 10px;">(Rs. {{ number_format($sale->total_net, 2) }})</small>
+                @endif
+            @elseif ($retNet > 0)
+                <span class="text-success">Rs. {{ number_format($effNet, 2) }}</span>
+                <small class="text-danger d-block" style="font-size: 10px;">(-Rs. {{ number_format($retNet, 2) }} ret)</small>
             @else
-                Rs. {{ number_format($sale->total_net, 2) }}
+                <span class="text-success">Rs. {{ number_format($sale->total_net, 2) }}</span>
             @endif
         </td>
         <td class="text-nowrap small text-muted">
