@@ -101,30 +101,99 @@
                 {{ number_format($origQty, 2) }}
             @endif
         </td>
-        <td class="text-end fw-bold text-dark font-monospace">
-            Rs. {{ number_format($gross_subtotal, 2) }}
-        </td>
-        <td class="text-end text-dark font-monospace">
-            Rs. {{ number_format($inline_val, 2) }}
-            @if ($inline_val > 0)
-                <div class="text-muted small mt-1" style="font-size: 10px;">({{ number_format($inline_pct, 1) }}%)</div>
+        <td class="text-right fw-bold text-dark font-monospace" style="text-align: right !important;">
+            @php
+                $effGross = isset($sale->effective_gross) ? $sale->effective_gross : $gross_subtotal;
+            @endphp
+            @if ($sale->sale_status === 'returned' || $sale->sale_status == 1)
+                @if ($effGross > 0)
+                    <span>Rs. {{ number_format($effGross, 2) }}</span>
+                    <small class="text-danger d-block" style="font-size: 10px;">(-Rs. {{ number_format($gross_subtotal - $effGross, 2) }} ret)</small>
+                @else
+                    <span class="text-danger">Rs. 0.00</span>
+                    <small class="text-muted d-block text-decoration-line-through" style="font-size: 10px;">(Rs. {{ number_format($gross_subtotal, 2) }})</small>
+                @endif
+            @elseif ($retNet > 0 && $effGross < $gross_subtotal)
+                <span>Rs. {{ number_format($effGross, 2) }}</span>
+                <small class="text-danger d-block" style="font-size: 10px;">(-Rs. {{ number_format($gross_subtotal - $effGross, 2) }} ret)</small>
+            @else
+                Rs. {{ number_format($gross_subtotal, 2) }}
             @endif
         </td>
-        <td class="text-end text-dark font-monospace">
+        <td class="text-right font-monospace align-middle" style="text-align: right !important;">
+            @if ($inline_val > 0)
+                <div class="d-flex align-items-center justify-content-end gap-1">
+                    <span class="fw-bold text-dark font-monospace" style="font-size: 13px;">Rs. {{ number_format($inline_val, 2) }}</span>
+                    <span class="badge bg-danger text-white rounded-pill px-1.5 py-0 fw-bold" style="font-size: 9.5px;">-{{ number_format($inline_pct, 1) }}%</span>
+                </div>
+
+                @php
+                    // Multi-Tier Discount Breakdown (Medical, Doctor, Distribution)
+                    $tierBreakdowns = [];
+                    $tiers = optional($sale->customer_relation)->discount_tiers ?? [];
+                    $savedTierStr = $sale->discount_tier ?? '';
+                    $activeTiersArray = !empty($savedTierStr) ? array_map('trim', explode(',', $savedTierStr)) : [];
+
+                    if (empty($activeTiersArray) && $inline_pct > 0 && !empty($tiers)) {
+                        $mVal = (float)($tiers['medical'] ?? 0);
+                        $dVal = (float)($tiers['doctor'] ?? 0);
+                        $distVal = (float)($tiers['distribution'] ?? 0);
+                        $targetDisc = round($inline_pct, 2);
+
+                        if (round($mVal + $dVal + $distVal, 2) === $targetDisc && $mVal > 0 && $dVal > 0 && $distVal > 0) {
+                            $activeTiersArray = ['medical', 'doctor', 'distribution'];
+                        } elseif (round($mVal + $distVal, 2) === $targetDisc && $mVal > 0 && $distVal > 0) {
+                            $activeTiersArray = ['medical', 'distribution'];
+                        } elseif (round($mVal + $dVal, 2) === $targetDisc && $mVal > 0 && $dVal > 0) {
+                            $activeTiersArray = ['medical', 'doctor'];
+                        } elseif (round($dVal + $distVal, 2) === $targetDisc && $dVal > 0 && $distVal > 0) {
+                            $activeTiersArray = ['doctor', 'distribution'];
+                        }
+                    }
+
+                    if (count($activeTiersArray) > 1 && $gross_subtotal > 0 && $inline_val > 0) {
+                        foreach ($activeTiersArray as $t) {
+                            $pct = (float)($tiers[$t] ?? 0);
+                            if ($pct > 0) {
+                                $amt = round(($gross_subtotal * $pct) / 100, 2);
+                                $tierBreakdowns[] = [
+                                    'name' => $t === 'medical' ? 'Medical' : ($t === 'doctor' ? 'Doctor' : 'Distribution'),
+                                    'short' => $t === 'medical' ? 'Med' : ($t === 'doctor' ? 'Doc' : 'Dist'),
+                                    'color' => $t === 'medical' ? '#0284c7' : ($t === 'doctor' ? '#059669' : '#4f46e5'),
+                                    'pct' => $pct,
+                                    'amt' => $amt,
+                                ];
+                            }
+                        }
+                    }
+                @endphp
+
+                @if(count($tierBreakdowns) > 1)
+                    <div class="text-muted mt-0.5" style="font-size: 9.5px; line-height: 1.2;" title="@foreach($tierBreakdowns as $item){{ $item['name'] }}: {{ $item['pct'] }}% (Rs. {{ number_format($item['amt'], 0) }}){{ !$loop->last ? ' | ' : '' }}@endforeach">
+                        @foreach($tierBreakdowns as $item)
+                            <span style="color: {{ $item['color'] }}; font-weight: 600;">{{ $item['short'] }}:{{ $item['pct'] }}%</span>@if(!$loop->last) + @endif
+                        @endforeach
+                    </div>
+                @endif
+            @else
+                <span class="text-muted font-monospace small">Rs. 0.00</span>
+            @endif
+        </td>
+        <td class="text-right font-monospace align-middle" style="text-align: right !important;">
             @if ($sale->total_extradiscount > 0)
                 @php
                     $add_val = $sale->total_extradiscount;
                     $add_pct = $bill_amount > 0 ? ($add_val / $bill_amount) * 100 : 0;
                 @endphp
-                <span class="badge rounded-pill border px-2 py-1" style="background-color: #fff8e1; color: #b78103; border-color: #ffe082 !important; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fas fa-tag" style="font-size: 10px;"></i> Rs. {{ number_format($add_val, 2) }}
-                </span>
-                <div class="text-muted small mt-1" style="font-size: 10px;">({{ number_format($add_pct, 1) }}%)</div>
+                <div class="d-flex align-items-center justify-content-end gap-1">
+                    <span class="fw-bold text-dark font-monospace" style="font-size: 13px;">Rs. {{ number_format($add_val, 2) }}</span>
+                    <span class="badge bg-warning text-dark rounded-pill px-1.5 py-0 fw-bold" style="font-size: 9.5px;">-{{ number_format($add_pct, 1) }}%</span>
+                </div>
             @else
-                <span class="text-muted">Rs. 0.00</span>
+                <span class="text-muted font-monospace small">Rs. 0.00</span>
             @endif
         </td>
-        <td class="text-end fw-bold font-monospace">
+        <td class="text-right fw-bold font-monospace align-middle" style="text-align: right !important;">
             @if (isset($isExchange) && $isExchange)
                 @if ($collected > 0)
                     <span class="text-success">Rs. {{ number_format($collected, 2) }}</span>

@@ -7,23 +7,68 @@
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            transition: all 0.2s ease-in-out;
+            padding: 18px 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             height: 100%;
+            position: relative;
         }
         .sale-stat-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+            border-color: #cbd5e1;
+        }
+        .sale-stat-card.card-accent-gross {
+            border-top: 3.5px solid #2563eb;
+        }
+        .sale-stat-card.card-accent-discount {
+            border-top: 3.5px solid #dc2626;
+        }
+        .sale-stat-card.card-accent-net {
+            border-top: 3.5px solid #10b981;
+        }
+        .sale-stat-card.card-accent-status {
+            border-top: 3.5px solid #0284c7;
         }
         .sale-stat-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 20px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        /* 3-Tier Discount Micro Cards */
+        .tier-kpi-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 14px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tier-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.07);
+        }
+        .tier-kpi-card.tier-med {
+            border-left: 4px solid #0284c7;
+            background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+        }
+        .tier-kpi-card.tier-doc {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+        }
+        .tier-kpi-card.tier-dist {
+            border-left: 4px solid #6366f1;
+            background: linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%);
         }
 
         /* Clean & Bold Filter Panel */
@@ -137,7 +182,7 @@
             color: #1e293b !important;
         }
 
-        /* Premium Table Styling */
+        /* Premium Table Styling with Crisp Column Partitions */
         .premium-card {
             border: 1.5px solid #cbd5e1 !important;
             border-radius: 12px !important;
@@ -146,9 +191,9 @@
         }
 
         .premium-table {
-            border: 2px solid #475569 !important;
-            border-radius: 8px !important;
-            overflow: visible !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-collapse: collapse !important;
+            width: 100% !important;
         }
 
         /* Prevent Dropdowns from Being Clipped */
@@ -182,6 +227,17 @@
             margin: 6px 0 !important;
         }
         
+        .text-end, .text-right {
+            text-align: right !important;
+        }
+
+        .premium-table thead th.text-right,
+        .premium-table thead th.text-end,
+        .premium-table tbody td.text-right,
+        .premium-table tbody td.text-end {
+            text-align: right !important;
+        }
+        
         .premium-table thead th {
             background-color: #f1f5f9 !important;
             color: #1e293b !important;
@@ -189,21 +245,26 @@
             text-transform: uppercase;
             font-size: 11px;
             letter-spacing: 0.5px;
-            border-bottom: 3px solid #475569 !important;
+            border: 1px solid #cbd5e1 !important;
+            border-bottom: 2.5px solid #475569 !important;
             border-right: 1.5px solid #cbd5e1 !important;
-            padding: 12px 10px !important;
+            padding: 10px 8px !important;
+            vertical-align: middle !important;
+            white-space: nowrap;
         }
         
         .premium-table tbody td {
-            border: 1.5px solid #e2e8f0 !important;
-            padding: 12px 10px !important;
-            font-size: 13px !important;
-            color: #334155 !important;
+            border: 1px solid #e2e8f0 !important;
+            border-right: 1.5px solid #cbd5e1 !important;
+            padding: 8px 8px !important;
+            font-size: 12.5px !important;
+            color: #1e293b !important;
             background-color: #ffffff;
+            vertical-align: middle !important;
         }
         
         .premium-table tbody tr:hover td {
-            background-color: #f8fafc !important;
+            background-color: #f0f7ff !important;
         }
 
         /* Dropdown Action Button */
@@ -311,12 +372,13 @@
                 </div>
 
                 {{-- KPI Stat Cards --}}
-                <div class="row g-3 mb-4">
+                {{-- KPI Stat Cards --}}
+                <div class="row g-3 mb-3">
                     <div class="col-6 col-md-3">
-                        <div class="sale-stat-card">
+                        <div class="sale-stat-card card-accent-gross">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Gross Total (Before Disc)</div>
+                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.3px;">Gross Total (Before Disc)</div>
                                     <h4 class="fw-bold text-dark mb-0 mt-1" id="statTotalGross">Rs. {{ number_format($stats['total_gross'] ?? 0, 2) }}</h4>
                                     <small class="text-muted d-block mt-1" style="font-size: 10px;">{{ number_format($stats['total_count'] ?? 0) }} invoices</small>
                                 </div>
@@ -327,29 +389,33 @@
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="sale-stat-card">
+                        <div class="sale-stat-card card-accent-discount">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Total Discounts Given</div>
+                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.3px;">Total Discounts Given</div>
                                     <h4 class="fw-bold text-danger mb-0 mt-1" id="statTotalDiscount" style="color: #dc2626 !important;">Rs. {{ number_format($stats['total_discount'] ?? 0, 2) }}</h4>
-                                    <small class="text-muted d-block mt-1" style="font-size: 10px;" id="statDiscountSub">
-                                        Line: Rs. {{ number_format($stats['inline_discount'] ?? 0, 2) }}
+                                    <div class="d-flex align-items-center gap-1 mt-1.5 flex-wrap" id="statDiscountSub">
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 9.5px;">
+                                            Line: Rs. {{ number_format($stats['inline_discount'] ?? 0, 2) }}
+                                        </span>
                                         @if(($stats['additional_discount'] ?? 0) > 0)
-                                            | Extra: Rs. {{ number_format($stats['additional_discount'] ?? 0, 2) }}
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 9.5px;">
+                                                Extra: Rs. {{ number_format($stats['additional_discount'] ?? 0, 2) }}
+                                            </span>
                                         @endif
-                                    </small>
+                                    </div>
                                 </div>
-                                <div class="sale-stat-icon bg-warning-subtle text-warning" style="background-color: #fffbeb; color: #d97706;">
+                                <div class="sale-stat-icon bg-danger-subtle text-danger" style="background-color: #fef2f2; color: #dc2626;">
                                     <i class="fas fa-tags"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="sale-stat-card" style="border-left: 3px solid #10b981 !important;">
+                        <div class="sale-stat-card card-accent-net">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Total Net Revenue (After Disc)</div>
+                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.3px;">Total Net Revenue (After Disc)</div>
                                     <h4 class="fw-bold text-success mb-0 mt-1" id="statTotalNet">Rs. {{ number_format($stats['total_net'] ?? 0, 2) }}</h4>
                                     <small class="text-success d-block mt-1" style="font-size: 10px;"><i class="fas fa-check-circle me-1"></i>Actual Realized</small>
                                 </div>
@@ -360,10 +426,10 @@
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
-                        <div class="sale-stat-card">
+                        <div class="sale-stat-card card-accent-status">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Posted / Booked</div>
+                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.3px;">Posted / Booked</div>
                                     <h4 class="fw-bold text-info mb-0 mt-1" id="statStatusCounts" style="color: #0284c7 !important;">
                                         {{ $stats['posted_count'] ?? 0 }} <span class="fs-6 fw-normal text-muted">/ {{ $stats['booked_count'] ?? 0 }}</span>
                                     </h4>
@@ -372,6 +438,81 @@
                                 <div class="sale-stat-icon bg-info-subtle text-info" style="background-color: #f0f9ff; color: #0284c7;">
                                     <i class="fas fa-check-circle"></i>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Tier Discounts Breakdown Sub-Cards --}}
+                <div class="mb-4">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 22px; height: 22px; font-size: 10px;">
+                                <i class="fas fa-layer-group"></i>
+                            </span>
+                            <span class="text-uppercase fw-bold text-secondary" style="font-size: 11px; letter-spacing: 0.5px;">Customer Discount Distribution by Tier</span>
+                        </div>
+                        <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 10px;">
+                            <i class="fas fa-info-circle me-1 text-primary"></i>Medical + Doctor + Distribution
+                        </span>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4">
+                            <div class="tier-kpi-card tier-med">
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: #e0f2fe; color: #0284c7; font-size: 14px; box-shadow: 0 2px 4px rgba(2, 132, 199, 0.12);">
+                                        <i class="fas fa-clinic-medical"></i>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-1.5">
+                                            <span class="text-dark fw-bold" style="font-size: 12px;">Medical Discount</span>
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-1.5 py-0" style="font-size: 9px; font-weight: 700;">Pharmacy</span>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 10.5px;">Total Given to Medical Stores</div>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold mb-0 font-monospace" id="statDiscountMed" style="color: #0284c7;">
+                                    Rs. {{ number_format($stats['discount_medical'] ?? 0, 2) }}
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="tier-kpi-card tier-doc">
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: #dcfce7; color: #059669; font-size: 14px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.12);">
+                                        <i class="fas fa-user-md"></i>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-1.5">
+                                            <span class="text-dark fw-bold" style="font-size: 12px;">Doctor Discount</span>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0" style="font-size: 9px; font-weight: 700;">Clinic</span>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 10.5px;">Total Given to Doctors</div>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold mb-0 font-monospace" id="statDiscountDoc" style="color: #059669;">
+                                    Rs. {{ number_format($stats['discount_doctor'] ?? 0, 2) }}
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="tier-kpi-card tier-dist">
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: #e0e7ff; color: #4f46e5; font-size: 14px; box-shadow: 0 2px 4px rgba(99, 102, 241, 0.12);">
+                                        <i class="fas fa-truck"></i>
+                                    </div>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-1.5">
+                                            <span class="text-dark fw-bold" style="font-size: 12px;">Distribution Discount</span>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-0" style="font-size: 9px; font-weight: 700;">Wholesale</span>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 10.5px;">Total Given to Distributors</div>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold mb-0 font-monospace" id="statDiscountDist" style="color: #4f46e5;">
+                                    Rs. {{ number_format($stats['discount_distribution'] ?? 0, 2) }}
+                                </h5>
                             </div>
                         </div>
                     </div>
@@ -498,18 +639,18 @@
 
                         {{-- Table Container --}}
                         <div class="table-responsive">
-                            <table id="sales-table" class="table table-hover align-middle datanew premium-table" style="width:100%">
+                            <table id="sales-table" class="table table-bordered table-hover align-middle datanew premium-table" style="width:100%">
                                 <thead class="bg-light">
                                     <tr>
                                         <th class="py-3 ps-3 rounded-start text-secondary fw-semibold text-uppercase small">Invoice / Bill#</th>
                                         <th class="py-3 text-secondary fw-semibold text-uppercase small">Customer</th>
                                         <th class="py-3 text-secondary fw-semibold text-uppercase small">M.Bill</th>
                                         <th class="py-3 text-secondary fw-semibold text-uppercase small">Products</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-center">Qty</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-end">Gross</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-end">Inline Disc</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-end">Add. Disc</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small text-end">Net Total</th>
+                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-center">Qty</th>
+                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important;">Gross</th>
+                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important;">Line Disc</th>
+                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important;">Extra Disc</th>
+                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important;">Net Total</th>
                                         <th class="py-3 text-secondary fw-semibold text-uppercase small">Date</th>
                                         <th class="py-3 text-secondary fw-semibold text-uppercase small">Status</th>
                                         <th class="py-3 pe-3 rounded-end text-secondary fw-semibold text-uppercase small text-center">Action</th>
@@ -605,11 +746,14 @@
                             $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
                             $('#statTotalGross').text('Rs. ' + Number(response.stats.total_gross || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statTotalDiscount').text('Rs. ' + Number(response.stats.total_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            let discSubText = 'Line: Rs. ' + Number(response.stats.inline_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            let discSubHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 9.5px;">Line: Rs. ' + Number(response.stats.inline_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
                             if (Number(response.stats.additional_discount || 0) > 0) {
-                                discSubText += ' | Extra: Rs. ' + Number(response.stats.additional_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                discSubHtml += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 9.5px;">Extra: Rs. ' + Number(response.stats.additional_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
                             }
-                            $('#statDiscountSub').text(discSubText);
+                            $('#statDiscountSub').html(discSubHtml);
+                            $('#statDiscountMed').text('Rs. ' + Number(response.stats.discount_medical || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                            $('#statDiscountDoc').text('Rs. ' + Number(response.stats.discount_doctor || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                            $('#statDiscountDist').text('Rs. ' + Number(response.stats.discount_distribution || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statTotalNet').text('Rs. ' + Number(response.stats.total_net || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statStatusCounts').html((response.stats.posted_count || 0) + ' <span class="fs-6 fw-normal text-muted">/ ' + (response.stats.booked_count || 0) + '</span>');
                         }

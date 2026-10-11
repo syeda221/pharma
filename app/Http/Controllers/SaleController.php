@@ -147,11 +147,80 @@ class SaleController extends Controller
                 $sale->effective_additional_discount = 0;
                 $sale->effective_total_discount = 0;
             } else {
-                $sale->effective_gross = $grossSubtotal;
-                $sale->effective_inline_discount = $inlineVal;
-                $sale->effective_additional_discount = $additionalDiscount;
-                $sale->effective_total_discount = $inlineVal + $additionalDiscount;
+                // If there is a return on this sale, reduce the effective gross by the returned gross amount
+                $returnedGross = $returnedAmount;
+                // If the sale had discounts, calculate proportional gross returned
+                if ($grossSubtotal > 0 && (float)$sale->total_net > 0 && $returnedAmount > 0) {
+                    $ratio = $grossSubtotal / (float)$sale->total_net;
+                    $returnedGross = $returnedAmount * $ratio;
+                }
+                $sale->effective_gross = max(0, $grossSubtotal - $returnedGross);
+
+                // Reduce discount proportionally if return occurred
+                if ($grossSubtotal > 0 && $sale->effective_gross < $grossSubtotal) {
+                    $remainingRatio = $sale->effective_gross / $grossSubtotal;
+                    $sale->effective_inline_discount = $inlineVal * $remainingRatio;
+                    $sale->effective_additional_discount = $additionalDiscount * $remainingRatio;
+                } else {
+                    $sale->effective_inline_discount = $inlineVal;
+                    $sale->effective_additional_discount = $additionalDiscount;
+                }
+                $sale->effective_total_discount = $sale->effective_inline_discount + $sale->effective_additional_discount;
             }
+
+            // Tier specific discount totals
+            $tierMedicalDisc = 0;
+            $tierDoctorDisc = 0;
+            $tierDistributionDisc = 0;
+
+            if (!$isFullyReturned && $grossSubtotal > 0 && $inlineVal > 0) {
+                $tiers = optional($sale->customer_relation)->discount_tiers ?? [];
+                $savedTierStr = $sale->discount_tier ?? '';
+                $activeTiersArray = !empty($savedTierStr) ? array_map('trim', explode(',', $savedTierStr)) : [];
+
+                if (empty($activeTiersArray) && !empty($tiers)) {
+                    $mVal = (float)($tiers['medical'] ?? 0);
+                    $dVal = (float)($tiers['doctor'] ?? 0);
+                    $distVal = (float)($tiers['distribution'] ?? 0);
+                    $inlinePct = $grossSubtotal > 0 ? ($inlineVal / $grossSubtotal) * 100 : 0;
+                    $targetDisc = round($inlinePct, 2);
+
+                    if (round($mVal + $dVal + $distVal, 2) === $targetDisc && $mVal > 0 && $dVal > 0 && $distVal > 0) {
+                        $activeTiersArray = ['medical', 'doctor', 'distribution'];
+                    } elseif (round($mVal + $distVal, 2) === $targetDisc && $mVal > 0 && $distVal > 0) {
+                        $activeTiersArray = ['medical', 'distribution'];
+                    } elseif (round($mVal + $dVal, 2) === $targetDisc && $mVal > 0 && $dVal > 0) {
+                        $activeTiersArray = ['medical', 'doctor'];
+                    } elseif (round($dVal + $distVal, 2) === $targetDisc && $dVal > 0 && $distVal > 0) {
+                        $activeTiersArray = ['doctor', 'distribution'];
+                    } elseif (round($dVal, 2) === $targetDisc && $dVal > 0) {
+                        $activeTiersArray = ['doctor'];
+                    } elseif (round($mVal, 2) === $targetDisc && $mVal > 0) {
+                        $activeTiersArray = ['medical'];
+                    } elseif (round($distVal, 2) === $targetDisc && $distVal > 0) {
+                        $activeTiersArray = ['distribution'];
+                    }
+                }
+
+                if (!empty($activeTiersArray)) {
+                    foreach ($activeTiersArray as $t) {
+                        $pct = (float)($tiers[$t] ?? 0);
+                        if ($pct > 0) {
+                            $amt = round(($grossSubtotal * $pct) / 100, 2);
+                            if ($t === 'medical') $tierMedicalDisc += $amt;
+                            elseif ($t === 'doctor') $tierDoctorDisc += $amt;
+                            elseif ($t === 'distribution') $tierDistributionDisc += $amt;
+                        }
+                    }
+                } else {
+                    // Fallback: assign remaining inline discount to doctor tier (standard)
+                    $tierDoctorDisc += $inlineVal;
+                }
+            }
+
+            $sale->tier_medical_discount = $tierMedicalDisc;
+            $sale->tier_doctor_discount = $tierDoctorDisc;
+            $sale->tier_distribution_discount = $tierDistributionDisc;
 
             if ($isExchange) {
                 $collected = (float)$sale->cash - (float)$sale->change;
@@ -186,6 +255,9 @@ class SaleController extends Controller
             'inline_discount' => (float) $sales->sum('effective_inline_discount'),
             'additional_discount' => (float) $sales->sum('effective_additional_discount'),
             'total_discount' => (float) $sales->sum('effective_total_discount'),
+            'discount_medical' => (float) $sales->sum('tier_medical_discount'),
+            'discount_doctor' => (float) $sales->sum('tier_doctor_discount'),
+            'discount_distribution' => (float) $sales->sum('tier_distribution_discount'),
             'posted_count' => $sales->where('sale_status', 'posted')->count(),
             'draft_count' => $sales->where('sale_status', 'draft')->count(),
             'booked_count' => $sales->where('sale_status', 'booked')->count(),
