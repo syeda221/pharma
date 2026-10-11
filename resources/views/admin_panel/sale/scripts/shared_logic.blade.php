@@ -131,6 +131,18 @@
         const custDisc = parseFloat($('#discountPercent').val()) || 0;
         const defaultDiscStr = custDisc > 0 ? custDisc : '';
 
+        const currentTiers = window.currentCustomerTiers || {};
+        let activeBreakdowns = [];
+        $('.tier-pill-btn.active').each(function() {
+            const tier = $(this).data('tier');
+            const val = parseFloat(currentTiers[tier] || 0);
+            if (val > 0) {
+                const shortLabel = tier === 'medical' ? 'M' : (tier === 'distribution' ? 'D' : 'Dr');
+                activeBreakdowns.push(shortLabel + ':' + val + '%');
+            }
+        });
+        const hintHtml = activeBreakdowns.length > 1 ? `<small class="tier-breakdown-hint text-muted fw-bold text-center" style="display:block; white-space:nowrap; font-size:0.58rem; line-height:1.1; margin-top:2px; letter-spacing:-0.3px;" title="${activeBreakdowns.join(' + ')}">${activeBreakdowns.join(' + ')}</small>` : '';
+
         const rowHtml = `
   <tr>
     <!-- # ROW INDEX -->
@@ -219,6 +231,7 @@
                 class="btn btn-outline-secondary discount-toggle"
                 data-type="percent" tabindex="-1">%</button>
       </div>
+      ${hintHtml}
       <input type="hidden" class="discount-amount" value="0">
     </td>
 
@@ -483,6 +496,9 @@
         $('#tQty').text(tQty.toFixed(0));
         $('#tGross').text(tGross.toFixed(2));
         $('#tLineDisc').text(tLineDisc.toFixed(2));
+        if (typeof window.updateTierBreakdownSummary === 'function') {
+            window.updateTierBreakdownSummary(tGross, tLineDisc);
+        }
         $('#tSub').text(currentInvoiceTotal.toFixed(2));
         $('#tOrderDisc').text(orderDisc.toFixed(2));
         $('#tPrev').text(prev.toFixed(2));

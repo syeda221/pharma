@@ -789,7 +789,7 @@
                                                 <i class="fas fa-clinic-medical"></i> Medical
                                                 <span class="tier-pct-badge" id="tierMedVal">0%</span>
                                             </button>
-                                            <button type="button" class="tier-pill-btn active" data-tier="doctor" title="Apply Doctor Discount">
+                                            <button type="button" class="tier-pill-btn" data-tier="doctor" title="Apply Doctor Discount">
                                                 <i class="fas fa-user-md"></i> Doctor
                                                 <span class="tier-pct-badge" id="tierDocVal">0%</span>
                                             </button>
@@ -818,7 +818,7 @@
                                             <th class="col-color" style="width: 65px;">BONUS</th>
                                             <th class="col-pieces" style="width: 55px;">PCS</th>
                                             <th class="col-price-p" style="width: 85px;">PRICE</th>
-                                            <th class="col-disc" style="width: 85px;">DISCOUNT</th>
+                                            <th class="col-disc" style="min-width: 95px; width: 95px;">DISCOUNT</th>
                                             <th class="col-amount" style="width: 95px;">AMOUNT</th>
                                             <th class="col-action" style="width: 34px;">Ã—</th>
                                         </tr>
@@ -953,6 +953,10 @@
                                 <div class="summary-row">
                                     <span class="text-muted">Line Discount</span>
                                     <span class="fw-bold text-danger" id="tLineDisc">0.00</span>
+                                </div>
+                                <div class="summary-row" id="tierBreakdownSummaryRow" style="display: none; font-size: 0.72rem; background: #eff6ff; padding: 4px 8px; border-radius: 6px; border: 1px dashed #bfdbfe; margin-top: -2px; margin-bottom: 4px;">
+                                    <span class="text-primary fw-bold" id="tierBreakdownSummaryLabel" style="white-space: nowrap;"><i class="fas fa-layer-group me-1"></i>Disc Split:</span>
+                                    <span class="text-primary fw-bold text-end" id="tierBreakdownSummaryVal">-</span>
                                 </div>
                                 <div class="summary-row">
                                     <span class="fw-bold text-dark">Net Total</span>
@@ -1375,91 +1379,137 @@
 
                     // Pick default active tier
                     let defaultTier = 'doctor';
-                    let activeDisc = docDisc;
                     if (docDisc > 0) {
                         defaultTier = 'doctor';
-                        activeDisc = docDisc;
                     } else if (medDisc > 0) {
                         defaultTier = 'medical';
-                        activeDisc = medDisc;
                     } else if (distDisc > 0) {
                         defaultTier = 'distribution';
-                        activeDisc = distDisc;
                     }
 
                     $('.tier-pill-btn, .tier-toggle-btn').removeClass('active');
                     $('.tier-pill-btn[data-tier="' + defaultTier + '"], .tier-toggle-btn[data-tier="' + defaultTier + '"]').addClass('active');
-                    $('#selectedDiscountTier').val(defaultTier);
-                    $('#discountPercent').val(activeDisc);
 
-                    if (activeDisc > 0) {
-                        const tierName = defaultTier.charAt(0).toUpperCase() + defaultTier.slice(1);
-                        $('#customerDiscountBadge').text(activeDisc + '% (' + tierName + ')').removeClass('d-none');
-                        if (typeof showAlert === 'function') {
-                            showAlert('success', tierName + ' discount (' + activeDisc + '%) applied automatically');
-                        }
-                    } else {
-                        $('#customerDiscountBadge').addClass('d-none');
-                    }
-
-                    // Apply active discount percentage to all rows in table
-                    $('#salesTableBody tr').each(function() {
-                        const $tr = $(this);
-                        $tr.find('.discount-toggle').data('type', 'percent').text('%');
-                        $tr.find('.discount-type-hidden').val('percent');
-                        $tr.find('.discount-value').val(activeDisc > 0 ? activeDisc : '');
-                        if (typeof computeRow === 'function') computeRow($tr);
-                    });
-
-                    if (typeof updateGrandTotals === 'function') updateGrandTotals();
+                    // Apply multi-tier discount calculation
+                    recalculateActiveDiscountTiers(false);
                 }).fail(function() {
                     showAlert('error', 'Failed to load customer details');
                 });
             });
 
-            // Tier Toggle Button Click Handler
-            $(document).on('click', '.tier-pill-btn, .tier-toggle-btn', function() {
-                const $btn = $(this);
-                const tier = $btn.data('tier');
-                $('.tier-pill-btn, .tier-toggle-btn').removeClass('active');
-                $btn.addClass('active');
-
-                $('#selectedDiscountTier').val(tier);
+            // Recalculate combined active discount tiers (Multi-select support)
+            window.recalculateActiveDiscountTiers = function(notify = false) {
                 const tiers = window.currentCustomerTiers || {};
-                const discVal = parseFloat(tiers[tier] || 0);
-                $('#discountPercent').val(discVal);
+                let totalPercent = 0;
+                let activeTiers = [];
+                let breakdownParts = [];
+                let rowBreakdownShort = [];
 
-                const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
-                if (discVal > 0) {
-                    $('#customerDiscountBadge').text(discVal + '% (' + tierName + ')').removeClass('d-none');
+                $('.tier-pill-btn.active').each(function() {
+                    const tier = $(this).data('tier');
+                    const val = parseFloat(tiers[tier] || 0);
+                    if (val > 0) {
+                        totalPercent += val;
+                        activeTiers.push(tier);
+                        const label = tier.charAt(0).toUpperCase() + tier.slice(1);
+                        breakdownParts.push(label + ': ' + val + '%');
+
+                        const shortLabel = tier === 'medical' ? 'M' : (tier === 'distribution' ? 'D' : 'Dr');
+                        rowBreakdownShort.push(shortLabel + ':' + val + '%');
+                    }
+                });
+
+                // Round to 2 decimals to prevent floating point inaccuracies
+                totalPercent = Math.round(totalPercent * 100) / 100;
+
+                $('#selectedDiscountTier').val(activeTiers.join(','));
+                $('#discountPercent').val(totalPercent);
+
+                if (totalPercent > 0) {
+                    const badgeText = totalPercent + '% (' + breakdownParts.join(' + ') + ')';
+                    $('#customerDiscountBadge').text(badgeText).removeClass('d-none');
+                    if (notify && typeof Swal !== 'undefined') {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 1500,
+                            timerProgressBar: true
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Discount ' + badgeText + ' applied!'
+                        });
+                    }
                 } else {
                     $('#customerDiscountBadge').addClass('d-none');
                 }
 
-                // Apply to all rows
+                // Apply active discount percentage to all rows in table
                 $('#salesTableBody tr').each(function() {
                     const $tr = $(this);
                     $tr.find('.discount-toggle').data('type', 'percent').text('%');
                     $tr.find('.discount-type-hidden').val('percent');
-                    $tr.find('.discount-value').val(discVal > 0 ? discVal : '');
+                    $tr.find('.discount-value').val(totalPercent > 0 ? totalPercent : '');
+
+                    // Inline breakdown hint under discount input (compact initials on single line)
+                    let $hint = $tr.find('.tier-breakdown-hint');
+                    if (rowBreakdownShort.length > 1) {
+                        const hintText = rowBreakdownShort.join(' + ');
+                        if ($hint.length === 0) {
+                            $tr.find('.discount-wrapper').after('<small class="tier-breakdown-hint text-muted fw-bold text-center" style="display:block; white-space:nowrap; font-size:0.58rem; line-height:1.1; margin-top:2px; letter-spacing:-0.3px;"></small>');
+                            $hint = $tr.find('.tier-breakdown-hint');
+                        }
+                        $hint.attr('title', hintText).text(hintText).show();
+                    } else {
+                        $hint.remove();
+                    }
+
                     if (typeof computeRow === 'function') computeRow($tr);
                 });
 
                 if (typeof updateGrandTotals === 'function') updateGrandTotals();
+            };
 
-                if (typeof Swal !== 'undefined') {
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 1500,
-                        timerProgressBar: true
+            // Update live split breakdown in summary sidebar
+            window.updateTierBreakdownSummary = function(grossTotal, totalDiscount) {
+                const tiers = window.currentCustomerTiers || {};
+                let activeTiers = [];
+                let totalPct = 0;
+
+                $('.tier-pill-btn.active').each(function() {
+                    const tier = $(this).data('tier');
+                    const val = parseFloat(tiers[tier] || 0);
+                    if (val > 0) {
+                        activeTiers.push({ tier: tier, pct: val });
+                        totalPct += val;
+                    }
+                });
+
+                if (activeTiers.length > 1 && grossTotal > 0 && totalDiscount > 0) {
+                    let splitParts = [];
+                    activeTiers.forEach(function(item) {
+                        const amount = Math.round(((grossTotal * item.pct) / 100) * 100) / 100;
+                        const label = item.tier === 'medical' ? 'M' : (item.tier === 'distribution' ? 'D' : 'Dr');
+                        splitParts.push(label + ': Rs. ' + amount.toFixed(2));
                     });
-                    Toast.fire({
-                        icon: 'success',
-                        title: tierName + ' discount (' + discVal + '%) applied!'
-                    });
+                    $('#tierBreakdownSummaryVal').text(splitParts.join(' | '));
+                    $('#tierBreakdownSummaryRow').show().css('display', 'flex');
+                } else {
+                    $('#tierBreakdownSummaryRow').hide();
                 }
+            };
+
+            // Tier Multi-Select Toggle Button Click Handler
+            $(document).on('click', '.tier-pill-btn, .tier-toggle-btn', function() {
+                const $btn = $(this);
+                const tier = $btn.data('tier');
+
+                // Toggle active state on clicked button (allow multi-select)
+                $btn.toggleClass('active');
+                $('.tier-toggle-btn[data-tier="' + tier + '"]').toggleClass('active', $btn.hasClass('active'));
+
+                recalculateActiveDiscountTiers(true);
             });
 
             // Customer cleared

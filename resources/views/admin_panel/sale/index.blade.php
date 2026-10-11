@@ -316,11 +316,12 @@
                         <div class="sale-stat-card">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Total Invoices</div>
-                                    <h4 class="fw-bold text-dark mb-0 mt-1" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</h4>
+                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Gross Total (Before Disc)</div>
+                                    <h4 class="fw-bold text-dark mb-0 mt-1" id="statTotalGross">Rs. {{ number_format($stats['total_gross'] ?? 0, 2) }}</h4>
+                                    <small class="text-muted d-block mt-1" style="font-size: 10px;">{{ number_format($stats['total_count'] ?? 0) }} invoices</small>
                                 </div>
                                 <div class="sale-stat-icon bg-primary-subtle text-primary" style="background-color: #eff6ff; color: #2563eb;">
-                                    <i class="fas fa-file-invoice"></i>
+                                    <i class="fas fa-file-invoice-dollar"></i>
                                 </div>
                             </div>
                         </div>
@@ -329,24 +330,31 @@
                         <div class="sale-stat-card">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Total Net Revenue</div>
-                                    <h4 class="fw-bold text-success mb-0 mt-1" id="statTotalNet">Rs. {{ number_format($stats['total_net'] ?? 0, 2) }}</h4>
-                                </div>
-                                <div class="sale-stat-icon bg-success-subtle text-success" style="background-color: #ecfdf5; color: #059669;">
-                                    <i class="fas fa-coins"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="sale-stat-card">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Discounts Given</div>
-                                    <h4 class="fw-bold text-warning mb-0 mt-1" id="statTotalDiscount" style="color: #d97706 !important;">Rs. {{ number_format($stats['total_discount'] ?? 0, 2) }}</h4>
+                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Total Discounts Given</div>
+                                    <h4 class="fw-bold text-danger mb-0 mt-1" id="statTotalDiscount" style="color: #dc2626 !important;">Rs. {{ number_format($stats['total_discount'] ?? 0, 2) }}</h4>
+                                    <small class="text-muted d-block mt-1" style="font-size: 10px;" id="statDiscountSub">
+                                        Line: Rs. {{ number_format($stats['inline_discount'] ?? 0, 2) }}
+                                        @if(($stats['additional_discount'] ?? 0) > 0)
+                                            | Extra: Rs. {{ number_format($stats['additional_discount'] ?? 0, 2) }}
+                                        @endif
+                                    </small>
                                 </div>
                                 <div class="sale-stat-icon bg-warning-subtle text-warning" style="background-color: #fffbeb; color: #d97706;">
                                     <i class="fas fa-tags"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="sale-stat-card" style="border-left: 3px solid #10b981 !important;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px;">Total Net Revenue (After Disc)</div>
+                                    <h4 class="fw-bold text-success mb-0 mt-1" id="statTotalNet">Rs. {{ number_format($stats['total_net'] ?? 0, 2) }}</h4>
+                                    <small class="text-success d-block mt-1" style="font-size: 10px;"><i class="fas fa-check-circle me-1"></i>Actual Realized</small>
+                                </div>
+                                <div class="sale-stat-icon bg-success-subtle text-success" style="background-color: #ecfdf5; color: #059669;">
+                                    <i class="fas fa-coins"></i>
                                 </div>
                             </div>
                         </div>
@@ -359,6 +367,7 @@
                                     <h4 class="fw-bold text-info mb-0 mt-1" id="statStatusCounts" style="color: #0284c7 !important;">
                                         {{ $stats['posted_count'] ?? 0 }} <span class="fs-6 fw-normal text-muted">/ {{ $stats['booked_count'] ?? 0 }}</span>
                                     </h4>
+                                    <small class="text-muted d-block mt-1" style="font-size: 10px;">Total Invoices: <span id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</span></small>
                                 </div>
                                 <div class="sale-stat-icon bg-info-subtle text-info" style="background-color: #f0f9ff; color: #0284c7;">
                                     <i class="fas fa-check-circle"></i>
@@ -594,8 +603,14 @@
                         // Update Stat Cards dynamically if present
                         if (response.stats) {
                             $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
-                            $('#statTotalNet').text('Rs. ' + Number(response.stats.total_net || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                            $('#statTotalGross').text('Rs. ' + Number(response.stats.total_gross || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statTotalDiscount').text('Rs. ' + Number(response.stats.total_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                            let discSubText = 'Line: Rs. ' + Number(response.stats.inline_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            if (Number(response.stats.additional_discount || 0) > 0) {
+                                discSubText += ' | Extra: Rs. ' + Number(response.stats.additional_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            }
+                            $('#statDiscountSub').text(discSubText);
+                            $('#statTotalNet').text('Rs. ' + Number(response.stats.total_net || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statStatusCounts').html((response.stats.posted_count || 0) + ' <span class="fs-6 fw-normal text-muted">/ ' + (response.stats.booked_count || 0) + '</span>');
                         }
 

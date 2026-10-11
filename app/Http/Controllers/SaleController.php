@@ -111,7 +111,7 @@ class SaleController extends Controller
 
         $sales = $query->get();
 
-        // Calculate actual net amount and actual sold qty per sale (excluding returns)
+        // Calculate actual net amount, gross amount, inline discounts, and actual sold qty per sale (excluding returns)
         $sales->each(function ($sale) {
             $isExchange = \Illuminate\Support\Str::startsWith($sale->reference, 'Exchange for');
 
@@ -132,6 +132,26 @@ class SaleController extends Controller
 
             $origQty = $sale->total_items > 0 ? (float) $sale->total_items : (float) $sale->qty;
             $sale->effective_qty = max(0, $origQty - $returnedQty);
+
+            // Gross & Discount calculations
+            $inlineVal = $sale->items ? (float) $sale->items->sum('discount_amount') : 0;
+            $billAmount = $sale->total_bill_amount > 0 ? (float) $sale->total_bill_amount : (float) $sale->per_total;
+            $grossSubtotal = $billAmount + $inlineVal;
+            $additionalDiscount = (float) ($sale->total_extradiscount ?? 0);
+
+            $isFullyReturned = ($sale->sale_status === 'returned' || $sale->sale_status == 1) && ($returnedAmount <= 0 || (float)$sale->total_net <= $returnedAmount);
+
+            if ($isFullyReturned) {
+                $sale->effective_gross = 0;
+                $sale->effective_inline_discount = 0;
+                $sale->effective_additional_discount = 0;
+                $sale->effective_total_discount = 0;
+            } else {
+                $sale->effective_gross = $grossSubtotal;
+                $sale->effective_inline_discount = $inlineVal;
+                $sale->effective_additional_discount = $additionalDiscount;
+                $sale->effective_total_discount = $inlineVal + $additionalDiscount;
+            }
 
             if ($isExchange) {
                 $collected = (float)$sale->cash - (float)$sale->change;
@@ -161,8 +181,11 @@ class SaleController extends Controller
 
         $stats = [
             'total_count' => $sales->count(),
+            'total_gross' => (float) $sales->sum('effective_gross'),
             'total_net' => (float) $sales->sum('effective_net'),
-            'total_discount' => (float) $sales->sum('total_extradiscount'),
+            'inline_discount' => (float) $sales->sum('effective_inline_discount'),
+            'additional_discount' => (float) $sales->sum('effective_additional_discount'),
+            'total_discount' => (float) $sales->sum('effective_total_discount'),
             'posted_count' => $sales->where('sale_status', 'posted')->count(),
             'draft_count' => $sales->where('sale_status', 'draft')->count(),
             'booked_count' => $sales->where('sale_status', 'booked')->count(),
@@ -1486,6 +1509,10 @@ class SaleController extends Controller
             $sale->total_extradiscount = (float) ($request->total_extra_cost ?? $request->discountAmount ?? $request->discount_amount ?? 0);
             $sale->total_net = max(0, $total_bill - $sale->total_extradiscount);
             $sale->total_items = $total_items;
+
+            if ($request->filled('discount_tier')) {
+                $sale->discount_tier = $request->input('discount_tier');
+            }
 
             $sale->cash = (float) ($request->cash ?? 0);
             $sale->change = ($sale->cash - $sale->total_net);

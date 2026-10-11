@@ -1,4 +1,4 @@
-﻿@extends('admin_panel.layout.app')
+@extends('admin_panel.layout.app')
 
 @section('content')
 <style>
@@ -1298,60 +1298,65 @@
             let disc = doc;
             if (doc > 0) {
                 activeTier = 'doctor';
-                disc = doc;
             } else if (med > 0) {
                 activeTier = 'medical';
-                disc = med;
             } else if (dist > 0) {
                 activeTier = 'distribution';
-                disc = dist;
             }
 
             $('.pos-tier-btn').removeClass('active');
             $('.pos-tier-btn[data-tier="' + activeTier + '"]').addClass('active');
-            $('#posSelectedDiscountTier').val(activeTier);
 
-            currentCustomerDiscountPercent = disc;
-
-            if (currentCustomerDiscountPercent > 0) {
-                let typeName = activeTier.charAt(0).toUpperCase() + activeTier.slice(1);
-                $('#posDiscountBadge').text(currentCustomerDiscountPercent + '% (' + typeName + ')').removeClass('d-none');
-            } else {
-                $('#posDiscountBadge').addClass('d-none');
-            }
+            recalculatePosTiers(false);
         }
 
-        $(document).on('click', '.pos-tier-btn', function() {
-            let tier = $(this).data('tier');
-            $('.pos-tier-btn').removeClass('active');
-            $(this).addClass('active');
-            $('#posSelectedDiscountTier').val(tier);
+        function recalculatePosTiers(notify = false) {
+            let totalPct = 0;
+            let activeTiers = [];
+            let breakdownParts = [];
 
-            let disc = currentCustomerTiers[tier] || 0;
-            currentCustomerDiscountPercent = disc;
+            $('.pos-tier-btn.active').each(function() {
+                let tier = $(this).data('tier');
+                let val = parseFloat(currentCustomerTiers[tier] || 0);
+                if (val > 0) {
+                    totalPct += val;
+                    activeTiers.push(tier);
+                    let label = tier.charAt(0).toUpperCase() + tier.slice(1);
+                    breakdownParts.push(label + ': ' + val + '%');
+                }
+            });
+
+            totalPct = Math.round(totalPct * 100) / 100;
+            $('#posSelectedDiscountTier').val(activeTiers.join(','));
+            currentCustomerDiscountPercent = totalPct;
             isCustomerDiscountManualOverride = false;
 
-            let typeName = tier.charAt(0).toUpperCase() + tier.slice(1);
             if (currentCustomerDiscountPercent > 0) {
-                $('#posDiscountBadge').text(currentCustomerDiscountPercent + '% (' + typeName + ')').removeClass('d-none');
+                let badgeText = currentCustomerDiscountPercent + '% (' + breakdownParts.join(' + ') + ')';
+                $('#posDiscountBadge').text(badgeText).removeClass('d-none');
+                if (notify && typeof Swal !== 'undefined') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Discount ' + badgeText + ' applied!'
+                    });
+                }
             } else {
                 $('#posDiscountBadge').addClass('d-none');
             }
 
             updateBillSummary();
+        }
 
-            if (typeof Swal !== 'undefined') {
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 1200
-                });
-                Toast.fire({
-                    icon: 'success',
-                    title: typeName + ' discount (' + disc + '%) applied!'
-                });
-            }
+        $(document).on('click', '.pos-tier-btn', function() {
+            // Toggle active on clicked button (allow multi-select)
+            $(this).toggleClass('active');
+            recalculatePosTiers(true);
         });
 
         $('#customerSelect').on('change', function() {
