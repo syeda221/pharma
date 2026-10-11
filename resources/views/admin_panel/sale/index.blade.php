@@ -2,146 +2,165 @@
 
 @section('content')
     <style>
-        /* Modern Sales Management Styles */
-        .sale-stat-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 18px 16px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            height: 100%;
-            position: relative;
-        }
-        .sale-stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-            border-color: #cbd5e1;
-        }
-        .sale-stat-card.card-accent-gross {
-            border-top: 3.5px solid #2563eb;
-        }
-        .sale-stat-card.card-accent-discount {
-            border-top: 3.5px solid #dc2626;
-        }
-        .sale-stat-card.card-accent-net {
-            border-top: 3.5px solid #10b981;
-        }
-        .sale-stat-card.card-accent-status {
-            border-top: 3.5px solid #0284c7;
-        }
-        .sale-stat-icon {
-            width: 46px;
-            height: 46px;
-            border-radius: 12px;
+        /* Minimal KPI Strip */
+        .kpi-strip {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
         }
-
-        /* 3-Tier Discount Micro Cards */
-        .tier-kpi-card {
-            background: #ffffff;
+        .kpi-card {
+            background: #fff;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
-            padding: 12px 14px;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            padding: 10px 14px;
+            flex: 1 1 0;
+            min-width: 100px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            position: relative;
         }
-        .tier-kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.07);
+        .kpi-card .kpi-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #64748b;
+            white-space: nowrap;
+            margin-bottom: 3px;
         }
-        .tier-kpi-card.tier-med {
-            border-left: 4px solid #0284c7;
-            background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+        .kpi-card .kpi-value {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
         }
-        .tier-kpi-card.tier-doc {
-            border-left: 4px solid #10b981;
-            background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+        .kpi-card .kpi-sub {
+            font-size: 9.5px;
+            color: #94a3b8;
+            margin-top: 2px;
+            white-space: nowrap;
         }
-        .tier-kpi-card.tier-dist {
-            border-left: 4px solid #6366f1;
-            background: linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%);
+        .kpi-card.kpi-gross  { border-top: 3px solid #2563eb; }
+        .kpi-card.kpi-disc   { border-top: 3px solid #dc2626; }
+        .kpi-card.kpi-net    { border-top: 3px solid #10b981; }
+        .kpi-card.kpi-count  { border-top: 3px solid #0284c7; }
+        .kpi-card.kpi-pharma { border-top: 3px solid #0284c7; background: #f0f9ff; }
+        .kpi-card.kpi-doc    { border-top: 3px solid #059669; background: #f0fdf4; }
+        .kpi-card.kpi-dist   { border-top: 3px solid #6366f1; background: #f5f3ff; }
+
+        /* Ultra-Compact Minimal Single-Row Filter Toolbar */
+        .filter-panel {
+            background-color: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            padding: 6px 10px !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
         }
 
-        /* Clean & Bold Filter Panel */
-        .filter-panel {
-            background-color: #f8fafc !important;
-            border: 2px dashed #cbd5e1 !important;
-            border-radius: 12px !important;
-            padding: 16px !important;
+        .filter-toolbar-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+            width: 100%;
         }
-        
-        .filter-panel label {
-            font-size: 11px;
-            font-weight: 700 !important;
-            color: #475569 !important;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
+
         .filter-panel .form-control,
         .filter-panel .form-select {
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: 8px !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
             font-weight: 500 !important;
-            color: #1e293b !important;
-            transition: all 0.2s ease-in-out;
-            height: 38px !important;
-            font-size: 13px !important;
+            color: #0f172a !important;
+            height: 30px !important;
+            font-size: 11.5px !important;
+            background-color: #ffffff !important;
+            padding: 2px 6px !important;
         }
         
         .filter-panel .form-control:focus,
         .filter-panel .form-select:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
         }
 
-        /* Select2 In Filter Panel */
+        /* Compact Select2 in Filter Panel */
         .filter-panel .select2-container {
             width: 100% !important;
         }
         .filter-panel .select2-container--default .select2-selection--single {
-            height: 38px !important;
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            padding: 5px 8px !important;
+            height: 30px !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 2px 6px !important;
             background-color: #ffffff !important;
         }
         .filter-panel .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 26px !important;
-            color: #1e293b !important;
+            line-height: 24px !important;
+            color: #0f172a !important;
             font-weight: 500 !important;
-            font-size: 13px !important;
+            font-size: 11.5px !important;
             padding-left: 0 !important;
         }
         .filter-panel .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 36px !important;
-            right: 6px !important;
+            height: 28px !important;
+            right: 4px !important;
         }
         .filter-panel .select2-container--default.select2-container--focus .select2-selection--single,
         .filter-panel .select2-container--default.select2-container--open .select2-selection--single {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
         }
         .select2-dropdown {
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            box-shadow: 0 10px 20px -3px rgba(0, 0, 0, 0.1) !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.1) !important;
+            font-size: 12px !important;
             z-index: 9999 !important;
         }
         .select2-search--dropdown .select2-search__field {
             border: 1.5px solid #cbd5e1 !important;
             border-radius: 6px !important;
-            padding: 6px 10px !important;
-            font-size: 13px !important;
+            padding: 4px 8px !important;
+            font-size: 12px !important;
+        }
+
+        /* Compact Filter Action Buttons */
+        .filter-panel .btn-compact-primary {
+            background-color: #2563eb !important;
+            border: 1px solid #1d4ed8 !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            height: 30px !important;
+            padding: 0 10px !important;
+            font-size: 11.5px !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .filter-panel .btn-compact-primary:hover {
+            background-color: #1d4ed8 !important;
+        }
+        .filter-panel .btn-compact-secondary {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #475569 !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            height: 30px !important;
+            padding: 0 8px !important;
+            font-size: 11.5px !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .filter-panel .btn-compact-secondary:hover {
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
         }
 
         /* Premium Buttons */
@@ -371,151 +390,65 @@
                     </div>
                 </div>
 
-                {{-- KPI Stat Cards --}}
-                {{-- KPI Stat Cards --}}
-                <div class="row g-3 mb-3">
-                    <div class="col-6 col-md-3">
-                        <div class="sale-stat-card card-accent-gross">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.3px;">Gross Total (Before Disc)</div>
-                                    <h4 class="fw-bold text-dark mb-0 mt-1" id="statTotalGross">Rs. {{ number_format($stats['total_gross'] ?? 0, 2) }}</h4>
-                                    <small class="text-muted d-block mt-1" style="font-size: 10px;">{{ number_format($stats['total_count'] ?? 0) }} invoices</small>
-                                </div>
-                                <div class="sale-stat-icon bg-primary-subtle text-primary" style="background-color: #eff6ff; color: #2563eb;">
-                                    <i class="fas fa-file-invoice-dollar"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="sale-stat-card card-accent-discount">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.3px;">Total Discounts Given</div>
-                                    <h4 class="fw-bold text-danger mb-0 mt-1" id="statTotalDiscount" style="color: #dc2626 !important;">Rs. {{ number_format($stats['total_discount'] ?? 0, 2) }}</h4>
-                                    <div class="d-flex align-items-center gap-1 mt-1.5 flex-wrap" id="statDiscountSub">
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 9.5px;">
-                                            Line: Rs. {{ number_format($stats['inline_discount'] ?? 0, 2) }}
-                                        </span>
-                                        @if(($stats['additional_discount'] ?? 0) > 0)
-                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 9.5px;">
-                                                Extra: Rs. {{ number_format($stats['additional_discount'] ?? 0, 2) }}
-                                            </span>
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="sale-stat-icon bg-danger-subtle text-danger" style="background-color: #fef2f2; color: #dc2626;">
-                                    <i class="fas fa-tags"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="sale-stat-card card-accent-net">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.3px;">Total Net Revenue (After Disc)</div>
-                                    <h4 class="fw-bold text-success mb-0 mt-1" id="statTotalNet">Rs. {{ number_format($stats['total_net'] ?? 0, 2) }}</h4>
-                                    <small class="text-success d-block mt-1" style="font-size: 10px;"><i class="fas fa-check-circle me-1"></i>Actual Realized</small>
-                                </div>
-                                <div class="sale-stat-icon bg-success-subtle text-success" style="background-color: #ecfdf5; color: #059669;">
-                                    <i class="fas fa-coins"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="sale-stat-card card-accent-status">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="text-muted small fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.3px;">Posted / Booked</div>
-                                    <h4 class="fw-bold text-info mb-0 mt-1" id="statStatusCounts" style="color: #0284c7 !important;">
-                                        {{ $stats['posted_count'] ?? 0 }} <span class="fs-6 fw-normal text-muted">/ {{ $stats['booked_count'] ?? 0 }}</span>
-                                    </h4>
-                                    <small class="text-muted d-block mt-1" style="font-size: 10px;">Total Invoices: <span id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</span></small>
-                                </div>
-                                <div class="sale-stat-icon bg-info-subtle text-info" style="background-color: #f0f9ff; color: #0284c7;">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {{-- KPI Stat Strip — all 7 cards in one minimal row --}}
+                <div class="kpi-strip mb-3">
 
-                {{-- Tier Discounts Breakdown Sub-Cards --}}
-                <div class="mb-4">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 22px; height: 22px; font-size: 10px;">
-                                <i class="fas fa-layer-group"></i>
-                            </span>
-                            <span class="text-uppercase fw-bold text-secondary" style="font-size: 11px; letter-spacing: 0.5px;">Customer Discount Distribution by Tier</span>
-                        </div>
-                        <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 10px;">
-                            <i class="fas fa-info-circle me-1 text-primary"></i>Medical + Doctor + Distribution
-                        </span>
+                    {{-- Gross Total --}}
+                    <div class="kpi-card kpi-gross">
+                        <div class="kpi-label">Gross Total</div>
+                        <div class="kpi-value text-dark" id="statTotalGross">Rs. {{ number_format($stats['total_gross'] ?? 0, 2) }}</div>
                     </div>
 
-                    <div class="row g-2">
-                        <div class="col-12 col-md-4">
-                            <div class="tier-kpi-card tier-med">
-                                <div class="d-flex align-items-center gap-2.5">
-                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: #e0f2fe; color: #0284c7; font-size: 14px; box-shadow: 0 2px 4px rgba(2, 132, 199, 0.12);">
-                                        <i class="fas fa-clinic-medical"></i>
-                                    </div>
-                                    <div>
-                                        <div class="d-flex align-items-center gap-1.5">
-                                            <span class="text-dark fw-bold" style="font-size: 12px;">Medical Discount</span>
-                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-1.5 py-0" style="font-size: 9px; font-weight: 700;">Pharmacy</span>
-                                        </div>
-                                        <div class="text-muted" style="font-size: 10.5px;">Total Given to Medical Stores</div>
-                                    </div>
-                                </div>
-                                <h5 class="fw-bold mb-0 font-monospace" id="statDiscountMed" style="color: #0284c7;">
-                                    Rs. {{ number_format($stats['discount_medical'] ?? 0, 2) }}
-                                </h5>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <div class="tier-kpi-card tier-doc">
-                                <div class="d-flex align-items-center gap-2.5">
-                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: #dcfce7; color: #059669; font-size: 14px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.12);">
-                                        <i class="fas fa-user-md"></i>
-                                    </div>
-                                    <div>
-                                        <div class="d-flex align-items-center gap-1.5">
-                                            <span class="text-dark fw-bold" style="font-size: 12px;">Doctor Discount</span>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0" style="font-size: 9px; font-weight: 700;">Clinic</span>
-                                        </div>
-                                        <div class="text-muted" style="font-size: 10.5px;">Total Given to Doctors</div>
-                                    </div>
-                                </div>
-                                <h5 class="fw-bold mb-0 font-monospace" id="statDiscountDoc" style="color: #059669;">
-                                    Rs. {{ number_format($stats['discount_doctor'] ?? 0, 2) }}
-                                </h5>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <div class="tier-kpi-card tier-dist">
-                                <div class="d-flex align-items-center gap-2.5">
-                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: #e0e7ff; color: #4f46e5; font-size: 14px; box-shadow: 0 2px 4px rgba(99, 102, 241, 0.12);">
-                                        <i class="fas fa-truck"></i>
-                                    </div>
-                                    <div>
-                                        <div class="d-flex align-items-center gap-1.5">
-                                            <span class="text-dark fw-bold" style="font-size: 12px;">Distribution Discount</span>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-0" style="font-size: 9px; font-weight: 700;">Wholesale</span>
-                                        </div>
-                                        <div class="text-muted" style="font-size: 10.5px;">Total Given to Distributors</div>
-                                    </div>
-                                </div>
-                                <h5 class="fw-bold mb-0 font-monospace" id="statDiscountDist" style="color: #4f46e5;">
-                                    Rs. {{ number_format($stats['discount_distribution'] ?? 0, 2) }}
-                                </h5>
-                            </div>
+                    {{-- Total Discounts --}}
+                    <div class="kpi-card kpi-disc">
+                        <div class="kpi-label">Discounts</div>
+                        <div class="kpi-value text-danger" id="statTotalDiscount">Rs. {{ number_format($stats['total_discount'] ?? 0, 2) }}</div>
+                        <div id="statDiscountSub" class="kpi-sub">
+                            Line: Rs. {{ number_format($stats['inline_discount'] ?? 0, 2) }}
+                            @if(($stats['additional_discount'] ?? 0) > 0)
+                                &nbsp;· Extra: Rs. {{ number_format($stats['additional_discount'] ?? 0, 2) }}
+                            @endif
                         </div>
                     </div>
+
+                    {{-- Net Revenue --}}
+                    <div class="kpi-card kpi-net">
+                        <div class="kpi-label">Net Revenue</div>
+                        <div class="kpi-value text-success" id="statTotalNet">Rs. {{ number_format($stats['total_net'] ?? 0, 2) }}</div>
+                    </div>
+
+                    {{-- Invoices Count --}}
+                    <div class="kpi-card kpi-count">
+                        <div class="kpi-label">Invoices</div>
+                        <div class="kpi-value text-dark" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</div>
+                        <div id="statStatusCounts" class="kpi-sub">
+                            P:{{ $stats['posted_count'] ?? 0 }}
+                            @if(($stats['booked_count'] ?? 0) > 0) &nbsp;B:{{ $stats['booked_count'] ?? 0 }} @endif
+                            @if(($stats['returned_count'] ?? 0) > 0) &nbsp;R:{{ $stats['returned_count'] ?? 0 }} @endif
+                        </div>
+                    </div>
+
+                    {{-- Pharmacy Discount --}}
+                    <div class="kpi-card kpi-pharma">
+                        <div class="kpi-label" style="color:#0284c7;">Pharmacy</div>
+                        <div class="kpi-value" style="color:#0284c7;" id="statDiscountMed">Rs. {{ number_format($stats['discount_medical'] ?? 0, 2) }}</div>
+                        <div class="kpi-sub" style="color:#0284c7; opacity:0.75;">Inline Disc · Medical</div>
+                    </div>
+
+                    {{-- Doctor Discount --}}
+                    <div class="kpi-card kpi-doc">
+                        <div class="kpi-label" style="color:#059669;">Doctor</div>
+                        <div class="kpi-value" style="color:#059669;" id="statDiscountDoc">Rs. {{ number_format($stats['discount_doctor'] ?? 0, 2) }}</div>
+                        <div class="kpi-sub" style="color:#059669; opacity:0.75;">Inline Disc · Doctor</div>
+                    </div>
+
+                    {{-- Distribution Discount --}}
+                    <div class="kpi-card kpi-dist">
+                        <div class="kpi-label" style="color:#6366f1;">Distribution</div>
+                        <div class="kpi-value" style="color:#6366f1;" id="statDiscountDist">Rs. {{ number_format($stats['discount_distribution'] ?? 0, 2) }}</div>
+                        <div class="kpi-sub" style="color:#6366f1; opacity:0.75;">Inline Disc · Distribution</div>
+                    </div>
+
                 </div>
 
                 {{-- Status Filter Pills --}}
@@ -565,73 +498,84 @@
                             <i class="fas fa-filter"></i> Search & Filters Toggle
                         </button>
 
-                        {{-- AJAX Filter Panel --}}
-                        <div class="card filter-panel mb-4" id="filterPanelContainer">
+                        {{-- Compact Filter Toolbar --}}
+                        <div class="card filter-panel mb-3" id="filterPanelContainer">
                             <div class="card-body p-0">
-                                <form id="filterForm" class="row g-2 g-md-3 align-items-end" autocomplete="off" onsubmit="return false;">
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label mb-1">Quick Filter</label>
-                                        <select id="quick_filter" class="form-select">
-                                            <option value="custom">Custom Range</option>
-                                            <option value="daily">Daily (Today)</option>
-                                            <option value="weekly">Weekly (This Week)</option>
-                                            <option value="monthly">Monthly (This Month)</option>
-                                            <option value="yearly">Yearly (This Year)</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label mb-1">From Date</label>
-                                        <input type="text" class="form-control datepicker-custom bg-white" name="from_date" id="filter_from_date" placeholder="dd/mm/yyyy">
-                                    </div>
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label mb-1">To Date</label>
-                                        <input type="text" class="form-control datepicker-custom bg-white" name="to_date" id="filter_to_date" placeholder="dd/mm/yyyy">
-                                    </div>
-                                    <div class="col-6 col-md-2">
-                                        <label class="form-label mb-1">Invoice / Bill#</label>
-                                        <input type="text" class="form-control" name="bill_no" id="filter_bill_no" value="{{ request('bill_no') ?? request('invoice_no') }}" placeholder="Inv / Bill#...">
-                                    </div>
-                                    <div class="col-6 col-md-1">
-                                        <label class="form-label mb-1">M.Bill / Ref</label>
-                                        <input type="text" class="form-control" name="reference" id="filter_reference" placeholder="M.Bill...">
-                                    </div>
-                                    <div class="col-6 col-md-3">
-                                        <label class="form-label mb-1">Customer</label>
-                                        <select class="form-select select2-customer" name="customer_id" id="filter_customer_id" style="width: 100%;">
-                                            <option value="">All Customers</option>
-                                            @foreach ($customers as $c)
-                                                <option value="{{ $c->id }}" {{ request('customer_id') == $c->id ? 'selected' : '' }}>
-                                                    {{ $c->customer_name }} {{ $c->mobile ? '('.$c->mobile.')' : '' }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-6 col-md-2 mt-2">
-                                        <label class="form-label mb-1">Customer Type</label>
-                                        <select class="form-select" name="customer_type" id="filter_customer_type">
-                                            <option value="">All Types</option>
-                                            <option value="doctor">Doctor</option>
-                                            <option value="company">Company</option>
-                                            <option value="normal">Normal</option>
-                                            <option value="distributor">Distributor</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-6 col-md-2 mt-2">
-                                        <label class="form-label mb-1">Zone</label>
-                                        <select class="form-select" name="zone_id" id="filter_zone_id">
-                                            <option value="">All Zones</option>
-                                            @foreach($zones as $z)
-                                                <option value="{{ $z->id }}">{{ $z->zone }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-12 d-flex justify-content-end gap-2 mt-2">
-                                        <button type="button" class="btn btn-premium-secondary px-3" id="btnReset">
-                                            <i class="fas fa-undo me-1"></i>Reset
-                                        </button>
-                                        <button type="button" class="btn btn-premium-primary px-4" id="btnSearch">
-                                            <i class="fas fa-search me-1"></i>Search
-                                        </button>
+                                <form id="filterForm" autocomplete="off" onsubmit="return false;">
+                                    <div class="filter-toolbar-row">
+                                        {{-- Quick Filter --}}
+                                        <div style="width: 82px; flex-shrink: 0;">
+                                            <select id="quick_filter" class="form-select text-center" title="Quick Filter">
+                                                <option value="custom">Range</option>
+                                                <option value="daily">Today</option>
+                                                <option value="weekly">Week</option>
+                                                <option value="monthly">Month</option>
+                                                <option value="yearly">Year</option>
+                                            </select>
+                                        </div>
+
+                                        {{-- From Date (exact width for 10-char date like 06/10/2026) --}}
+                                        <div style="width: 95px; flex-shrink: 0;">
+                                            <input type="text" class="form-control datepicker-custom bg-white text-center" name="from_date" id="filter_from_date" placeholder="From Date">
+                                        </div>
+
+                                        {{-- To Date --}}
+                                        <div style="width: 95px; flex-shrink: 0;">
+                                            <input type="text" class="form-control datepicker-custom bg-white text-center" name="to_date" id="filter_to_date" placeholder="To Date">
+                                        </div>
+
+                                        {{-- Inv / Bill# --}}
+                                        <div style="width: 90px; flex-shrink: 0;">
+                                            <input type="text" class="form-control text-center" name="bill_no" id="filter_bill_no" value="{{ request('bill_no') ?? request('invoice_no') }}" placeholder="Inv/Bill#">
+                                        </div>
+
+                                        {{-- M.Bill Ref --}}
+                                        <div style="width: 85px; flex-shrink: 0;">
+                                            <input type="text" class="form-control text-center" name="reference" id="filter_reference" placeholder="M.Bill">
+                                        </div>
+
+                                        {{-- Customer (flexible to fill remaining space) --}}
+                                        <div style="flex: 1 1 180px; min-width: 140px;">
+                                            <select class="form-select select2-customer" name="customer_id" id="filter_customer_id" style="width:100%;">
+                                                <option value="">All Customers</option>
+                                                @foreach ($customers as $c)
+                                                    <option value="{{ $c->id }}" {{ request('customer_id') == $c->id ? 'selected' : '' }}>
+                                                        {{ $c->customer_name }} {{ $c->mobile ? '('.$c->mobile.')' : '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        {{-- Customer Type --}}
+                                        <div style="width: 82px; flex-shrink: 0;">
+                                            <select class="form-select text-center" name="customer_type" id="filter_customer_type" title="Customer Type">
+                                                <option value="">Type</option>
+                                                <option value="doctor">Doctor</option>
+                                                <option value="company">Company</option>
+                                                <option value="normal">Normal</option>
+                                                <option value="distributor">Distributor</option>
+                                            </select>
+                                        </div>
+
+                                        {{-- Zone --}}
+                                        <div style="width: 82px; flex-shrink: 0;">
+                                            <select class="form-select text-center" name="zone_id" id="filter_zone_id" title="Zone">
+                                                <option value="">Zone</option>
+                                                @foreach($zones as $z)
+                                                    <option value="{{ $z->id }}">{{ $z->zone }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        {{-- Reset & Search Buttons --}}
+                                        <div class="d-flex align-items-center gap-1" style="flex-shrink: 0;">
+                                            <button type="button" class="btn btn-compact-secondary" id="btnReset" title="Reset Filters">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-compact-primary" id="btnSearch">
+                                                <i class="fas fa-search me-1"></i>Search
+                                            </button>
+                                        </div>
                                     </div>
                                 </form>
                             </div>
@@ -755,7 +699,14 @@
                             $('#statDiscountDoc').text('Rs. ' + Number(response.stats.discount_doctor || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statDiscountDist').text('Rs. ' + Number(response.stats.discount_distribution || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statTotalNet').text('Rs. ' + Number(response.stats.total_net || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statStatusCounts').html((response.stats.posted_count || 0) + ' <span class="fs-6 fw-normal text-muted">/ ' + (response.stats.booked_count || 0) + '</span>');
+                            let statusHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 9.5px;"><i class="fas fa-check-circle me-0.5"></i> Posted: ' + (response.stats.posted_count || 0) + '</span>';
+                            if (Number(response.stats.booked_count || 0) > 0) {
+                                statusHtml += '<span class="badge bg-info-subtle text-info border border-info-subtle ms-1" style="font-size: 9.5px;">Booked: ' + (response.stats.booked_count || 0) + '</span>';
+                            }
+                            if (Number(response.stats.returned_count || 0) > 0) {
+                                statusHtml += '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 9.5px;">Ret: ' + (response.stats.returned_count || 0) + '</span>';
+                            }
+                            $('#statStatusCounts').html(statusHtml);
                         }
 
                         initDataTable();
