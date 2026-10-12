@@ -130,8 +130,33 @@ class SaleController extends Controller
             }
             $sale->returned_qty = $returnedQty;
 
+            $saleBonus = 0;
+            if ($sale->items && $sale->items->count() > 0) {
+                foreach ($sale->items as $item) {
+                    $bQty = (float)($item->bonus_qty ?? 0);
+                    if ($bQty <= 0 && !empty($item->color)) {
+                        $b64 = base64_decode($item->color, true);
+                        $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($item->color, true);
+                        if (is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
+                            $bQty = (float)$vData['bonus'];
+                        }
+                    }
+                    $saleBonus += $bQty;
+                }
+            }
+            $sale->bonus_qty = $saleBonus;
+
             $origQty = $sale->total_items > 0 ? (float) $sale->total_items : (float) $sale->qty;
-            $sale->effective_qty = max(0, $origQty - $returnedQty);
+            $effTotalPieces = max(0, $origQty - $returnedQty);
+            $sale->effective_qty = $effTotalPieces;
+
+            if ($sale->sale_status === 'returned' || $sale->sale_status == 1) {
+                $sale->effective_bonus_qty = 0;
+                $sale->effective_sold_qty = 0;
+            } else {
+                $sale->effective_bonus_qty = $saleBonus;
+                $sale->effective_sold_qty = max(0, $effTotalPieces - $saleBonus);
+            }
 
             // Gross & Discount calculations
             $inlineVal = $sale->items ? (float) $sale->items->sum('discount_amount') : 0;
@@ -250,7 +275,9 @@ class SaleController extends Controller
 
         $stats = [
             'total_count' => $sales->count(),
-            'total_qty' => (float) $sales->sum('effective_qty'),
+            'total_qty' => (float) $sales->sum('effective_sold_qty'),
+            'total_bonus_qty' => (float) $sales->sum('effective_bonus_qty'),
+            'total_all_qty' => (float) $sales->sum('effective_qty'),
             'total_gross' => (float) $sales->sum('effective_gross'),
             'total_net' => (float) $sales->sum('effective_net'),
             'inline_discount' => (float) $sales->sum('effective_inline_discount'),

@@ -86,19 +86,26 @@
             {{ \Illuminate\Support\Str::limit($pNames, 18) }}
         </td>
         <td class="text-center font-monospace text-nowrap">
+            @php
+                $rowBonus = isset($sale->bonus_qty) ? (float)$sale->bonus_qty : 0;
+                $rowSold = isset($sale->effective_sold_qty) ? (float)$sale->effective_sold_qty : max(0, $effQty - $rowBonus);
+            @endphp
             @if ($sale->sale_status === 'returned' || $sale->sale_status == 1)
                 @if ($effQty > 0)
-                    <span class="fw-bold">{{ number_format($effQty, 2) }}</span>
-                    <small class="text-danger d-block" style="font-size: 9.5px;">(-{{ number_format($retQty > 0 ? $retQty : ($origQty - $effQty), 2) }} ret)</small>
+                    <span class="fw-bold">{{ number_format($effQty, 0) }}</span>
+                    <small class="text-danger d-block" style="font-size: 9.5px;">(-{{ number_format($retQty > 0 ? $retQty : ($origQty - $effQty), 0) }} ret)</small>
                 @else
-                    <span class="text-danger fw-bold">0.00</span>
-                    <small class="text-muted d-block text-decoration-line-through" style="font-size: 9.5px;">{{ number_format($origQty, 2) }}</small>
+                    <span class="text-danger fw-bold">0</span>
+                    <small class="text-muted d-block text-decoration-line-through" style="font-size: 9.5px;">{{ number_format($origQty, 0) }}</small>
                 @endif
             @elseif ($retQty > 0)
-                <span class="fw-bold">{{ number_format($effQty, 2) }}</span>
-                <small class="text-danger d-block" style="font-size: 9.5px;">(-{{ number_format($retQty, 2) }} ret)</small>
+                <span class="fw-bold">{{ number_format($effQty, 0) }}</span>
+                <small class="text-danger d-block" style="font-size: 9.5px;">(-{{ number_format($retQty, 0) }} ret)</small>
+            @elseif ($rowBonus > 0)
+                <span class="fw-bold text-dark">{{ number_format($rowSold, 0) }} <span class="text-primary fw-bold" title="Bonus">/ {{ number_format($rowBonus, 0) }}</span></span>
+                <small class="d-block text-muted" style="font-size: 9px;">(Sold / Bns)</small>
             @else
-                {{ number_format($origQty, 2) }}
+                {{ number_format($origQty, 0) }}
             @endif
         </td>
         <td class="text-right fw-bold text-dark font-monospace text-nowrap" style="text-align: right !important; white-space: nowrap;">
