@@ -746,8 +746,9 @@ class ReportingController extends Controller
         $products = Product::orderBy('item_name')->get();
         $categories = Category::orderBy('name')->get();
         $customers = DB::table('customers')->orderBy('customer_name')->get();
+        $zones = \App\Models\Zone::orderBy('zone')->get();
 
-        return view('admin_panel.reporting.profit_loss_report', compact('products', 'categories', 'customers'));
+        return view('admin_panel.reporting.profit_loss_report', compact('products', 'categories', 'customers', 'zones'));
     }
 
     public function fetchProfitLoss(Request $request)
@@ -770,6 +771,13 @@ class ReportingController extends Controller
         $productId = $request->product_id;
         $categoryId = $request->category_id;
         $customerId = $request->customer_id;
+        $zoneId = $request->zone_id;
+
+        // If zone filter is selected, retrieve customer IDs belonging to that zone
+        $zoneCustomerIds = null;
+        if ($zoneId && $zoneId !== 'all') {
+            $zoneCustomerIds = DB::table('customers')->where('zone', $zoneId)->pluck('id')->toArray();
+        }
 
         $productsQuery = Product::query();
         if ($productId && $productId !== 'all') {
@@ -831,6 +839,8 @@ class ReportingController extends Controller
                 }
                 if ($customerId && $customerId !== 'all') {
                     $saleQuery->where('sales.customer_id', $customerId);
+                } elseif ($zoneCustomerIds !== null) {
+                    $saleQuery->whereIn('sales.customer_id', $zoneCustomerIds);
                 }
 
                 $salesList = $saleQuery->select(
@@ -851,7 +861,7 @@ class ReportingController extends Controller
                 if ($start && $end) {
                     $webSalesQuery->whereBetween('eo.created_at', [$start, $end]);
                 }
-                if ($customerId && $customerId !== 'all') {
+                if (($customerId && $customerId !== 'all') || $zoneCustomerIds !== null) {
                     $webSalesQuery->whereRaw('1 = 0');
                 }
 
@@ -887,6 +897,11 @@ class ReportingController extends Controller
                 
                 if ($start && $end) {
                     $returnQuery->whereBetween('sr.created_at', [$start, $end]);
+                }
+                if ($customerId && $customerId !== 'all') {
+                    $returnQuery->where('sr.customer_id', $customerId);
+                } elseif ($zoneCustomerIds !== null) {
+                    $returnQuery->whereIn('sr.customer_id', $zoneCustomerIds);
                 }
                 $returnsList = $returnQuery->select('sri.qty', 'sri.color', 'sr.sale_id', 'sri.line_total')
                     ->get();
@@ -1063,6 +1078,8 @@ class ReportingController extends Controller
 
                 if ($customerId && $customerId !== 'all') {
                     $saleQuery->where('sales.customer_id', $customerId);
+                } elseif ($zoneCustomerIds !== null) {
+                    $saleQuery->whereIn('sales.customer_id', $zoneCustomerIds);
                 }
 
                 $salesList = $saleQuery->select(
@@ -1094,6 +1111,11 @@ class ReportingController extends Controller
                 
                 if ($start && $end) {
                     $returnQuery->whereBetween('sr.created_at', [$start, $end]);
+                }
+                if ($customerId && $customerId !== 'all') {
+                    $returnQuery->where('sr.customer_id', $customerId);
+                } elseif ($zoneCustomerIds !== null) {
+                    $returnQuery->whereIn('sr.customer_id', $zoneCustomerIds);
                 }
                 $returnsList = $returnQuery->select('sri.qty', 'sri.line_total')->get();
 
@@ -1195,6 +1217,8 @@ class ReportingController extends Controller
         }
         if ($customerId && $customerId !== 'all') {
             $manualSaleQuery->where('sales.customer_id', $customerId);
+        } elseif ($zoneCustomerIds !== null) {
+            $manualSaleQuery->whereIn('sales.customer_id', $zoneCustomerIds);
         }
 
         $manualSalesList = $manualSaleQuery->select(
@@ -1239,6 +1263,8 @@ class ReportingController extends Controller
                 }
                 if ($customerId && $customerId !== 'all') {
                     $manualRetQuery->where('sale_returns.customer_id', $customerId);
+                } elseif ($zoneCustomerIds !== null) {
+                    $manualRetQuery->whereIn('sale_returns.customer_id', $zoneCustomerIds);
                 }
 
                 $manualReturns = $manualRetQuery->select(
@@ -1284,8 +1310,12 @@ class ReportingController extends Controller
 
         $totalExpenses = $expenseQueryV1->sum('total_amount') + $expenseQueryV2->sum('total_amount');
 
-        // 4. Top 10 Customers by Profit
-        $allCustomers = DB::table('customers')->get();
+        // 4. Top Customers by Profit (filter by zone if selected)
+        $customerQuery = DB::table('customers');
+        if ($zoneCustomerIds !== null) {
+            $customerQuery->whereIn('id', $zoneCustomerIds);
+        }
+        $allCustomers = $customerQuery->get();
         $customerProfits = [];
 
         $balanceService = app(\App\Services\BalanceService::class);

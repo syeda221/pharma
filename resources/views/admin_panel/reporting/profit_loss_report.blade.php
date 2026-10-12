@@ -148,9 +148,27 @@
                     </div>
                 </div>
 
-                {{-- Bottom Section: Category, Customer, Product --}}
+                {{-- Bottom Section: Category, Customer, Product, Zone --}}
                 <div class="row g-2">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label for="zone_id_desk" class="sale-filter-label mb-1">Zone:</label>
+                        <select id="zone_id_desk" class="form-select form-select-sm select2 zoneSelect">
+                            <option value="all">All Zones</option>
+                            @foreach($zones as $z)
+                                <option value="{{ $z->id }}">{{ $z->zone }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="customer_id_desk" class="sale-filter-label mb-1">Customer:</label>
+                        <select id="customer_id_desk" class="form-select form-select-sm select2 customerSelect">
+                            <option value="all" data-zone="">All Customers</option>
+                            @foreach($customers as $cus)
+                                <option value="{{ $cus->id }}" data-zone="{{ $cus->zone }}">{{ $cus->customer_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label for="category_id_desk" class="sale-filter-label mb-1">Category:</label>
                         <select id="category_id_desk" class="form-select form-select-sm select2 categorySelect">
                             <option value="all">All Categories</option>
@@ -159,16 +177,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label for="customer_id_desk" class="sale-filter-label mb-1">Customer:</label>
-                        <select id="customer_id_desk" class="form-select form-select-sm select2 customerSelect">
-                            <option value="all">All Customers</option>
-                            @foreach($customers as $cus)
-                                <option value="{{ $cus->id }}">{{ $cus->customer_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="product_id_desk" class="sale-filter-label mb-1">Product:</label>
                         <select id="product_id_desk" class="form-select form-select-sm select2 productSelect">
                             <option value="all">All Products</option>
@@ -204,7 +213,29 @@
                         <input type="datetime-local" id="end_date_mob" class="form-control form-control-sm endDateInput" value="{{ date('Y-m-d\T23:59') }}" style="font-size: 11px;">
                     </div>
 
-                    {{-- 2. Category --}}
+                    {{-- 2. Zone --}}
+                    <div class="col-12 mb-1">
+                        <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Zone</label>
+                        <select class="form-select form-select-sm select2 zoneSelect">
+                            <option value="all">All Zones</option>
+                            @foreach($zones as $z)
+                                <option value="{{ $z->id }}">{{ $z->zone }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- 3. Customer --}}
+                    <div class="col-12 mb-1">
+                        <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Customer</label>
+                        <select class="form-select form-select-sm select2 customerSelect">
+                            <option value="all" data-zone="">All Customers</option>
+                            @foreach($customers as $cus)
+                                <option value="{{ $cus->id }}" data-zone="{{ $cus->zone }}">{{ $cus->customer_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- 4. Category --}}
                     <div class="col-12 mb-1">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Category</label>
                         <select class="form-select form-select-sm select2 categorySelect">
@@ -215,18 +246,7 @@
                         </select>
                     </div>
 
-                    {{-- 3. Customer --}}
-                    <div class="col-12 mb-1">
-                        <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Customer</label>
-                        <select class="form-select form-select-sm select2 customerSelect">
-                            <option value="all">All Customers</option>
-                            @foreach($customers as $cus)
-                                <option value="{{ $cus->id }}">{{ $cus->customer_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    {{-- 4. Product --}}
+                    {{-- 5. Product --}}
                     <div class="col-12 mb-1">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Product</label>
                         <select class="form-select form-select-sm select2 productSelect">
@@ -415,8 +435,34 @@ $(document).ready(function() {
     $('.startDateInput').on('change', function() { $('.startDateInput').val($(this).val()); });
     $('.endDateInput').on('change', function() { $('.endDateInput').val($(this).val()); });
     $('.categorySelect').on('change', function() { $('.categorySelect').val($(this).val()); });
-    $('.customerSelect').on('change', function() { $('.customerSelect').val($(this).val()); });
     $('.productSelect').on('change', function() { $('.productSelect').val($(this).val()); });
+    $('.customerSelect').on('change', function() { $('.customerSelect').val($(this).val()); });
+
+    // Zone Filter Sync & Dynamic Customer Dropdown Filter
+    $('.zoneSelect').on('change', function() {
+        let selectedZone = $(this).val();
+        $('.zoneSelect').val(selectedZone);
+
+        $('.customerSelect').each(function() {
+            let $select = $(this);
+            let currentVal = $select.val();
+            $select.find('option').each(function() {
+                let optZone = $(this).attr('data-zone');
+                if ($(this).val() === 'all' || selectedZone === 'all' || optZone == selectedZone) {
+                    $(this).show().removeAttr('disabled');
+                } else {
+                    $(this).hide().attr('disabled', 'disabled');
+                }
+            });
+            // If current customer doesn't match selected zone, reset to 'all'
+            let selectedOpt = $select.find('option[value="' + currentVal + '"]');
+            if (selectedOpt.length && selectedOpt.is(':disabled')) {
+                $select.val('all').trigger('change');
+            } else {
+                $select.trigger('change.select2');
+            }
+        });
+    });
 
     var profitTable = $('#profitTable').DataTable({
         paging: true,
@@ -447,7 +493,7 @@ $(document).ready(function() {
     $('.btnResetTrigger').on('click', function() {
         $('.startDateInput').val('{{ date("Y-m-d\T00:00") }}');
         $('.endDateInput').val('{{ date("Y-m-d\T23:59") }}');
-        $('.categorySelect, .customerSelect, .productSelect').val('all').trigger('change');
+        $('.zoneSelect, .categorySelect, .customerSelect, .productSelect').val('all').trigger('change');
         fetchReport();
     });
 
@@ -458,6 +504,7 @@ $(document).ready(function() {
 
         let startDate = $('.startDateInput').val();
         let endDate   = $('.endDateInput').val();
+        let zoneId    = $('.zoneSelect').val() || 'all';
         let catId     = $('.categorySelect').val();
         let custId    = $('.customerSelect').val();
         let prodId    = $('.productSelect').val();
@@ -469,6 +516,7 @@ $(document).ready(function() {
                 _token: "{{ csrf_token() }}",
                 start_date: startDate,
                 end_date: endDate,
+                zone_id: zoneId,
                 product_id: prodId,
                 category_id: catId,
                 customer_id: custId
