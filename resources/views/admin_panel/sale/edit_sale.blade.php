@@ -911,6 +911,13 @@
                                                     $variantLabel = '';
                                                     $vSize = '-';
                                                     $vCol = '-';
+                                                    if (!empty($item->bonus_qty) && (float)$item->bonus_qty > 0) {
+                                                        $vCol = (float)$item->bonus_qty;
+                                                    } elseif ($variantData && isset($variantData['bonus']) && $variantData['bonus'] !== '-') {
+                                                        $vCol = $variantData['bonus'];
+                                                    } elseif ($variantData && isset($variantData['color']) && $variantData['color'] !== '-') {
+                                                        $vCol = $variantData['color'];
+                                                    }
                                                     if ($variantData && isset($variantData['name'])) {
                                                         $vSize = (isset($variantData['size']) && $variantData['size'] !== '-') ? $variantData['size'] : '-';
                                                         $vCol  = (isset($variantData['color']) && $variantData['color'] !== '-') ? $variantData['color'] : '-';
@@ -981,7 +988,7 @@
                                                     
                                                     <!-- Bonus (Editable) -->
                                                     <td class="col-color">
-                                                        <input type="text"
+                                                        <input type="number" step="any" min="0"
                                                             class="form-control color-display text-center"
                                                             name="bonus_display[]"
                                                             value="{{ ($vCol ?? '') !== '-' ? ($vCol ?? '') : '' }}"
@@ -1075,7 +1082,7 @@
                                                     <input type="number" class="form-control loose-pcs-input text-end" name="loose_qty[]" placeholder="" min="0" value="">
                                                 </td>
                                                 <td class="col-size"><input type="text" class="form-control size-display text-center" name="size_display[]" placeholder="-"><input type="hidden" class="pack-qty" name="pack_qty[]" value="1"></td>
-                                                <td class="col-color"><input type="text" class="form-control color-display text-center" name="bonus_display[]" placeholder="0"></td>
+                                                <td class="col-color"><input type="number" step="any" min="0" class="form-control color-display text-center" name="bonus_display[]" placeholder="0"></td>
                                                 <td class="col-pieces"><input type="text" class="form-control total-pieces text-end input-readonly fw-semibold" name="total_pieces[]" readonly placeholder="0" tabindex="-1"><input type="hidden" class="sales-qty" name="qty[]" value="0"></td>
                                                 <td class="col-price-p">
                                                     <div class="d-flex align-items-center gap-1">

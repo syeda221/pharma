@@ -236,10 +236,12 @@ class ProductController extends Controller
                             $initial = (float) $vRawStock;
                         }
 
+                        $variantsTotal = count($variants);
+
                         // Calculate Purchased variant qty
                         $purchased = 0;
                         foreach ($purchasesList as $pItem) {
-                            if ($this->matchSaleItemToVariant($pItem, $v)) {
+                            if ($this->matchSaleItemToVariant($pItem, $v, $variantsTotal)) {
                                 $pUnit = strtolower(trim($pItem->unit ?? ''));
                                 $itemPPB = (float) ($pItem->pieces_per_box > 0 ? $pItem->pieces_per_box : $vPpb);
                                 if ($itemPPB <= 0) $itemPPB = 1;
@@ -264,7 +266,7 @@ class ProductController extends Controller
                         // Calculate Purchase Returned variant qty
                         $pReturned = 0;
                         foreach ($purchaseReturnsList as $prItem) {
-                            if ($this->matchSaleItemToVariant($prItem, $v)) {
+                            if ($this->matchSaleItemToVariant($prItem, $v, $variantsTotal)) {
                                 $pReturned += (float) $prItem->qty;
                             }
                         }
@@ -272,7 +274,7 @@ class ProductController extends Controller
                         // Calculate Sold variant qty
                         $sold = 0;
                         foreach ($salesList as $sItem) {
-                            if ($this->matchSaleItemToVariant($sItem, $v)) {
+                            if ($this->matchSaleItemToVariant($sItem, $v, $variantsTotal)) {
                                 $sold += (float) $sItem->total_pieces;
                             }
                         }
@@ -289,7 +291,7 @@ class ProductController extends Controller
                                 'qty' => $rItem->qty,
                                 'color' => $rColor
                             ];
-                            if ($this->matchSaleItemToVariant($rItemCopy, $v)) {
+                            if ($this->matchSaleItemToVariant($rItemCopy, $v, $variantsTotal)) {
                                 $returnedQty += (float) $rItem->qty;
                             }
                         }
@@ -1683,6 +1685,18 @@ class ProductController extends Controller
             return strtolower(trim($itemColor)) === $vColor;
         }
 
+        // 1. Direct Barcode Match (Highest Priority)
+        if (!empty($variant['barcode']) && !empty($itemVariant['barcode'])) {
+            if (trim((string)$variant['barcode']) === trim((string)$itemVariant['barcode'])) {
+                return true;
+            }
+        }
+
+        // 2. If product has only 1 variant in total, any item of this product belongs to this variant
+        if ($totalVariantsCount <= 1) {
+            return true;
+        }
+
         // Compare name, color and size
         $vColor = strtolower(trim($variant['color'] ?? '-'));
         $vSize = strtolower(trim($variant['size'] ?? '-'));
@@ -1691,6 +1705,11 @@ class ProductController extends Controller
         $itemVColor = strtolower(trim($itemVariant['color'] ?? ($itemVariant['color_val'] ?? '-')));
         $itemVSize = strtolower(trim($itemVariant['size'] ?? ($itemVariant['size_val'] ?? '-')));
         $itemVName = strtolower(trim($itemVariant['name'] ?? ''));
+
+        // If item color was filled from bonus or equals bonus, normalize to '-' if variant has '-'
+        if (isset($itemVariant['bonus']) && $itemVariant['color'] == $itemVariant['bonus'] && ($vColor === '-' || $vColor === '')) {
+            $itemVColor = '-';
+        }
 
         if ($vColor === '') $vColor = '-';
         if ($vSize === '') $vSize = '-';

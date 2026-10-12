@@ -44,6 +44,7 @@
         .kpi-card.kpi-disc   { border-top: 3px solid #dc2626; }
         .kpi-card.kpi-net    { border-top: 3px solid #10b981; }
         .kpi-card.kpi-count  { border-top: 3px solid #0284c7; }
+        .kpi-card.kpi-qty    { border-top: 3px solid #8b5cf6; background: #faf5ff; }
         .kpi-card.kpi-pharma { border-top: 3px solid #0284c7; background: #f0f9ff; }
         .kpi-card.kpi-doc    { border-top: 3px solid #059669; background: #f0fdf4; }
         .kpi-card.kpi-dist   { border-top: 3px solid #6366f1; background: #f5f3ff; }
@@ -215,11 +216,12 @@
             width: 100% !important;
         }
 
-        /* Prevent Dropdowns from Being Clipped */
+        /* Table Scroll and Sticky Action */
         .table-responsive {
             border-radius: 8px !important;
-            overflow: visible !important;
+            overflow-x: auto !important;
             min-height: 380px;
+            position: relative;
         }
 
         /* Premium Dropdown Menu Customizations */
@@ -258,50 +260,81 @@
         }
         
         .premium-table thead th {
-            background-color: #f1f5f9 !important;
-            color: #1e293b !important;
+            background-color: #f8fafc !important;
+            color: #475569 !important;
             font-weight: 700 !important;
             text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
-            border: 1px solid #cbd5e1 !important;
-            border-bottom: 2.5px solid #475569 !important;
-            border-right: 1.5px solid #cbd5e1 !important;
-            padding: 10px 8px !important;
+            font-size: 10.5px;
+            letter-spacing: 0.3px;
+            border: 1px solid #e2e8f0 !important;
+            border-bottom: 2px solid #cbd5e1 !important;
+            border-right: 1px solid #e2e8f0 !important;
+            padding: 8px 6px !important;
             vertical-align: middle !important;
             white-space: nowrap;
+            position: relative;
+        }
+
+        /* DataTables sorting padding */
+        table.dataTable.premium-table thead th.sorting,
+        table.dataTable.premium-table thead th.sorting_asc,
+        table.dataTable.premium-table thead th.sorting_desc {
+            padding-right: 20px !important;
+        }
+
+        table.dataTable.premium-table thead th.text-right.sorting,
+        table.dataTable.premium-table thead th.text-right.sorting_asc,
+        table.dataTable.premium-table thead th.text-right.sorting_desc {
+            padding-right: 20px !important;
         }
         
         .premium-table tbody td {
-            border: 1px solid #e2e8f0 !important;
-            border-right: 1.5px solid #cbd5e1 !important;
-            padding: 8px 8px !important;
-            font-size: 12.5px !important;
+            border: 1px solid #f1f5f9 !important;
+            border-right: 1px solid #e2e8f0 !important;
+            padding: 5px 6px !important;
+            font-size: 11.5px !important;
             color: #1e293b !important;
             background-color: #ffffff;
             vertical-align: middle !important;
         }
         
         .premium-table tbody tr:hover td {
-            background-color: #f0f7ff !important;
+            background-color: #f8fafc !important;
+        }
+
+        /* Sticky Action Column so it is ALWAYS visible */
+        .premium-table th:last-child,
+        .premium-table td:last-child {
+            position: sticky !important;
+            right: 0 !important;
+            background-color: #ffffff !important;
+            z-index: 5 !important;
+            box-shadow: -3px 0 6px -2px rgba(0, 0, 0, 0.12) !important;
+        }
+        .premium-table thead th:last-child {
+            background-color: #f8fafc !important;
+            z-index: 6 !important;
+        }
+        .premium-table tbody tr:hover td:last-child {
+            background-color: #f8fafc !important;
         }
 
         /* Dropdown Action Button */
         .btn-premium-action {
             background-color: #f8fafc !important;
-            border: 1.5px solid #cbd5e1 !important;
+            border: 1px solid #cbd5e1 !important;
             color: #475569 !important;
-            font-weight: 700 !important;
-            border-radius: 6px !important;
-            height: 32px !important;
-            padding: 0 12px !important;
+            font-weight: 600 !important;
+            border-radius: 5px !important;
+            height: 27px !important;
+            padding: 0 8px !important;
             font-size: 11px !important;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.2px;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
             transition: all 0.2s ease-in-out !important;
+            white-space: nowrap !important;
         }
         .btn-premium-action:hover, 
         .btn-premium-action:focus, 
@@ -426,6 +459,13 @@
                             @if(($stats['booked_count'] ?? 0) > 0) &nbsp;B:{{ $stats['booked_count'] ?? 0 }} @endif
                             @if(($stats['returned_count'] ?? 0) > 0) &nbsp;R:{{ $stats['returned_count'] ?? 0 }} @endif
                         </div>
+                    </div>
+
+                    {{-- Products Sold Qty --}}
+                    <div class="kpi-card kpi-qty">
+                        <div class="kpi-label" style="color:#7c3aed;">Product Qty</div>
+                        <div class="kpi-value" style="color:#7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }}</div>
+                        <div class="kpi-sub" style="color:#7c3aed; opacity:0.8;">Total Items Sold</div>
                     </div>
 
                     {{-- Pharmacy Discount --}}
@@ -586,18 +626,20 @@
                             <table id="sales-table" class="table table-bordered table-hover align-middle datanew premium-table" style="width:100%">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th class="py-3 ps-3 rounded-start text-secondary fw-semibold text-uppercase small">Invoice / Bill#</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">Customer</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">M.Bill</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">Products</th>
-                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-center">Qty</th>
-                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important;">Gross</th>
-                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important;">Line Disc</th>
-                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important;">Extra Disc</th>
-                                        <th class="py-2.5 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important;">Net Total</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">Date</th>
-                                        <th class="py-3 text-secondary fw-semibold text-uppercase small">Status</th>
-                                        <th class="py-3 pe-3 rounded-end text-secondary fw-semibold text-uppercase small text-center">Action</th>
+                                        <th class="py-2 px-2 text-secondary fw-semibold text-uppercase small" style="width: 80px;">Invoice#</th>
+                                        <th class="py-2 px-2 text-secondary fw-semibold text-uppercase small" style="width: 110px;">Customer</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-center" style="width: 45px;" data-orderable="false">M.Bill</th>
+                                        <th class="py-2 px-2 text-secondary fw-semibold text-uppercase small" style="width: 95px;" data-orderable="false">Product</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-center" style="width: 45px;">Qty</th>
+                                        <th class="py-2 px-2 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important; width: 80px;">Gross</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important; width: 68px;" data-orderable="false">Pharm</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important; width: 68px;" data-orderable="false">Doctor</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important; width: 58px;" data-orderable="false">Dist</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important; width: 58px;" data-orderable="false">Extra</th>
+                                        <th class="py-2 px-2 text-secondary fw-semibold text-uppercase small text-right" style="text-align: right !important; width: 80px;">Net Total</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-center" style="width: 70px;">Date</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-center" style="width: 65px;">Status</th>
+                                        <th class="py-2 px-1 text-secondary fw-semibold text-uppercase small text-center" style="width: 65px;" data-orderable="false">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="salesTableBody">
@@ -635,6 +677,10 @@
                         $('#sales-table').DataTable({
                             "pageLength": 10,
                             "order": [],
+                            "autoWidth": false,
+                            "columnDefs": [
+                                { "orderable": false, "targets": [2, 3, 6, 7, 8, 9, 13] }
+                            ],
                             "language": {
                                 "search": "",
                                 "searchPlaceholder": "Search sales..."
@@ -688,6 +734,7 @@
                         // Update Stat Cards dynamically if present
                         if (response.stats) {
                             $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
+                            $('#statTotalQty').text(Number(response.stats.total_qty || 0).toLocaleString());
                             $('#statTotalGross').text('Rs. ' + Number(response.stats.total_gross || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statTotalDiscount').text('Rs. ' + Number(response.stats.total_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             let discSubHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 9.5px;">Line: Rs. ' + Number(response.stats.inline_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';

@@ -873,7 +873,7 @@
 
                                             <!-- Bonus (Editable) -->
                                             <td class="col-color">
-                                                <input type="text" class="form-control color-display text-center" name="bonus_display[]" placeholder="0">
+                                                <input type="number" step="any" min="0" class="form-control color-display text-center" name="bonus_display[]" placeholder="0">
                                             </td>
 
                                             <!-- Total Pieces (Calculated) -->

@@ -250,6 +250,7 @@ class SaleController extends Controller
 
         $stats = [
             'total_count' => $sales->count(),
+            'total_qty' => (float) $sales->sum('effective_qty'),
             'total_gross' => (float) $sales->sum('effective_gross'),
             'total_net' => (float) $sales->sum('effective_net'),
             'inline_discount' => (float) $sales->sum('effective_inline_discount'),
@@ -1427,39 +1428,44 @@ class SaleController extends Controller
                     $totalPieces = 0;
                     $loose = (float) ($request->loose_pieces[$index] ?? 0); // Legacy/Fallback
 
-                    // Quantity Logic based on Size Mode
+                    // Quantity Logic based on Size Mode (Billed Pieces)
+                    $billedPieces = 0;
                     if ($product->size_mode === 'by_cartons' || $product->size_mode === 'by_size') {
-                        // For Carton/Size modes, Frontend sends 'total_pieces' (Calculated Pieces)
-                        // and 'qty' contains "Box.Loose" string.
-                        $reqTotal = (float) ($request->total_pieces[$index] ?? 0);
-
-                        if ($reqTotal > 0) {
-                            $totalPieces = $reqTotal;
-                        } else {
-                            // Fallback: Parse "Box.Loose" manually if Frontend failed/missing
-                            $qStr = (string) ($quantities[$index] ?? '');
+                        $qStr = (string) ($quantities[$index] ?? '');
+                        if (str_contains($qStr, '.')) {
                             $parts = explode('.', $qStr);
                             $boxes = (int) ($parts[0] ?? 0);
                             $l = isset($parts[1]) ? (int) $parts[1] : 0;
-                            $totalPieces = ($boxes * $ppb) + $l;
+                            $billedPieces = ($boxes * $ppb) + $l;
+                            $storedQtyBox = $ppb > 0 ? ($billedPieces / $ppb) : $boxes;
+                        } else {
+                            $subUnit = $request->sub_unit_mode[$index] ?? 'main';
+                            if ($subUnit === 'pcs') {
+                                $billedPieces = $qtyInput;
+                                $storedQtyBox = $ppb > 0 ? ($billedPieces / $ppb) : $billedPieces;
+                            } else {
+                                $storedQtyBox = $qtyInput;
+                                $billedPieces = $qtyInput * $ppb;
+                            }
                         }
                     } else {
                         // Start of By Piece
-                        $reqTotal = (float) ($request->total_pieces[$index] ?? 0);
-                        if ($reqTotal > 0) {
-                            $totalPieces = $reqTotal;
-                        } else {
-                            $qStr = (string) ($quantities[$index] ?? '');
-                            $parts = explode('.', $qStr);
-                            $boxes = (int) ($parts[0] ?? 0);
-                            $l = isset($parts[1]) ? (int) $parts[1] : 0;
-                            // For by_pieces, both fields act as plain piece counts in frontend
-                            $totalPieces = $boxes + $l;
-                        }
+                        $billedPieces = $qtyInput;
+                        $storedQtyBox = $qtyInput;
                     }
 
-                    // Calculate boxes for storage (reverse calculation)
-                    $storedQtyBox = $ppb > 0 ? ($totalPieces / $ppb) : $totalPieces;
+                    // Bonus Quantity
+                    $bonusVal = $request->bonus_display[$index] ?? ($request->bonus[$index] ?? ($request->color_display[$index] ?? null));
+                    $bonusQty = (float) ($bonusVal ?? 0);
+                    if ($bonusQty < 0) $bonusQty = 0;
+
+                    // Total Physical Pieces for Inventory (Billed Pieces + Bonus)
+                    $reqTotal = (float) ($request->total_pieces[$index] ?? 0);
+                    if ($reqTotal > 0) {
+                        $totalPieces = $reqTotal;
+                    } else {
+                        $totalPieces = $billedPieces + $bonusQty;
+                    }
                     
                     $productName = $product->item_name;
                     $brandId = $product->brand_id;
@@ -1488,12 +1494,12 @@ class SaleController extends Controller
                     if ($sizeMode === 'by_cartons') {
                         $subUnit = $request->sub_unit_mode[$index] ?? 'main';
                         if ($subUnit === 'pcs') {
-                            $lineGross = $totalPieces * $dbPrice;
+                            $lineGross = $billedPieces * $dbPrice;
                         } else {
                             $lineGross = $storedQtyBox * $dbPrice;
                         }
                     } else {
-                        $lineGross = $totalPieces * $dbPrice;
+                        $lineGross = $billedPieces * $dbPrice;
                     }
                 }
 
@@ -1528,7 +1534,6 @@ class SaleController extends Controller
                 }
                 if ($bonusVal !== null && $bonusVal !== '' && $bonusVal !== '-') {
                     $vData['bonus'] = $bonusVal;
-                    $vData['color'] = $bonusVal;
                 }
                 if (!empty($vData)) {
                     $colorVal = base64_encode(json_encode($vData));
@@ -1541,8 +1546,9 @@ class SaleController extends Controller
                 $saleItem->warehouse_id = !empty($warehouses[$index]) ? $warehouses[$index] : $defaultWhId;
                 $saleItem->product_name = $productName; // Store name snapshot
 
-                $saleItem->qty = $storedQtyBox; // Store as Box equivalent for consistency
-                $saleItem->total_pieces = $totalPieces;
+                $saleItem->qty = $storedQtyBox; // Store Billed Qty (Box / Pcs)
+                $saleItem->bonus_qty = $bonusQty; // Free Bonus Qty
+                $saleItem->total_pieces = $totalPieces; // Total Physical Pieces Dispatched (Billed + Bonus)
                 $saleItem->loose_pieces = $loose;
 
                 $saleItem->price = $dbPrice;
@@ -2103,6 +2109,7 @@ class SaleController extends Controller
                 $stock->quantity = round($stock->total_pieces / ($ppb > 0 ? $ppb : 1), 2);
                 $stock->save();
 
+                $bonusInfo = ((float)($item->bonus_qty ?? 0) > 0) ? ' (Sold: ' . ($item->qty) . ', Bonus: ' . ($item->bonus_qty) . ')' : '';
                 // Movement
                 DB::table('stock_movements')->insert([
                     'product_id' => $item->product_id,
@@ -2110,7 +2117,7 @@ class SaleController extends Controller
                     'qty' => -$qtyPieces, // Negative for OUT
                     'ref_type' => 'sale',
                     'ref_id' => $sale->id,
-                    'note' => 'Sale Posted #'.$sale->invoice_no,
+                    'note' => 'Sale Posted #'.$sale->invoice_no . $bonusInfo,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -2282,6 +2289,9 @@ class SaleController extends Controller
 
             $variantUnit = $variant['unit'] ?? ($liveVariant['unit'] ?? ($item->product->unit->name ?? ''));
 
+            $bonusQty = (float)($item->bonus_qty ?? 0);
+            $bonusDisplayVal = $bonusQty > 0 ? $bonusQty : ($variant['bonus'] ?? ($variant['color'] ?? ''));
+
             return [
                 'is_manual' => $item->is_manual,
                 'product_id' => $item->product_id,
@@ -2289,8 +2299,9 @@ class SaleController extends Controller
                 'item_code' => $item->product->item_code ?? '',
                 'brand' => $item->product->brand->name ?? '',
                 'unit' => $item->product->unit->name ?? '', // Access name if relation exists
-                'qty' => (int) $item->total_pieces, // Use Pieces for Return Logic (Matches Price-Per-Piece)
+                'qty' => (float) $item->qty, // Billed quantity
                 'qty_box' => (float) $item->qty, // Store Box Count separately
+                'bonus_qty' => $bonusQty,
                 'total_pieces' => (int) $item->total_pieces,
                 'loose_pieces' => (int) $item->loose_pieces,
                 'price' => (float) $item->price, // Price Per Piece / Unit
@@ -2299,14 +2310,14 @@ class SaleController extends Controller
                 'discount_amount' => (float) $item->discount_amount,
                 'total' => (float) $item->total,
                 'variant_name' => $variant['name'] ?? '',
-                'color_val' => $variant['bonus'] ?? ($variant['color'] ?? ''),
-                'bonus_val' => $variant['bonus'] ?? ($variant['color'] ?? ''),
+                'color_val' => $bonusDisplayVal,
+                'bonus_val' => $bonusDisplayVal,
                 'size_val' => $variant['size'] ?? '',
                 'variant_unit' => $variantUnit,
                 'weight_per_piece' => $variant['weight_per_piece'] ?? $item->product->weight_per_piece ?? 0,
                 'color' => is_array($variant) ? $variant : [$item->color], // for legacy compatibility
                 'pieces_per_box' => $ppb,
-                'price_per_piece' => ($item->total_pieces > 0) ? ($item->total / $item->total_pieces) : 0,
+                'price_per_piece' => (float)$item->price > 0 ? (float)$item->price : (((float)$item->qty > 0) ? ((float)$item->total / (float)$item->qty) : 0),
                 // Add dimension and m² data from product
                 'height' => $item->product->height ?? 0,
                 'width' => $item->product->width ?? 0,

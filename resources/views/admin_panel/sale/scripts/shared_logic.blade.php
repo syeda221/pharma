@@ -193,7 +193,7 @@
 
     <!-- Bonus (Editable) -->
     <td class="col-color">
-      <input type="text" class="form-control color-display text-center" name="bonus_display[]" placeholder="0">
+      <input type="number" step="any" min="0" class="form-control color-display text-center" name="bonus_display[]" placeholder="0">
     </td>
 
     <!-- Total Pieces (Calculated) -->
@@ -437,9 +437,18 @@
             gross = baseQty * unitPrice;
         }
 
+        // Bonus quantity (Free pcs - does not affect bill amount, but affects physical count and stock)
+        const bonusQty = parseFloat($row.find('.color-display[name="bonus_display[]"], input[name="bonus_display[]"]').val()) || 0;
+        let totalPiecesWithBonus = (parseFloat(pcsDisplay) || 0) + bonusQty;
+        if (sizeMode === 'by_feet' || sizeMode === 'by_meter') {
+            totalPiecesWithBonus = totalPiecesWithBonus.toFixed(3);
+        } else {
+            totalPiecesWithBonus = Math.round(totalPiecesWithBonus * 100) / 100;
+        }
+
         // Sync hidden qty and total-pieces field for backend
         $row.find('.sales-qty').val(baseQty);
-        $row.find('.total-pieces').val(pcsDisplay);
+        $row.find('.total-pieces').val(totalPiecesWithBonus);
         $row.find('.price-per-piece').val(unitPrice);
 
         const discValue = toNum($row.find('.discount-value').val());
@@ -968,9 +977,20 @@
                 } catch(ex) {}
             }
             
-            // Set size and color display
+            // Set size and bonus display
             $row.find('.size-display').val(variantSize !== '-' ? variantSize : '');
-            $row.find('.color-display').val(variantColor);
+            let bVal = '';
+            if (data.variant_data) {
+                try {
+                    const vd = JSON.parse(atob(data.variant_data));
+                    if (vd.bonus !== undefined && vd.bonus !== null && vd.bonus !== '' && vd.bonus !== '-') {
+                        bVal = vd.bonus;
+                    } else if (vd.color !== undefined && vd.color !== null && vd.color !== '-' && !isNaN(vd.color)) {
+                        bVal = vd.color;
+                    }
+                } catch(e) {}
+            }
+            $row.find('.color-display').val(bVal);
             
             // Store variant stock for later use (after warehouse loads)
             if (variantStock !== null) {
@@ -1234,8 +1254,29 @@
         // ... existing bindings ...
 
         // Inputs -> Calc
-        $(document).on('input', '.carton-qty, .loose-pcs-input, .pack-qty, .discount-value, .visible-price',
+        $(document).on('input', '.carton-qty, .loose-pcs-input, .pack-qty, .discount-value, .visible-price, .color-display[name="bonus_display[]"], input[name="bonus_display[]"]',
             function() {
+                // If user changes bonus, sync to variant data
+                if ($(this).attr('name') === 'bonus_display[]' || $(this).hasClass('color-display')) {
+                    const $row = $(this).closest('tr');
+                    const newBonus = $(this).val();
+                    let variantData = {};
+                    const existingVd = $row.find('.variant-data-hidden').val();
+                    if (existingVd) {
+                        try {
+                            const decoded = atob(existingVd);
+                            variantData = JSON.parse(decoded);
+                        } catch(e) {
+                            try { variantData = JSON.parse(existingVd); } catch(e2) { variantData = {}; }
+                        }
+                    }
+                    if (typeof variantData !== 'object' || variantData === null) {
+                        variantData = {};
+                    }
+                    variantData.bonus = newBonus;
+                    $row.find('.variant-data-hidden').val(btoa(JSON.stringify(variantData)));
+                }
+
                 // If user manually changes the visible price, also update the hidden price-per-piece and normalized base rate
                 if ($(this).hasClass('visible-price')) {
                     const $row = $(this).closest('tr');

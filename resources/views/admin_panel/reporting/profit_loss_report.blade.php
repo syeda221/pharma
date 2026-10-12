@@ -97,6 +97,17 @@
         white-space: nowrap;
     }
 
+    .partner1-pct-input::-webkit-inner-spin-button,
+    .partner1-pct-input::-webkit-outer-spin-button,
+    .partner2-pct-input::-webkit-inner-spin-button,
+    .partner2-pct-input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .partner1-pct-input, .partner2-pct-input {
+        -moz-appearance: textfield;
+    }
+
     @media print {
         body { background: #ffffff !important; font-size: 11px; }
         .no-print, header, .sidebar, .navbar, footer { display: none !important; }
@@ -287,24 +298,48 @@
                 
                 <div class="stat-pill" style="background: #f0fdf4; border-color: #86efac;">
                     <div class="stat-label text-success">Gross Profit</div>
-                    <div class="stat-val text-success" id="cardGrossProfit">Rs 0.00</div>
+                    <div class="stat-val text-success" id="cardGrossProfit">Rs 0</div>
                 </div>
 
                 <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
                     <div class="stat-label text-danger">Total Expenses</div>
-                    <div class="stat-val text-danger" id="cardExpenses">Rs 0.00</div>
+                    <div class="stat-val text-danger" id="cardExpenses">Rs 0</div>
                 </div>
 
                 <div class="stat-pill" style="background: #f0f9ff; border-color: #bae6fd;">
                     <div class="stat-label text-primary">Net Profit / Loss</div>
-                    <div class="stat-val text-primary" id="cardNetProfit">Rs 0.00</div>
+                    <div class="stat-val text-primary" id="cardNetProfit">Rs 0</div>
+                </div>
+
+                <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;">
+                    <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #7c3aed;">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Partner 1</span>
+                        <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #d8b4fe !important; height: 18px;">
+                            <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 32px; font-size: 10px; outline: none; color: #7c3aed; background: transparent;" title="Change %">
+                            <span style="font-size: 9px; font-weight: 700; color: #7c3aed;">%</span>
+                        </span>
+                    </div>
+                    <div class="stat-val" style="color: #7c3aed;" id="cardPartner1Profit">Rs 0</div>
+                </div>
+
+                <div class="stat-pill" style="background: #fff7ed; border-color: #fed7aa;">
+                    <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #ea580c;">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Partner 2</span>
+                        <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #fed7aa !important; height: 18px;">
+                            <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 32px; font-size: 10px; outline: none; color: #ea580c; background: transparent;" title="Change %">
+                            <span style="font-size: 9px; font-weight: 700; color: #ea580c;">%</span>
+                        </span>
+                    </div>
+                    <div class="stat-val" style="color: #ea580c;" id="cardPartner2Profit">Rs 0</div>
                 </div>
 
             </div>
         </div>
     </div>
 
-    {{-- MOBILE SUMMARY METRIC GRID (2 Columns + Full-Width Net Profit d-md-none) --}}
+    {{-- MOBILE SUMMARY METRIC GRID (d-md-none) --}}
     <div class="row g-2 mb-3 d-md-none no-print px-1">
         <div class="col-6">
             <div class="mob-metric-card p-2">
@@ -318,10 +353,34 @@
                 <div class="mob-metric-val text-danger mt-1" id="mobCardExpenses" style="font-size: 14px;">Rs 0</div>
             </div>
         </div>
-        <div class="col-12 mt-2">
+        <div class="col-12 mt-1">
             <div class="mob-metric-card p-2" style="background: #f0f9ff; border-color: #bae6fd;">
                 <span class="mob-metric-label text-primary" style="font-size: 11px;"><i class="fas fa-balance-scale me-1"></i>Net Profit / Loss</span>
                 <div class="mob-metric-val text-primary mt-1" id="mobCardNetProfit" style="font-size: 15px;">Rs 0</div>
+            </div>
+        </div>
+        <div class="col-6 mt-1">
+            <div class="mob-metric-card p-2" style="background: #faf5ff; border-color: #d8b4fe;">
+                <div class="mob-metric-label d-flex align-items-center justify-content-between" style="color: #7c3aed; font-size: 11px;">
+                    <span><i class="fas fa-user-tie me-1"></i>Partner 1</span>
+                    <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #d8b4fe !important; height: 18px;">
+                        <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 30px; font-size: 10px; outline: none; color: #7c3aed; background: transparent;" title="Change %">
+                        <span style="font-size: 9px; font-weight: 700; color: #7c3aed;">%</span>
+                    </span>
+                </div>
+                <div class="mob-metric-val mt-1" style="color: #7c3aed; font-size: 14px;" id="mobCardPartner1Profit">Rs 0</div>
+            </div>
+        </div>
+        <div class="col-6 mt-1">
+            <div class="mob-metric-card p-2" style="background: #fff7ed; border-color: #fed7aa;">
+                <div class="mob-metric-label d-flex align-items-center justify-content-between" style="color: #ea580c; font-size: 11px;">
+                    <span><i class="fas fa-user-tie me-1"></i>Partner 2</span>
+                    <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #fed7aa !important; height: 18px;">
+                        <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 30px; font-size: 10px; outline: none; color: #ea580c; background: transparent;" title="Change %">
+                        <span style="font-size: 9px; font-weight: 700; color: #ea580c;">%</span>
+                    </span>
+                </div>
+                <div class="mob-metric-val mt-1" style="color: #ea580c; font-size: 14px;" id="mobCardPartner2Profit">Rs 0</div>
             </div>
         </div>
     </div>
@@ -483,10 +542,64 @@ $(document).ready(function() {
     });
 
     var myChart = null;
+    var currentNetProfit = 0;
 
     function fmt(n) {
         return Math.round(parseFloat(n)).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
     }
+
+    // Load saved partner percentages if available
+    var savedP1 = localStorage.getItem('partner1_profit_pct');
+    var savedP2 = localStorage.getItem('partner2_profit_pct');
+    if (savedP1 !== null && savedP2 !== null) {
+        $('.partner1-pct-input').val(savedP1);
+        $('.partner2-pct-input').val(savedP2);
+    }
+
+    function updatePartnerShares() {
+        var p1Pct = parseFloat($('.partner1-pct-input').first().val());
+        if (isNaN(p1Pct)) p1Pct = 0;
+        var p2Pct = parseFloat($('.partner2-pct-input').first().val());
+        if (isNaN(p2Pct)) p2Pct = 0;
+
+        var p1Share = currentNetProfit * (p1Pct / 100);
+        var p2Share = currentNetProfit * (p2Pct / 100);
+
+        var p1Color = p1Share >= 0 ? '#7c3aed' : '#dc2626';
+        var p2Color = p2Share >= 0 ? '#ea580c' : '#dc2626';
+
+        $('#cardPartner1Profit, #mobCardPartner1Profit').text('Rs ' + fmt(p1Share)).css('color', p1Color);
+        $('#cardPartner2Profit, #mobCardPartner2Profit').text('Rs ' + fmt(p2Share)).css('color', p2Color);
+    }
+
+    // Dynamic Partner Percentage Handlers (Desktop & Mobile synced + Complementary calculation)
+    $(document).on('input change', '.partner1-pct-input', function() {
+        var rawVal = $(this).val();
+        if (rawVal === '') return;
+        var val = parseFloat(rawVal);
+        if (isNaN(val)) val = 0;
+        val = Math.max(0, Math.min(100, Math.round(val * 10) / 10));
+        $('.partner1-pct-input').val(val);
+        var other = Math.max(0, Math.min(100, Math.round((100 - val) * 10) / 10));
+        $('.partner2-pct-input').val(other);
+        localStorage.setItem('partner1_profit_pct', val);
+        localStorage.setItem('partner2_profit_pct', other);
+        updatePartnerShares();
+    });
+
+    $(document).on('input change', '.partner2-pct-input', function() {
+        var rawVal = $(this).val();
+        if (rawVal === '') return;
+        var val = parseFloat(rawVal);
+        if (isNaN(val)) val = 0;
+        val = Math.max(0, Math.min(100, Math.round(val * 10) / 10));
+        $('.partner2-pct-input').val(val);
+        var other = Math.max(0, Math.min(100, Math.round((100 - val) * 10) / 10));
+        $('.partner1-pct-input').val(other);
+        localStorage.setItem('partner1_profit_pct', other);
+        localStorage.setItem('partner2_profit_pct', val);
+        updatePartnerShares();
+    });
 
     $('.btnSearchTrigger').click(fetchReport);
 
@@ -594,9 +707,13 @@ $(document).ready(function() {
         let formattedExp   = 'Rs ' + fmt(data.total_expenses);
         let formattedNet   = 'Rs ' + fmt(data.net_profit);
 
+        currentNetProfit = parseFloat(data.net_profit || 0);
+
         $('#cardGrossProfit, #mobCardGrossProfit').text(formattedGross);
         $('#cardExpenses, #mobCardExpenses').text(formattedExp);
         $('#cardNetProfit, #mobCardNetProfit').text(formattedNet);
+
+        updatePartnerShares();
 
         // Chart
         updateChart(chartLabels, chartData);
