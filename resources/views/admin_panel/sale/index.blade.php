@@ -230,7 +230,8 @@
             border-radius: 8px !important;
             box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
             padding: 6px 0 !important;
-            z-index: 1060 !important;
+            z-index: 1070 !important;
+            min-width: 195px !important;
         }
         .dropdown-item {
             font-size: 12px !important;
@@ -238,6 +239,7 @@
             color: #475569 !important;
             padding: 8px 16px !important;
             transition: all 0.15s ease-in-out !important;
+            white-space: nowrap !important;
         }
         .dropdown-item:hover {
             background-color: #f1f5f9 !important;
@@ -317,6 +319,19 @@
         }
         .premium-table tbody tr:hover td:last-child {
             background-color: #f8fafc !important;
+        }
+
+        /* Elevate active row and sticky action cell when dropdown is opened so rows below don't paint over it */
+        .premium-table tr:has(.dropdown.show),
+        .premium-table tr.dropdown-open {
+            position: relative !important;
+            z-index: 1060 !important;
+        }
+        .premium-table tr:has(.dropdown.show) td:last-child,
+        .premium-table td:has(.dropdown.show),
+        .premium-table tr.dropdown-open td:last-child,
+        .premium-table td.dropdown-open {
+            z-index: 1065 !important;
         }
 
         /* Dropdown Action Button */
@@ -697,6 +712,16 @@
 
             // Initial call
             initDataTable();
+
+            // Elevate row & sticky cell z-index when Action dropdown opens
+            $(document).on('show.bs.dropdown', '.premium-table .dropdown', function() {
+                $(this).closest('tr').addClass('dropdown-open').css('z-index', 1060);
+                $(this).closest('td').addClass('dropdown-open').css('z-index', 1065);
+            });
+            $(document).on('hidden.bs.dropdown', '.premium-table .dropdown', function() {
+                $(this).closest('tr').removeClass('dropdown-open').css('z-index', '');
+                $(this).closest('td').removeClass('dropdown-open').css('z-index', '');
+            });
 
             // Mobile Filter Panel Toggle
             $('#toggleFilterPanel').on('click', function() {

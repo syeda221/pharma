@@ -725,15 +725,50 @@
                                             <th class="col-price-p" style="width: 85px;">PRICE</th>
                                             <th class="col-disc" style="width: 85px;">DISCOUNT</th>
                                             <th class="col-amount" style="width: 95px;">AMOUNT</th>
-                                            <th class="col-action" style="width: 34px;">Ã—</th>
+                                            <th class="col-action text-center" style="width: 34px;"><i class="fas fa-times text-muted"></i></th>
                                         </tr>
                                     </thead>
                                     <tbody id="salesTableBody">
+                                        @php
+                                            $returnedQtyMap = [];
+                                            if (isset($sale) && $sale->returns) {
+                                                foreach ($sale->returns as $ret) {
+                                                    if ($ret->items) {
+                                                        foreach ($ret->items as $retItem) {
+                                                            if ($retItem->is_manual) {
+                                                                $k = 'MANUAL_' . strtolower(trim($retItem->product_name));
+                                                            } else {
+                                                                $k = $retItem->product_id . '_' . ($retItem->color ?? '');
+                                                            }
+                                                            $returnedQtyMap[$k] = ($returnedQtyMap[$k] ?? 0) + (float)$retItem->qty;
+                                                            if (!$retItem->is_manual && $retItem->product_id) {
+                                                                $pKey = 'PROD_' . $retItem->product_id;
+                                                                $returnedQtyMap[$pKey] = ($returnedQtyMap[$pKey] ?? 0) + (float)$retItem->qty;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        @endphp
                                         @if(isset($sale) && $sale->items && count($sale->items) > 0)
                                             @foreach ($sale->items as $index => $item)
                                                 @php
                                                     $prod = $item->product;
                                                     $sizeMode = $item->size_mode ?? ($prod->size_mode ?? 'std');
+
+                                                    // Calculate already returned pieces for this item
+                                                    $itemKey = $item->is_manual 
+                                                        ? ('MANUAL_' . strtolower(trim($item->product_name)))
+                                                        : ($item->product_id . '_' . ($item->color ?? ''));
+
+                                                    $returnedQty = 0;
+                                                    if (isset($returnedQtyMap[$itemKey])) {
+                                                        $returnedQty = $returnedQtyMap[$itemKey];
+                                                    } elseif (!$item->is_manual && isset($returnedQtyMap['PROD_' . $item->product_id])) {
+                                                        $returnedQty = $returnedQtyMap['PROD_' . $item->product_id];
+                                                    }
+
+                                                    $netPieces = max(0, (float)$item->total_pieces - $returnedQty);
 
                                                     $variantData = [];
                                                     if ($item->color) {
@@ -794,10 +829,10 @@
                                                     $cartons = 0;
                                                     $loose = 0;
                                                     if ($ppb > 0) {
-                                                        $cartons = floor($item->total_pieces / $ppb);
-                                                        $loose = $item->total_pieces % $ppb;
+                                                        $cartons = floor($netPieces / $ppb);
+                                                        $loose = $netPieces % $ppb;
                                                     } else {
-                                                        $loose = $item->total_pieces;
+                                                        $loose = $netPieces;
                                                     }
 
                                                     // Determine Sub-Unit Mode and Toggle Button configuration for Edit
@@ -805,7 +840,7 @@
                                                     $toggleText = 'Kg';
                                                     $toggleBtnClass = 'd-none';
                                                     $displayQty = $cartons;
-                                                    $itemTotalPieces = (float)$item->total_pieces;
+                                                    $itemTotalPieces = (float)$netPieces;
                                                     $isPcs = false;
 
                                                     if ($sizeMode === 'by_cartons') {
@@ -818,8 +853,8 @@
                                                             $unitMode = 'pcs';
                                                             $toggleText = 'Pcs';
                                                             $toggleBtnClass = 'btn-outline-info';
-                                                            $displayQty = (float) $item->total_pieces;
-                                                            $itemTotalPieces = (float) $item->total_pieces;
+                                                            $displayQty = (float) $netPieces;
+                                                            $itemTotalPieces = (float) $netPieces;
                                                         } else {
                                                             $unitMode = 'ctn';
                                                             $toggleText = 'Ctn';
@@ -832,24 +867,36 @@
                                                         $unitMode = 'kg';
                                                         $toggleText = 'Kg';
                                                         $toggleBtnClass = 'btn-outline-primary';
-                                                        $displayQty = (float) ($item->qty ?: $item->total_pieces);
+                                                        $displayQty = (float) $netPieces;
                                                     } elseif ($sizeMode === 'by_gm') {
                                                         $unitMode = 'gm';
                                                         $toggleText = 'Gm';
                                                         $toggleBtnClass = 'btn-outline-info';
-                                                        $displayQty = (float) ($item->qty ?: $item->total_pieces);
+                                                        $displayQty = (float) $netPieces;
                                                     } elseif ($sizeMode === 'by_feet') {
                                                         $unitMode = 'ft';
                                                         $toggleText = 'Ft';
                                                         $toggleBtnClass = 'btn-outline-primary';
-                                                        $displayQty = (float) ($item->qty ?: $item->total_pieces);
+                                                        $displayQty = (float) $netPieces;
                                                     } elseif ($sizeMode === 'by_meter') {
                                                         $unitMode = 'm';
                                                         $toggleText = 'Mtr';
                                                         $toggleBtnClass = 'btn-outline-primary';
-                                                        $displayQty = (float) ($item->qty ?: $item->total_pieces);
+                                                        $displayQty = (float) $netPieces;
                                                     } else {
-                                                        $displayQty = (float) ($item->qty ?: $item->total_pieces);
+                                                        $displayQty = (float) $netPieces;
+                                                    }
+
+                                                    // Format returned quantity matching unit mode (carton.loose if by_cartons)
+                                                    $retDisplayQty = (float) $returnedQty;
+                                                    if ($sizeMode === 'by_cartons' && !$isPcs && $ppb > 1) {
+                                                        $retCartons = floor($returnedQty / $ppb);
+                                                        $retLoose = $returnedQty % $ppb;
+                                                        $retDisplayQty = $retLoose > 0 ? "{$retCartons}.{$retLoose}" : $retCartons;
+                                                    } elseif ($sizeMode === 'by_size' && $ppb > 1) {
+                                                        $retCartons = floor($returnedQty / $ppb);
+                                                        $retLoose = $returnedQty % $ppb;
+                                                        $retDisplayQty = $retLoose > 0 ? "{$retCartons}.{$retLoose}" : $retCartons;
                                                     }
 
                                                     $pieceRetailPrice = 0;
@@ -872,41 +919,8 @@
                                                         $pieceWholesalePrice = (float) $prod->wholesale_price;
                                                     }
 
-                                                    $selStockDisp = '';
-                                                    if (!empty($variantData['current_stock'])) {
-                                                        $selStockDisp = $variantData['current_stock'];
-                                                    } elseif (isset($variantData['stock']) && $variantData['stock'] !== '') {
-                                                        $selStockDisp = $variantData['stock'];
-                                                    } elseif ($prod) {
-                                                        $stk = 0;
-                                                        if ($item->warehouse_id) {
-                                                            $selWs = $prod->warehouseStocks?->where('warehouse_id', $item->warehouse_id)->first();
-                                                            if ($selWs) {
-                                                                $stk = (float) $selWs->total_pieces;
-                                                                if ($stk <= 0 && $selWs->quantity > 0) {
-                                                                    $stk = $selWs->quantity * $ppb;
-                                                                }
-                                                            }
-                                                        }
-                                                        if ($stk == 0 && $prod->warehouseStocks) {
-                                                            $stk = (float) $prod->warehouseStocks->sum('total_pieces');
-                                                        }
-
-                                                        if (in_array($sizeMode, ['by_cartons', 'by_size']) && $ppb > 1) {
-                                                            $b = floor($stk / $ppb);
-                                                            $l = $stk % $ppb;
-                                                            $selStockDisp = $l > 0 ? "$b.$l" : $b;
-                                                        } elseif ($sizeMode === 'by_kg') {
-                                                            if ($stk > 0 && $stk < 1) {
-                                                                $gm = round($stk * 1000);
-                                                                $selStockDisp = "{$stk} Kg ({$gm} Gm)";
-                                                            } else {
-                                                                $selStockDisp = "{$stk} Kg";
-                                                            }
-                                                        } else {
-                                                            $selStockDisp = $stk;
-                                                        }
-                                                    }
+                                                    // Fetch Live Stock for product or variant
+                                                    $selStockDisp = \App\Http\Controllers\ProductController::getLiveStockForProductOrVariant($prod, $variantData ?: $liveVariant, $item->warehouse_id);
 
                                                     $variantLabel = '';
                                                     $vSize = '-';
@@ -918,12 +932,33 @@
                                                     } elseif ($variantData && isset($variantData['color']) && $variantData['color'] !== '-') {
                                                         $vCol = $variantData['color'];
                                                     }
-                                                    if ($variantData && isset($variantData['name'])) {
-                                                        $vSize = (isset($variantData['size']) && $variantData['size'] !== '-') ? $variantData['size'] : '-';
-                                                        $vCol  = (isset($variantData['color']) && $variantData['color'] !== '-') ? $variantData['color'] : '-';
-                                                        $sStr = $vSize !== '-' ? " {$vSize}" : '';
-                                                        $cStr = $vCol !== '-' ? " ({$vCol})" : '';
-                                                        $variantLabel = ' â€” ' . $variantData['name'] . $sStr . $cStr;
+
+                                                    $activeVar = !empty($variantData) ? $variantData : ($liveVariant ?? []);
+                                                    if (!empty($activeVar)) {
+                                                        $sizeVal = (isset($activeVar['size']) && $activeVar['size'] !== '-') ? trim($activeVar['size']) : '';
+                                                        $colVal  = (isset($activeVar['color']) && $activeVar['color'] !== '-') ? trim($activeVar['color']) : '';
+                                                        $nameVal = isset($activeVar['name']) ? trim($activeVar['name']) : '';
+
+                                                        if ($sizeVal !== '') {
+                                                            $vSize = $sizeVal;
+                                                        }
+                                                        if ($colVal !== '') {
+                                                            $vCol = $colVal;
+                                                        }
+
+                                                        $extraParts = [];
+                                                        if (!empty($nameVal) && strtolower($nameVal) !== strtolower(trim($prod->item_name ?? ''))) {
+                                                            $extraParts[] = $nameVal;
+                                                        }
+                                                        if ($sizeVal !== '') {
+                                                            $extraParts[] = $sizeVal;
+                                                        }
+                                                        if ($colVal !== '' && $colVal !== $sizeVal) {
+                                                            $extraParts[] = "({$colVal})";
+                                                        }
+                                                        if (!empty($extraParts)) {
+                                                            $variantLabel = ' - ' . implode(' ', $extraParts);
+                                                        }
                                                     }
                                                 @endphp
                                                 <tr data-size_mode="{{ $sizeMode }}"
@@ -967,7 +1002,13 @@
                                                                 {{ $toggleText }}
                                                             </button>
                                                         </div>
+                                                        @if($returnedQty > 0)
+                                                            <div class="text-danger fw-bold" style="font-size: 0.65rem; line-height: 1.1; margin-top: 2px;" title="Original Sold: {{ (float)$item->total_pieces }} pcs, Returned: {{ $retDisplayQty }} ({{ (float)$returnedQty }} pcs)">
+                                                                -{{ $retDisplayQty }} ret
+                                                            </div>
+                                                        @endif
                                                         <input type="hidden" class="hidden-sub-unit-mode" name="sub_unit_mode[]" value="{{ $unitMode }}">
+                                                        <input type="hidden" class="returned-pieces-hidden" name="returned_pieces[]" value="{{ (float)$returnedQty }}">
                                                     </td>
 
                                                     <!-- Loose Pieces (hidden) -->
@@ -1001,7 +1042,7 @@
                                                             class="form-control total-pieces text-end input-readonly fw-semibold"
                                                             name="total_pieces[]" readonly value="{{ $itemTotalPieces }}"
                                                             placeholder="0" tabindex="-1">
-                                                        <input type="hidden" class="sales-qty" name="qty[]" value="{{ $isPcs ? $item->total_pieces : ($cartons . ($loose > 0 ? '.' . $loose : '')) }}">
+                                                        <input type="hidden" class="sales-qty" name="qty[]" value="{{ $isPcs ? $itemTotalPieces : ($cartons . ($loose > 0 ? '.' . $loose : '')) }}">
                                                     </td>
 
                                                     <!-- Price/Piece -->
@@ -1043,11 +1084,18 @@
 
                                                     <!-- Net Amount -->
                                                     <td class="col-amount">
+                                                        @php
+                                                            $linePrice = (float) ($item->price ?? 0);
+                                                            $lineDiscPct = (float) ($item->discount_percent ?? 0);
+                                                            $grossLine = $itemTotalPieces * $linePrice;
+                                                            $lineDiscAmt = round($grossLine * ($lineDiscPct / 100), 2);
+                                                            $netLine = round($grossLine - $lineDiscAmt, 2);
+                                                        @endphp
                                                         <input type="text"
                                                             class="form-control sales-amount text-end input-readonly fw-bold text-dark"
-                                                            name="total[]" value="{{ $item->total }}" readonly
+                                                            name="total[]" value="{{ $returnedQty > 0 ? $netLine : $item->total }}" readonly
                                                             tabindex="-1">
-                                                        <input type="hidden" class="gross-amount" name="gross_amount[]" value="{{ $item->total + ($item->discount_amount ?? 0) }}">
+                                                        <input type="hidden" class="gross-amount" name="gross_amount[]" value="{{ $returnedQty > 0 ? $grossLine : ($item->total + ($item->discount_amount ?? 0)) }}">
                                                     </td>
 
                                                     <!-- Action -->
@@ -1421,7 +1469,7 @@
                 }
             });
 
-            // Party type change â†’ reset customer only on user change
+            // Party type change -> reset customer only on user change
             $(document).on('change', '#partyTypeSelect', function(e) {
                 if (!e.isTrigger) {
                     $('#customerSelect').val(null).trigger('change');

@@ -178,6 +178,7 @@
         </button>
       </div>
       <input type="hidden" class="hidden-sub-unit-mode" name="sub_unit_mode[]" value="main">
+      <input type="hidden" class="returned-pieces-hidden" name="returned_pieces[]" value="0">
     </td>
 
     <!-- Loose Pieces -->

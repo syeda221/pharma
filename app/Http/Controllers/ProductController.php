@@ -383,6 +383,220 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * Calculate live variant stock factoring initial stock, purchases, sales, and returns
+     */
+    public static function calculateLiveVariantStock($product, $variantData)
+    {
+        if (empty($variantData) || empty($product->color)) {
+            return null;
+        }
+
+        $prodVariants = is_string($product->color) ? json_decode($product->color, true) : $product->color;
+        if (!is_array($prodVariants) || empty($prodVariants)) {
+            return null;
+        }
+
+        // Find matching live variant
+        $liveVariant = null;
+        if (!empty($variantData['barcode'])) {
+            $liveVariant = collect($prodVariants)->firstWhere('barcode', $variantData['barcode']);
+        }
+        if (!$liveVariant && !empty($variantData['size']) && $variantData['size'] !== '-') {
+            $liveVariant = collect($prodVariants)->first(function($v) use ($variantData) {
+                $s1 = strtolower(trim($v['size'] ?? ''));
+                $s2 = strtolower(trim($variantData['size'] ?? ''));
+                if ($s1 === $s2) {
+                    if (!empty($variantData['color']) && $variantData['color'] !== '-') {
+                        return strtolower(trim($v['color'] ?? '')) === strtolower(trim($variantData['color'] ?? ''));
+                    }
+                    return true;
+                }
+                return false;
+            });
+        }
+        if (!$liveVariant && !empty($variantData['name'])) {
+            $liveVariant = collect($prodVariants)->first(function($v) use ($variantData) {
+                return strtolower(trim($v['name'] ?? '')) === strtolower(trim($variantData['name'] ?? ''));
+            });
+        }
+        if (!$liveVariant && count($prodVariants) === 1) {
+            $liveVariant = $prodVariants[0];
+        }
+
+        if (!$liveVariant) {
+            return null;
+        }
+
+        $isCartonMode = ($product->size_mode === 'by_cartons' || strtolower($liveVariant['unit'] ?? '') === 'carton');
+        $vPpb = (float) ($product->pieces_per_box ?? 1);
+        if ($isCartonMode) {
+            $vConv = (float) ($liveVariant['conv_factor'] ?? 0);
+            if ($vConv > 0) $vPpb = $vConv;
+        }
+        if ($vPpb <= 0) $vPpb = 1;
+
+        $variantsTotal = count($prodVariants);
+
+        // Initial Stock in Pieces
+        $vRawStock = (string) ($liveVariant['stock'] ?? '0');
+        if ($isCartonMode && $vPpb >= 1) {
+            if (strpos($vRawStock, '.') !== false) {
+                $parts = explode('.', $vRawStock);
+                $boxes = (int) ($parts[0] ?? 0);
+                $looseP = (int) ($parts[1] ?? 0);
+                $initial = ($boxes * $vPpb) + $looseP;
+            } else {
+                $initial = (float) $vRawStock * $vPpb;
+            }
+        } else {
+            $initial = (float) $vRawStock;
+        }
+
+        // Purchases
+        $purchasesList = \Illuminate\Support\Facades\DB::table('purchase_items as pi')
+            ->join('purchases as pur', 'pur.id', '=', 'pi.purchase_id')
+            ->where('pi.product_id', $product->id)
+            ->whereIn('pur.status_purchase', ['approved', 'Returned', 'Partial'])
+            ->select('pi.qty', 'pi.unit', 'pi.pieces_per_box', 'pi.boxes_qty', 'pi.loose_qty', 'pi.color')
+            ->get();
+
+        $purchased = 0;
+        foreach ($purchasesList as $pItem) {
+            if (self::matchSaleItemToVariant($pItem, $liveVariant, $variantsTotal)) {
+                $pUnit = strtolower(trim($pItem->unit ?? ''));
+                $itemPPB = (float) ($pItem->pieces_per_box > 0 ? $pItem->pieces_per_box : $vPpb);
+                if ($itemPPB <= 0) $itemPPB = 1;
+
+                if (in_array($pUnit, ['carton', 'ctn', 'box'])) {
+                    if (isset($pItem->boxes_qty) && ($pItem->boxes_qty > 0 || $pItem->loose_qty > 0)) {
+                        $pPieces = (((int) $pItem->boxes_qty) * $itemPPB) + ((int) $pItem->loose_qty);
+                    } else {
+                        [$b, $l] = \App\Http\Controllers\PurchaseController::parseCartonQty($pItem->qty);
+                        $pPieces = ($b * $itemPPB) + $l;
+                    }
+                } elseif (in_array($pUnit, ['gm', 'g'])) {
+                    $pPieces = ((float) $pItem->qty) / 1000.0;
+                } else {
+                    $pPieces = (float) $pItem->qty;
+                }
+                $purchased += $pPieces;
+            }
+        }
+
+        // Purchase returns
+        $pReturned = 0;
+        $purchaseReturnsList = \Illuminate\Support\Facades\DB::table('purchase_return_items as pri')
+            ->where('pri.product_id', $product->id)
+            ->select('pri.qty', 'pri.color')
+            ->get();
+        foreach ($purchaseReturnsList as $prItem) {
+            if (self::matchSaleItemToVariant($prItem, $liveVariant, $variantsTotal)) {
+                $pReturned += (float) $prItem->qty;
+            }
+        }
+
+        // Sales
+        $salesList = \Illuminate\Support\Facades\DB::table('sale_items')
+            ->where('product_id', $product->id)
+            ->select('total_pieces', 'color')
+            ->get();
+        $sold = 0;
+        foreach ($salesList as $sItem) {
+            if (self::matchSaleItemToVariant($sItem, $liveVariant, $variantsTotal)) {
+                $sold += (float) $sItem->total_pieces;
+            }
+        }
+
+        // Sale returns
+        $returnsList = \Illuminate\Support\Facades\DB::table('sale_return_items as sri')
+            ->join('sale_returns as sr', 'sr.id', '=', 'sri.sale_return_id')
+            ->where('sri.product_id', $product->id)
+            ->select('sri.qty', 'sri.color', 'sr.sale_id')
+            ->get();
+        $saleIds = $returnsList->pluck('sale_id')->unique()->toArray();
+        $saleItemsMap = [];
+        if (!empty($saleIds)) {
+            $siList = \Illuminate\Support\Facades\DB::table('sale_items')->whereIn('sale_id', $saleIds)->where('product_id', $product->id)->select('sale_id', 'color')->get();
+            foreach ($siList as $si) {
+                $saleItemsMap[$si->sale_id][] = $si->color;
+            }
+        }
+        $returnedQty = 0;
+        foreach ($returnsList as $rItem) {
+            $rColor = $rItem->color;
+            if (empty($rColor)) {
+                $saleColors = $saleItemsMap[$rItem->sale_id] ?? [];
+                $rColor = !empty($saleColors) ? $saleColors[0] : '';
+            }
+            $rItemCopy = (object)['qty' => $rItem->qty, 'color' => $rColor];
+            if (self::matchSaleItemToVariant($rItemCopy, $liveVariant, $variantsTotal)) {
+                $returnedQty += (float) $rItem->qty;
+            }
+        }
+
+        $vBalance = max(0, $initial + $purchased - $sold + $returnedQty - $pReturned);
+
+        if ($isCartonMode && $vPpb > 1) {
+            $vBoxes = (int) floor($vBalance / $vPpb);
+            $vLoose = (int) round($vBalance - ($vBoxes * $vPpb));
+            return $vLoose > 0 ? "{$vBoxes}.{$vLoose}" : (string)$vBoxes;
+        }
+
+        return (string)$vBalance;
+    }
+
+    /**
+     * Get live stock for product or its specific variant
+     */
+    public static function getLiveStockForProductOrVariant($product, $variantData = null, $warehouseId = null)
+    {
+        if (!$product) {
+            return 0;
+        }
+
+        // 1. If product has variants and variantData is provided, calculate live variant stock
+        if (!empty($product->color) && !empty($variantData)) {
+            $variantStock = self::calculateLiveVariantStock($product, $variantData);
+            if ($variantStock !== null) {
+                return $variantStock;
+            }
+        }
+
+        // 2. Fallback to warehouse stock for non-variant products or if variant not found
+        $ppb = (float)($product->pieces_per_box ?? 1);
+        if ($ppb <= 0) $ppb = 1;
+
+        $stk = 0;
+        if ($warehouseId) {
+            $selWs = $product->warehouseStocks ? $product->warehouseStocks->where('warehouse_id', $warehouseId)->first() : null;
+            if ($selWs) {
+                $stk = (float) $selWs->total_pieces;
+                if ($stk <= 0 && $selWs->quantity > 0) {
+                    $stk = $selWs->quantity * $ppb;
+                }
+            }
+        }
+        if ($stk == 0 && $product->warehouseStocks && $product->warehouseStocks->count() > 0) {
+            $stk = (float) $product->warehouseStocks->sum('total_pieces');
+        }
+
+        $sizeMode = $product->size_mode ?? 'std';
+        if (in_array($sizeMode, ['by_cartons', 'by_size']) && $ppb > 1) {
+            $b = (int) floor($stk / $ppb);
+            $l = (int) round($stk - ($b * $ppb));
+            return $l > 0 ? "{$b}.{$l}" : (string)$b;
+        } elseif ($sizeMode === 'by_kg') {
+            if ($stk > 0 && $stk < 1) {
+                $gm = round($stk * 1000);
+                return "{$stk} Kg ({$gm} Gm)";
+            }
+            return "{$stk} Kg";
+        }
+
+        return (string)$stk;
+    }
+
     // ===== Product search (general) =====
     public function searchProducts(Request $request)
     {
@@ -1648,7 +1862,7 @@ class ProductController extends Controller
     /**
      * Match a sale item to a specific variant based on size and color stored in color field.
      */
-    private function matchSaleItemToVariant($saleItem, $variant, $totalVariantsCount = 1)
+    public static function matchSaleItemToVariant($saleItem, $variant, $totalVariantsCount = 1)
     {
         $itemColor = $saleItem->color ?? null;
         if (empty($itemColor) || $itemColor === '-' || $itemColor === 'null') {

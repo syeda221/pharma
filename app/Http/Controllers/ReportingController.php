@@ -1310,13 +1310,40 @@ class ReportingController extends Controller
 
         $totalExpenses = $expenseQueryV1->sum('total_amount') + $expenseQueryV2->sum('total_amount');
 
-        // 4. Top Customers by Profit (filter by zone if selected)
+        // 4. Customers & Zone-wise Profit Calculation
         $customerQuery = DB::table('customers');
         if ($zoneCustomerIds !== null) {
             $customerQuery->whereIn('id', $zoneCustomerIds);
         }
         $allCustomers = $customerQuery->get();
         $customerProfits = [];
+
+        // Initialize all zones for the zone profit breakdown cards
+        $allZones = \App\Models\Zone::orderBy('zone')->get();
+        $zoneStatsMap = [];
+        $zoneByName = [];
+        foreach ($allZones as $z) {
+            $zoneStatsMap[$z->id] = [
+                'id' => $z->id,
+                'name' => $z->zone,
+                'revenue' => 0.0,
+                'cogs' => 0.0,
+                'profit' => 0.0,
+                'sales_count' => 0,
+                'customer_count' => 0,
+            ];
+            $zoneByName[strtolower(trim($z->zone))] = $z->id;
+        }
+
+        $unassignedZone = [
+            'id' => 'unassigned',
+            'name' => 'Other / No Zone',
+            'revenue' => 0.0,
+            'cogs' => 0.0,
+            'profit' => 0.0,
+            'sales_count' => 0,
+            'customer_count' => 0,
+        ];
 
         $balanceService = app(\App\Services\BalanceService::class);
         foreach ($allCustomers as $customer) {
@@ -1328,7 +1355,17 @@ class ReportingController extends Controller
                 $custSaleQuery->whereBetween('sales.created_at', [$start, $end]);
             }
 
+            if ($productId && $productId !== 'all') {
+                $custSaleQuery->where('sale_items.product_id', $productId);
+            }
+
+            if ($categoryId && $categoryId !== 'all') {
+                $custSaleQuery->join('products as p_cat', 'p_cat.id', '=', 'sale_items.product_id')
+                    ->where('p_cat.category_id', $categoryId);
+            }
+
             $custSaleItems = $custSaleQuery->select(
+                'sale_items.sale_id',
                 'sale_items.product_id', 
                 'sale_items.is_manual',
                 'sale_items.purchase_price',
@@ -1341,6 +1378,7 @@ class ReportingController extends Controller
 
             $custRevenue = 0;
             $custCogs = 0;
+            $custSalesCount = $custSaleItems->pluck('sale_id')->unique()->count();
 
             foreach ($custSaleItems as $item) {
                 $avgPrice = 0;
@@ -1400,9 +1438,35 @@ class ReportingController extends Controller
                 $custCogs += (float) ($item->total_pieces ?? 0) * $avgPrice;
             }
 
+            // Sale returns for this customer
+            $custRetQuery = DB::table('sale_return_items')
+                ->join('sale_returns', 'sale_returns.id', '=', 'sale_return_items.sale_return_id')
+                ->where('sale_returns.customer_id', $customer->id);
+
+            if ($start && $end) {
+                $custRetQuery->whereBetween('sale_returns.created_at', [$start, $end]);
+            }
+            if ($productId && $productId !== 'all') {
+                $custRetQuery->where('sale_return_items.product_id', $productId);
+            }
+
+            $custReturns = $custRetQuery->select(
+                'sale_return_items.product_id',
+                'sale_return_items.is_manual',
+                'sale_return_items.purchase_price',
+                'sale_return_items.qty',
+                'sale_return_items.line_total'
+            )->get();
+
+            foreach ($custReturns as $ret) {
+                $custRevenue -= (float) $ret->line_total;
+                $retAvgPrice = $ret->is_manual ? (float)$ret->purchase_price : ($avgPriceMap[$ret->product_id] ?? 0);
+                $custCogs -= ((float) $ret->qty) * $retAvgPrice;
+            }
+
             $custProfit = $custRevenue - $custCogs;
 
-            if ($custRevenue > 0) {
+            if ($custRevenue > 0 || $custSalesCount > 0 || count($custReturns) > 0) {
                 $customerProfits[] = [
                     'id' => $customer->id,
                     'name' => $customer->customer_name,
@@ -1411,6 +1475,31 @@ class ReportingController extends Controller
                     'cogs' => round($custCogs, 2),
                     'profit' => round($custProfit, 2),
                 ];
+
+                // Aggregate into Zone statistics
+                $cZone = $customer->zone;
+                $matchedZoneId = null;
+                if ($cZone !== null && $cZone !== '') {
+                    if (isset($zoneStatsMap[$cZone])) {
+                        $matchedZoneId = $cZone;
+                    } elseif (isset($zoneByName[strtolower(trim($cZone))])) {
+                        $matchedZoneId = $zoneByName[strtolower(trim($cZone))];
+                    }
+                }
+
+                if ($matchedZoneId !== null && isset($zoneStatsMap[$matchedZoneId])) {
+                    $zoneStatsMap[$matchedZoneId]['revenue'] += $custRevenue;
+                    $zoneStatsMap[$matchedZoneId]['cogs'] += $custCogs;
+                    $zoneStatsMap[$matchedZoneId]['profit'] += $custProfit;
+                    $zoneStatsMap[$matchedZoneId]['sales_count'] += $custSalesCount;
+                    $zoneStatsMap[$matchedZoneId]['customer_count'] += 1;
+                } else {
+                    $unassignedZone['revenue'] += $custRevenue;
+                    $unassignedZone['cogs'] += $custCogs;
+                    $unassignedZone['profit'] += $custProfit;
+                    $unassignedZone['sales_count'] += $custSalesCount;
+                    $unassignedZone['customer_count'] += 1;
+                }
             }
         }
 
@@ -1420,12 +1509,26 @@ class ReportingController extends Controller
         });
         $topCustomers = array_slice($customerProfits, 0, 10);
 
+        // Prepare final Zone Stats list
+        $zoneList = array_values($zoneStatsMap);
+        if ($unassignedZone['revenue'] > 0 || $unassignedZone['profit'] != 0 || $unassignedZone['sales_count'] > 0) {
+            $zoneList[] = $unassignedZone;
+        }
+
+        foreach ($zoneList as &$zs) {
+            $zs['revenue'] = round($zs['revenue'], 2);
+            $zs['cogs'] = round($zs['cogs'], 2);
+            $zs['profit'] = round($zs['profit'], 2);
+        }
+        unset($zs);
+
         return response()->json([
             'products' => $productStats,
             'total_gross_profit' => round($totalGrossProfit, 2),
             'total_expenses' => round($totalExpenses, 2),
             'net_profit' => round($totalGrossProfit - $totalExpenses, 2),
-            'top_customers' => $topCustomers
+            'top_customers' => $topCustomers,
+            'zone_stats' => $zoneList,
         ]);
     }
 

@@ -1136,8 +1136,8 @@ class SaleController extends Controller
     public function saleedit($id)
     {
         // 1. Fetch Sale with relations (including nested items.product for pre-fill)
-        // Eager load warehouseStocks to display stock in edit view
-        $sale = Sale::with(['items.product.warehouseStocks', 'customer_relation'])->findOrFail($id);
+        // Eager load warehouseStocks to display live stock and returns.items to reflect returns in edit view
+        $sale = Sale::with(['items.product.warehouseStocks', 'customer_relation', 'returns.items'])->findOrFail($id);
 
         if (in_array($sale->sale_status, ['cancelled', 'returned'])) {
             return redirect()->route('sale.index')->with('error', 'Cannot edit a '.$sale->sale_status.' sale.');
@@ -1486,12 +1486,22 @@ class SaleController extends Controller
                     $bonusQty = (float) ($bonusVal ?? 0);
                     if ($bonusQty < 0) $bonusQty = 0;
 
-                    // Total Physical Pieces for Inventory (Billed Pieces + Bonus)
-                    $reqTotal = (float) ($request->total_pieces[$index] ?? 0);
-                    if ($reqTotal > 0) {
-                        $totalPieces = $reqTotal;
+                    // Check if this row has returned pieces from previous sale returns
+                    $retPieces = (float) ($request->returned_pieces[$index] ?? 0);
+                    if ($retPieces > 0) {
+                        // The user in Edit Sale enters the NET billed quantity.
+                        // Add returned pieces to obtain GROSS pieces for proper stock & return balance tracking.
+                        $grossBilledPieces = $billedPieces + $retPieces;
+                        $storedQtyBox = $ppb > 0 ? ($grossBilledPieces / $ppb) : $grossBilledPieces;
+                        $totalPieces = $grossBilledPieces + $bonusQty;
                     } else {
-                        $totalPieces = $billedPieces + $bonusQty;
+                        // Total Physical Pieces for Inventory (Billed Pieces + Bonus)
+                        $reqTotal = (float) ($request->total_pieces[$index] ?? 0);
+                        if ($reqTotal > 0) {
+                            $totalPieces = $reqTotal;
+                        } else {
+                            $totalPieces = $billedPieces + $bonusQty;
+                        }
                     }
                     
                     $productName = $product->item_name;
@@ -1508,7 +1518,19 @@ class SaleController extends Controller
                 $frontendGross = (float) ($request->gross_amount[$index] ?? 0);
                 $frontendNet   = (float) ($request->total[$index] ?? 0);
 
-                if ($frontendGross > 0) {
+                if (!empty($retPieces) && $retPieces > 0) {
+                    // When row has returned items, line gross represents gross pieces (net + return)
+                    if ($sizeMode === 'by_cartons') {
+                        $subUnit = $request->sub_unit_mode[$index] ?? 'main';
+                        if ($subUnit === 'pcs') {
+                            $lineGross = $grossBilledPieces * $dbPrice;
+                        } else {
+                            $lineGross = $storedQtyBox * $dbPrice;
+                        }
+                    } else {
+                        $lineGross = $grossBilledPieces * $dbPrice;
+                    }
+                } elseif ($frontendGross > 0) {
                     $lineGross = $frontendGross;
                 } elseif ($frontendNet > 0) {
                     // frontendNet was already after discount in frontend
@@ -2129,8 +2151,26 @@ class SaleController extends Controller
             }
 
             if ($type === 'out') {
+                $alreadyReturned = 0;
+                if ($sale->relationLoaded('returns') || $sale->returns()->exists()) {
+                    $query = \App\Models\SaleReturnItem::join('sale_returns', 'sale_returns.id', '=', 'sale_return_items.sale_return_id')
+                        ->where('sale_returns.sale_id', $sale->id)
+                        ->where('sale_return_items.product_id', $item->product_id);
+                    if (!empty($item->color)) {
+                        $query->where('sale_return_items.color', $item->color);
+                    }
+                    $alreadyReturned = (float) $query->sum('sale_return_items.qty');
+                    if ($alreadyReturned == 0) {
+                        $alreadyReturned = (float) \App\Models\SaleReturnItem::join('sale_returns', 'sale_returns.id', '=', 'sale_return_items.sale_return_id')
+                            ->where('sale_returns.sale_id', $sale->id)
+                            ->where('sale_return_items.product_id', $item->product_id)
+                            ->sum('sale_return_items.qty');
+                    }
+                }
+                $effectiveQtyToDeduct = max(0, $qtyPieces - $alreadyReturned);
+
                 // Deduct stock directly into negative if stock is 0 or less
-                $stock->total_pieces -= $qtyPieces;
+                $stock->total_pieces -= $effectiveQtyToDeduct;
                 // Update approx boxes for display
                 $ppb = $item->product->pieces_per_box ?? 1;
                 $stock->quantity = round($stock->total_pieces / ($ppb > 0 ? $ppb : 1), 2);
@@ -2138,35 +2178,49 @@ class SaleController extends Controller
 
                 $bonusInfo = ((float)($item->bonus_qty ?? 0) > 0) ? ' (Sold: ' . ($item->qty) . ', Bonus: ' . ($item->bonus_qty) . ')' : '';
                 // Movement
-                DB::table('stock_movements')->insert([
-                    'product_id' => $item->product_id,
-                    'type' => 'out',
-                    'qty' => -$qtyPieces, // Negative for OUT
-                    'ref_type' => 'sale',
-                    'ref_id' => $sale->id,
-                    'note' => 'Sale Posted #'.$sale->invoice_no . $bonusInfo,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                if ($effectiveQtyToDeduct > 0) {
+                    DB::table('stock_movements')->insert([
+                        'product_id' => $item->product_id,
+                        'type' => 'out',
+                        'qty' => -$effectiveQtyToDeduct, // Negative for OUT
+                        'ref_type' => 'sale',
+                        'ref_id' => $sale->id,
+                        'note' => 'Sale Posted #'.$sale->invoice_no . $bonusInfo . ($alreadyReturned > 0 ? " (Net after {$alreadyReturned} returned)" : ''),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             } elseif ($type === 'in' || $type === 'return') {
+                // If any pieces were already returned to stock via SaleReturn, don't restore them twice
+                $alreadyReturned = 0;
+                if ($sale->relationLoaded('returns') || $sale->returns()->exists()) {
+                    $alreadyReturned = (float) \App\Models\SaleReturnItem::join('sale_returns', 'sale_returns.id', '=', 'sale_return_items.sale_return_id')
+                        ->where('sale_returns.sale_id', $sale->id)
+                        ->where('sale_return_items.product_id', $item->product_id)
+                        ->sum('sale_return_items.qty');
+                }
+                $effectiveQtyToRestore = max(0, $qtyPieces - $alreadyReturned);
+
                 // Restore (Cancel or Return)
-                $stock->total_pieces += $qtyPieces;
+                $stock->total_pieces += $effectiveQtyToRestore;
                 // Update approx boxes
                 $ppb = $item->product->pieces_per_box ?? 1;
                 $stock->quantity = round($stock->total_pieces / ($ppb > 0 ? $ppb : 1), 2);
                 $stock->save();
 
                 // Movement
-                DB::table('stock_movements')->insert([
-                    'product_id' => $item->product_id,
-                    'type' => 'in',
-                    'qty' => $qtyPieces,
-                    'ref_type' => 'sale_'.$type, // sale_in (cancel), sale_return
-                    'ref_id' => $sale->id,
-                    'note' => 'Sale '.ucfirst($type).' #'.$sale->invoice_no,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                if ($effectiveQtyToRestore > 0) {
+                    DB::table('stock_movements')->insert([
+                        'product_id' => $item->product_id,
+                        'type' => 'in',
+                        'qty' => $effectiveQtyToRestore,
+                        'ref_type' => 'sale_'.$type, // sale_in (cancel), sale_return
+                        'ref_id' => $sale->id,
+                        'note' => 'Sale '.ucfirst($type).' #'.$sale->invoice_no . ($alreadyReturned > 0 ? " (Net after {$alreadyReturned} returned)" : ''),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
     }

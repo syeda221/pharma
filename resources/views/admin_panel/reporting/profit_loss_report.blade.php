@@ -108,6 +108,91 @@
         -moz-appearance: textfield;
     }
 
+    /* Zone Pill Bar & Cards */
+    .zone-pill-bar {
+        display: flex;
+        align-items: stretch;
+        gap: 8px;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 2px;
+    }
+    .zone-pill-bar::-webkit-scrollbar {
+        height: 5px;
+    }
+    .zone-pill-bar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+    .zone-pill-bar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    .zone-pill-bar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    .zone-pill {
+        flex: 1 1 0px;
+        min-width: 180px;
+        max-width: 260px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        cursor: pointer;
+        transition: all 0.18s ease;
+        position: relative;
+        user-select: none;
+    }
+    .zone-pill:hover {
+        border-color: #3b82f6 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.12);
+        background: #fafbfc;
+    }
+    .zone-pill.active-zone {
+        border: 1.5px solid #2563eb !important;
+        background: #eff6ff !important;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18) !important;
+    }
+    .zone-pill .zone-name {
+        font-size: .75rem;
+        font-weight: 700;
+        color: #1e293b;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .zone-pill .zone-badge {
+        font-size: .62rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+    .zone-pill .zone-profit-label {
+        font-size: .60rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: #64748b;
+        margin-bottom: 1px;
+    }
+    .zone-pill .zone-profit-val {
+        font-size: .92rem;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+    .zone-pill .zone-rev-val {
+        font-size: .75rem;
+        font-weight: 700;
+        color: #334155;
+    }
+
     @media print {
         body { background: #ffffff !important; font-size: 11px; }
         .no-print, header, .sidebar, .navbar, footer { display: none !important; }
@@ -381,6 +466,31 @@
                     </span>
                 </div>
                 <div class="mob-metric-val mt-1" style="color: #ea580c; font-size: 14px;" id="mobCardPartner2Profit">Rs 0</div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ZONE-WISE PROFIT SUMMARY CARDS (UPPER CARDS) --}}
+    <div class="card border-0 shadow-sm mb-2 no-print" style="border-radius: 10px; background: #ffffff;" id="zoneProfitSection">
+        <div class="card-body p-2">
+            <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark" style="font-size: .76rem; letter-spacing: -0.1px;">
+                        <i class="fas fa-map-marked-alt text-primary me-1.5"></i>Zone-wise Profit
+                    </span>
+                    <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;" id="zoneCountBadge">0 Zones</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted d-none d-md-inline" style="font-size: 11px;">
+                        <i class="fas fa-hand-pointer me-1 text-primary opacity-75"></i>Click to filter
+                    </span>
+                    <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" id="btnClearZoneFilter" style="font-size: 10.5px; border-radius: 12px; display: none;">
+                        <i class="fas fa-times me-1"></i>All Zones
+                    </button>
+                </div>
+            </div>
+            <div class="zone-pill-bar" id="zoneCardsContainer">
+                <div class="text-center text-muted py-2 small w-100">Loading zone data…</div>
             </div>
         </div>
     </div>
@@ -720,7 +830,97 @@ $(document).ready(function() {
 
         // Top 10 Customers
         renderTopCustomers(data.top_customers || []);
+
+        // Zone-wise Profit Summary Cards
+        renderZoneCards(data.zone_stats || []);
     }
+
+    function renderZoneCards(zones) {
+        let currentSelectedZone = $('.zoneSelect').first().val() || 'all';
+        $('#zoneCountBadge').text(zones.length + ' ' + (zones.length === 1 ? 'Zone' : 'Zones'));
+
+        if (currentSelectedZone !== 'all') {
+            $('#btnClearZoneFilter').show();
+        } else {
+            $('#btnClearZoneFilter').hide();
+        }
+
+        if (!zones || zones.length === 0) {
+            $('#zoneCardsContainer').html('<div class="text-center text-muted py-2 small w-100">No zone records found</div>');
+            return;
+        }
+
+        // Detect duplicate zone names to disambiguate clearly
+        let nameCounts = {};
+        zones.forEach(function(z) {
+            nameCounts[z.name] = (nameCounts[z.name] || 0) + 1;
+        });
+
+        // Vibrant pastel accent colors for map icons
+        const accentColors = ['#2563eb', '#059669', '#7c3aed', '#ea580c', '#db2777', '#0891b2', '#4f46e5'];
+
+        let html = '';
+        zones.forEach(function(z, idx) {
+            let profitVal = parseFloat(z.profit || 0);
+            let profitColor = profitVal > 0 ? '#059669' : (profitVal < 0 ? '#dc2626' : '#475569');
+            let profitSign = profitVal < 0 ? '-' : '';
+            let isActive = (currentSelectedZone == z.id && currentSelectedZone !== 'all');
+            let cardClass = isActive ? 'zone-pill active-zone' : 'zone-pill';
+            let accent = accentColors[idx % accentColors.length];
+
+            let displayName = (nameCounts[z.name] > 1 && z.id !== 'unassigned') ? `${z.name} (#${z.id})` : z.name;
+            let isUnassigned = (z.id === 'unassigned');
+            let iconClass = isUnassigned ? 'fa-globe' : 'fa-location-dot';
+
+            html += `
+                <div class="${cardClass}" data-zone-id="${z.id}" title="Click to filter by ${displayName}">
+                    <div class="d-flex align-items-center justify-content-between mb-1.5">
+                        <div class="d-flex align-items-center gap-1.5" style="min-width: 0;">
+                            <i class="fas ${iconClass}" style="font-size: 11px; color: ${accent};"></i>
+                            <span class="zone-name" title="${displayName}">${displayName}</span>
+                        </div>
+                        ${isActive 
+                            ? '<span class="badge bg-primary text-white" style="font-size: 9.5px; padding: 2px 6px; font-weight: 700;"><i class="fas fa-check me-0.5"></i>Filtered</span>'
+                            : `<span class="zone-badge" title="${z.sales_count} sales"><i class="fas fa-receipt me-1 opacity-75"></i>${z.sales_count}</span>`
+                        }
+                    </div>
+                    <div class="d-flex align-items-end justify-content-between pt-1 border-top" style="border-color: #f1f5f9 !important;">
+                        <div>
+                            <div class="zone-profit-label">Net Profit</div>
+                            <div class="zone-profit-val" style="color: ${profitColor};">
+                                ${profitSign}Rs ${fmt(Math.abs(profitVal))}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="zone-profit-label">Revenue</div>
+                            <div class="zone-rev-val">Rs ${fmt(z.revenue)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        $('#zoneCardsContainer').html(html);
+    }
+
+    // Click handler for Zone Pills to filter
+    $(document).on('click', '.zone-pill', function() {
+        let zoneId = $(this).attr('data-zone-id');
+        let currentVal = $('.zoneSelect').first().val();
+
+        if (currentVal == zoneId) {
+            $('.zoneSelect').val('all').trigger('change');
+        } else {
+            $('.zoneSelect').val(zoneId).trigger('change');
+        }
+        fetchReport();
+    });
+
+    $('#btnClearZoneFilter').on('click', function(e) {
+        e.preventDefault();
+        $('.zoneSelect').val('all').trigger('change');
+        fetchReport();
+    });
 
     function renderTopCustomers(customers) {
         var html = '';
