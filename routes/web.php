@@ -354,6 +354,10 @@ Route::middleware('auth')->group(function () {
     Route::get('sale/return/{id}', [App\Http\Controllers\SaleReturnController::class, 'showReturnForm'])->middleware('permission:sales.create')->name('sale.return.show');
     Route::post('sale/return/store', [App\Http\Controllers\SaleReturnController::class, 'processSaleReturn'])->middleware('permission:sales.create')->name('sale.return.store');
 
+    // Bulk Discount Batch Review & Apply Routes
+    Route::get('/sales/bulk-discount', [SaleController::class, 'bulkDiscountIndex'])->middleware('permission:sales.edit')->name('sale.bulk_discount');
+    Route::post('/sales/bulk-discount/apply', [SaleController::class, 'applyBulkDiscount'])->middleware('permission:sales.edit')->name('sale.bulk_discount.apply');
+
     Route::get('/sales/{id}/invoice', [SaleController::class, 'saleinvoice'])->middleware('permission:sales.view')->name('sales.invoice');
     Route::get('/sales/{id}/edit', [SaleController::class, 'saleedit'])->middleware('permission:sales.edit')->name('sales.edit');
     Route::put('/sales/{id}', [SaleController::class, 'updatesale'])->middleware('permission:sales.edit')->name('sales.update');
@@ -403,6 +407,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/stock-adjustments', [StockAdjustmentController::class, 'store'])->name('stock_adjustments.store');
     Route::post('/stock-adjustments/store-batch', [StockAdjustmentController::class, 'storeBatch'])->name('stock_adjustments.store_batch');
     Route::get('/stock-adjustments/product-variants/{productId}', [StockAdjustmentController::class, 'getProductVariants'])->name('stock_adjustments.product_variants');
+
+    // Monthly Physical Stock Closing & Audit
+    Route::get('/stock-closing', [\App\Http\Controllers\MonthlyStockClosingController::class, 'index'])->name('stock-closing.index');
+    Route::get('/stock-closing/create', [\App\Http\Controllers\MonthlyStockClosingController::class, 'create'])->name('stock-closing.create');
+    Route::get('/stock-closing/warehouse-products', [\App\Http\Controllers\MonthlyStockClosingController::class, 'getWarehouseProducts'])->name('stock-closing.warehouse-products');
+    Route::post('/stock-closing', [\App\Http\Controllers\MonthlyStockClosingController::class, 'store'])->name('stock-closing.store');
+    Route::get('/stock-closing/{id}', [\App\Http\Controllers\MonthlyStockClosingController::class, 'show'])->name('stock-closing.show');
+    Route::get('/stock-closing/{id}/print', [\App\Http\Controllers\MonthlyStockClosingController::class, 'printSheet'])->name('stock-closing.print');
     // //////////
     Route::get('/get-stock/{product}', [StocksController::class, 'getStock'])
         ->name('get.stock');

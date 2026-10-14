@@ -429,6 +429,10 @@
                             href="{{ url('bookings') }}" style="border-radius: 8px;">
                             <i class="fas fa-bookmark"></i> Bookings
                         </a>
+                        <a class="btn btn-outline-warning px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1 text-dark"
+                            href="{{ route('sale.bulk_discount') }}" style="border-radius: 8px;" title="Bulk Discount & Tier Review Tool">
+                            <i class="fas fa-tags text-warning"></i> Bulk Discounts
+                        </a>
                         @can('sales.create')
                             <a class="btn btn-primary px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1"
                                 href="{{ route('sale.add') }}" style="border-radius: 8px;">

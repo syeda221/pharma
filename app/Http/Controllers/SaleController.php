@@ -2589,4 +2589,219 @@ class SaleController extends Controller
         $invoiceNo = \App\Models\InvoiceSeries::generateNextNo($prefix);
         return response()->json(['invoice_no' => $invoiceNo]);
     }
+
+    /**
+     * Preview page for reviewing and applying bulk discounts to past sales.
+     */
+    public function bulkDiscountIndex(Request $request)
+    {
+        $query = Sale::with(['customer_relation.customerTypeModel', 'items.product'])
+            ->orderByDesc('id');
+
+        // Customer filter
+        if ($request->filled('customer_id')) {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        // Customer type filter
+        if ($request->filled('customer_type')) {
+            $query->whereHas('customer_relation', function ($q) use ($request) {
+                $q->where('customer_type', $request->customer_type);
+            });
+        }
+
+        // Date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Sale Status filter
+        if ($request->filled('sale_status')) {
+            $query->where('sale_status', $request->sale_status);
+        }
+
+        // Discount filter: default 'no_discount'
+        $discountFilter = $request->input('discount_filter', 'no_discount');
+        if ($discountFilter === 'no_discount') {
+            $query->where(function ($q) {
+                $q->whereNull('discount_tier')
+                  ->orWhere('discount_tier', '')
+                  ->orWhereDoesntHave('items', function ($sub) {
+                      $sub->where('discount_percent', '>', 0);
+                  });
+            });
+        } elseif ($discountFilter === 'has_discount') {
+            $query->whereHas('items', function ($sub) {
+                $sub->where('discount_percent', '>', 0);
+            });
+        }
+
+        $sales = $query->paginate(50)->withQueryString();
+
+        $customers = Customer::select(
+            'id', 'customer_name', 'customer_type',
+            'custom_discount_medical', 'custom_discount_doctor',
+            'custom_discount_distribution', 'custom_discount_percentage'
+        )->orderBy('customer_name')->get();
+
+        $customerTypes = \App\Models\CustomerType::all();
+
+        return view('admin_panel.sale.bulk_discount', compact('sales', 'customers', 'customerTypes', 'discountFilter'));
+    }
+
+    /**
+     * Bulk apply discounts to selected sales.
+     * Safely updates line item discounts, sale totals, journal vouchers, and customer ledgers
+     * WITHOUT touching inventory stocks, loose pieces, cartons, or returns!
+     */
+    public function applyBulkDiscount(Request $request)
+    {
+        $request->validate([
+            'selected_sales' => 'required|array|min:1',
+            'selected_sales.*' => 'exists:sales,id',
+        ]);
+
+        $selectedSaleIds = $request->input('selected_sales', []);
+        $tiers = $request->input('tier', []);
+        $customPercents = $request->input('custom_percent', []);
+        $itemDiscounts = $request->input('item_discount', []);
+
+        $updatedCount = 0;
+        $totalDiscountApplied = 0;
+
+        DB::beginTransaction();
+        try {
+            $journalService = app(\App\Services\JournalEntryService::class);
+            $balanceService = app(\App\Services\BalanceService::class);
+
+            foreach ($selectedSaleIds as $saleId) {
+                $sale = Sale::with(['items', 'customer_relation.customerTypeModel'])->lockForUpdate()->find($saleId);
+                if (!$sale) {
+                    continue;
+                }
+
+                $customer = $sale->customer_relation;
+                $customerTiers = $customer ? $customer->discount_tiers : ['medical' => 0, 'doctor' => 0, 'distribution' => 0];
+
+                $tier = $tiers[$saleId] ?? 'doctor';
+                $defaultPct = 0;
+                if ($tier === 'custom') {
+                    $defaultPct = (float) ($customPercents[$saleId] ?? 0);
+                } elseif (isset($customerTiers[$tier])) {
+                    $defaultPct = (float) $customerTiers[$tier];
+                }
+
+                $oldNet = (float) $sale->total_net;
+                $newTotalBill = 0;
+
+                foreach ($sale->items as $item) {
+                    $pct = isset($itemDiscounts[$saleId][$item->id])
+                        ? (float) $itemDiscounts[$saleId][$item->id]
+                        : $defaultPct;
+
+                    // Un-discounted gross amount
+                    $lineGross = (float) ($item->total + $item->discount_amount);
+                    if ($lineGross <= 0) {
+                        $lineGross = (float) $item->qty * (float) $item->price;
+                    }
+
+                    $newDiscountAmount = round(($lineGross * $pct) / 100, 2);
+                    $newLineTotal = max(0, round($lineGross - $newDiscountAmount, 2));
+
+                    $item->discount_percent = $pct;
+                    $item->discount_amount = $newDiscountAmount;
+                    $item->total = $newLineTotal;
+                    $item->save();
+
+                    $newTotalBill += $newLineTotal;
+                }
+
+                // Update sale header
+                $sale->total_bill_amount = $newTotalBill;
+                $extraDiscount = (float) ($sale->total_extradiscount ?? 0);
+                $newNet = max(0, round($newTotalBill - $extraDiscount, 2));
+                $sale->total_net = $newNet;
+                $sale->discount_tier = $tier;
+                $sale->change = round((float) $sale->cash - $newNet, 2);
+                $sale->save();
+
+                $diff = $newNet - $oldNet;
+                $totalDiscountApplied += ($oldNet - $newNet);
+
+                // Financial updates (Zero stock changes!)
+                if ($customer && $sale->sale_status === 'posted') {
+                    // Reverse old sale Journal Voucher
+                    $vouchers = \App\Models\VoucherMaster::where('voucher_type', \App\Models\VoucherMaster::TYPE_JOURNAL)
+                        ->where('remarks', 'like', "%#{$sale->invoice_no}%")
+                        ->get();
+
+                    foreach ($vouchers as $voucher) {
+                        $journalService->reverseEntriesForSource($voucher);
+                        \App\Models\VoucherDetail::where('voucher_master_id', $voucher->id)->delete();
+                        $voucher->delete();
+                    }
+
+                    // Re-create sale voucher with new net
+                    $balanceService->createSaleVoucher(
+                        $customer,
+                        $newNet,
+                        $sale->invoice_no,
+                        $sale->created_at ? $sale->created_at->format('Y-m-d') : now()->format('Y-m-d')
+                    );
+
+                    // Adjust Customer Ledger
+                    if (abs($diff) > 0.001) {
+                        $ledger = CustomerLedger::where('customer_id', $customer->id)->latest('id')->first();
+                        $prevBal = $ledger ? (float) $ledger->closing_balance : (float) ($customer->previous_balance ?? 0);
+                        $newBal = $prevBal + $diff;
+
+                        CustomerLedger::create([
+                            'customer_id' => $customer->id,
+                            'admin_or_user_id' => auth()->id() ?? 1,
+                            'description' => "Bulk Discount Update #{$sale->invoice_no} ({$tier} {$defaultPct}%)",
+                            'previous_balance' => $prevBal,
+                            'closing_balance' => $newBal,
+                            'opening_balance' => 0,
+                        ]);
+
+                        $customer->previous_balance = $newBal;
+                        $customer->save();
+                    }
+                }
+
+                $updatedCount++;
+            }
+
+            DB::commit();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Successfully updated discounts for {$updatedCount} sale(s)! Total discount applied: Rs. " . number_format($totalDiscountApplied, 2),
+                    'updated_count' => $updatedCount,
+                    'total_discount' => $totalDiscountApplied,
+                ]);
+            }
+
+            return redirect()->route('sale.bulk_discount')
+                ->with('success', "Successfully updated discounts for {$updatedCount} sale(s)! Total discount applied: Rs. " . number_format($totalDiscountApplied, 2));
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error("Bulk discount error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to apply bulk discounts: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Failed to apply bulk discounts: ' . $e->getMessage());
+        }
+    }
 }
+
