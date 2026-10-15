@@ -359,6 +359,7 @@
                             <div class="submenu">
                                 <ul class="submenu-item">
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.item_stock') }}"><i class="fa-solid fa-boxes-stacked mr-2"></i><span>Item Stock</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{{ route('stock-closing.index') }}"><i class="fa-solid fa-clipboard-check mr-2"></i><span>Monthly Stock Closing</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.purchase') }}"><i class="fa-solid fa-cart-shopping mr-2"></i><span>Purchase Report</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.sale') }}"><i class="fa-solid fa-file-invoice-dollar mr-2"></i><span>Sale Report</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{{ route('report.product_sale_customer_wise') }}"><i class="fa-solid fa-users-between-lines mr-2"></i><span>Product Sale (Customer Wise)</span></a></li>

@@ -922,6 +922,8 @@
                                                     @canany(['stock.adjust.view', 'stock.adjust.create'])
                                                         <li><a href="{{ route('stock_adjustments.index') }}"><i
                                                                     class="fas fa-sliders-h"></i> Stock Adjustment</a></li>
+                                                        <li><a href="{{ route('stock-closing.index') }}"><i
+                                                                    class="fas fa-clipboard-check"></i> Monthly Stock Closing</a></li>
                                                     @endcanany
                                                 </ul>
                                             </div>

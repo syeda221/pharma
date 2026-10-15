@@ -66,6 +66,16 @@ class ReportingController extends Controller
         if ($categoryId && $categoryId !== 'all') {
             $productsQuery->where('category_id', $categoryId);
         }
+        if ($request->filled('brand_id') && $request->brand_id !== 'all') {
+            $productsQuery->where('brand_id', $request->brand_id);
+        }
+        if ($request->filled('search') && trim($request->search) !== '') {
+            $search = trim($request->search);
+            $productsQuery->where(function($q) use ($search) {
+                $q->where('item_name', 'like', "%{$search}%")
+                  ->orWhere('item_code', 'like', "%{$search}%");
+            });
+        }
 
         // Unit Mode Filter
         if ($unitType && $unitType !== 'all') {
@@ -460,6 +470,12 @@ class ReportingController extends Controller
                         'id'              => $product->id,
                         'item_code'       => $product->item_code,
                         'item_name'       => $vName . ' (' . $vSize . ' | ' . $vColor . ')',
+                        'variant_key'     => $vKey,
+                        'variant_name'    => $vName . ' (' . $vSize . ' | ' . $vColor . ')',
+                        'pieces_per_box'  => $ppb,
+                        'ppb'             => $ppb,
+                        'brand_id'        => $product->brand_id,
+                        'category_id'     => $product->category_id,
                         'category_name'   => $product->category_relation->name ?? 'Standard',
                         'unit_name'       => $vUnitName,
                         'size_mode'       => $sizeMode,
@@ -622,6 +638,12 @@ class ReportingController extends Controller
                     'id'              => $product->id,
                     'item_code'       => $product->item_code,
                     'item_name'       => $product->item_name,
+                    'variant_key'     => null,
+                    'variant_name'    => null,
+                    'pieces_per_box'  => $ppb,
+                    'ppb'             => $ppb,
+                    'brand_id'        => $product->brand_id,
+                    'category_id'     => $product->category_id,
                     'category_name'   => $product->category_relation->name ?? 'Standard',
                     'unit_name'       => $unitName,
                     'size_mode'       => $sizeMode,
@@ -3106,17 +3128,30 @@ class ReportingController extends Controller
         $vSize  = strtolower(trim($variant['size'] ?? '-'));
         $vColor = strtolower(trim($variant['color'] ?? '-'));
         $vName  = strtolower(trim($variant['name'] ?? ''));
+        $vKey   = strtolower(trim($vName) . '|' . trim($vSize) . '|' . trim($vColor));
+
+        if (!empty($vKey) && str_contains($note, $vKey)) {
+            return true;
+        }
 
         $sizeMatch = true;
         if ($vSize !== '-' && !empty($vSize)) {
-            $pattern = '/\b' . preg_quote($vSize, '/') . '\b/i';
-            $sizeMatch = preg_match($pattern, $note) === 1;
+            if (str_contains($note, 'size: ' . $vSize) || str_contains($note, '(' . $vSize . ' |')) {
+                $sizeMatch = true;
+            } else {
+                $pattern = '/(?<![a-zA-Z0-9])' . preg_quote($vSize, '/') . '(?![a-zA-Z0-9])/i';
+                $sizeMatch = preg_match($pattern, $note) === 1;
+            }
         }
 
         $colorMatch = true;
         if ($vColor !== '-' && !empty($vColor)) {
-            $pattern = '/\b' . preg_quote($vColor, '/') . '\b/i';
-            $colorMatch = preg_match($pattern, $note) === 1;
+            if (str_contains($note, 'color: ' . $vColor) || str_contains($note, '| ' . $vColor . ')')) {
+                $colorMatch = true;
+            } else {
+                $pattern = '/(?<![a-zA-Z0-9])' . preg_quote($vColor, '/') . '(?![a-zA-Z0-9])/i';
+                $colorMatch = preg_match($pattern, $note) === 1;
+            }
         }
 
         return $sizeMatch && $colorMatch;

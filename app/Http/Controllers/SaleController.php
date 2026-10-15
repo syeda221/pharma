@@ -2598,6 +2598,11 @@ class SaleController extends Controller
         $query = Sale::with(['customer_relation.customerTypeModel', 'items.product'])
             ->orderByDesc('id');
 
+        // Invoice No search
+        if ($request->filled('invoice_no')) {
+            $query->where('invoice_no', 'like', '%' . trim($request->invoice_no) . '%');
+        }
+
         // Customer filter
         if ($request->filled('customer_id')) {
             $query->where('customer_id', $request->customer_id);
@@ -2623,8 +2628,8 @@ class SaleController extends Controller
             $query->where('sale_status', $request->sale_status);
         }
 
-        // Discount filter: default 'no_discount'
-        $discountFilter = $request->input('discount_filter', 'no_discount');
+        // Discount filter: default 'all' so all sales invoices are visible
+        $discountFilter = $request->input('discount_filter', 'all');
         if ($discountFilter === 'no_discount') {
             $query->where(function ($q) {
                 $q->whereNull('discount_tier')
@@ -2668,6 +2673,9 @@ class SaleController extends Controller
         $tiers = $request->input('tier', []);
         $customPercents = $request->input('custom_percent', []);
         $itemDiscounts = $request->input('item_discount', []);
+        $selectedTiersInput = $request->input('selected_tiers', []); // e.g. [sale_id => ['doctor', 'distribution']]
+        $effectivePercents = $request->input('effective_percent', []); // e.g. [sale_id => 20.0]
+        $tierLabels = $request->input('tier_label', []);
 
         $updatedCount = 0;
         $totalDiscountApplied = 0;
@@ -2686,12 +2694,37 @@ class SaleController extends Controller
                 $customer = $sale->customer_relation;
                 $customerTiers = $customer ? $customer->discount_tiers : ['medical' => 0, 'doctor' => 0, 'distribution' => 0];
 
-                $tier = $tiers[$saleId] ?? 'doctor';
+                // Determine effective percentage and tier description (supporting multi-discount!)
                 $defaultPct = 0;
-                if ($tier === 'custom') {
-                    $defaultPct = (float) ($customPercents[$saleId] ?? 0);
-                } elseif (isset($customerTiers[$tier])) {
-                    $defaultPct = (float) $customerTiers[$tier];
+                $tier = 'doctor';
+
+                $saleTiers = $selectedTiersInput[$saleId] ?? null;
+                if (is_array($saleTiers) && count($saleTiers) > 0) {
+                    $combinedPct = 0;
+                    $labelParts = [];
+                    foreach ($saleTiers as $t) {
+                        if ($t === 'custom') {
+                            $cVal = (float) ($customPercents[$saleId] ?? 0);
+                            $combinedPct += $cVal;
+                            $labelParts[] = "Custom ({$cVal}%)";
+                        } elseif (isset($customerTiers[$t])) {
+                            $tVal = (float) $customerTiers[$t];
+                            $combinedPct += $tVal;
+                            $labelParts[] = ucfirst($t) . " ({$tVal}%)";
+                        }
+                    }
+                    $defaultPct = $combinedPct;
+                    $tier = !empty($labelParts) ? implode(' + ', $labelParts) : 'custom';
+                } elseif (isset($effectivePercents[$saleId])) {
+                    $defaultPct = (float) $effectivePercents[$saleId];
+                    $tier = $tierLabels[$saleId] ?? ($tiers[$saleId] ?? 'custom');
+                } else {
+                    $tier = $tiers[$saleId] ?? 'doctor';
+                    if ($tier === 'custom') {
+                        $defaultPct = (float) ($customPercents[$saleId] ?? 0);
+                    } elseif (isset($customerTiers[$tier])) {
+                        $defaultPct = (float) $customerTiers[$tier];
+                    }
                 }
 
                 $oldNet = (float) $sale->total_net;
