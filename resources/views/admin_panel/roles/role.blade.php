@@ -1093,17 +1093,24 @@
                     'inventory': 'fa-boxes',
                     'sales': 'fa-shopping-cart',
                     'purchase': 'fa-cart-plus',
-                    'accounts': 'fa-calculator'
+                    'accounts': 'fa-calculator',
+                    'profit': 'fa-chart-pie',
+                    'profit.loss.report': 'fa-chart-pie'
                 };
 
                 allPermissions.forEach(function(p) {
-                    // Group by everything before the last dot (the action)
-                    var parts = p.name.split('.');
-                    if (parts.length > 1) {
-                        parts.pop(); // remove action
-                        var module = parts.join('.');
+                    var module;
+                    if (p.name.startsWith('profit.loss')) {
+                        module = 'profit.loss.report';
                     } else {
-                        var module = 'General';
+                        // Group by everything before the last dot (the action)
+                        var parts = p.name.split('.');
+                        if (parts.length > 1) {
+                            parts.pop(); // remove action
+                            module = parts.join('.');
+                        } else {
+                            module = 'General';
+                        }
                     }
 
                     if (!groups[module]) groups[module] = [];
@@ -1161,7 +1168,7 @@
                             </div>
                             <div class="permission-group-body">
                                 <div class="row g-2">
-                    `;
+                            `;
 
                     perms.forEach(function(p) {
                         var checked = assignedPerms.includes(p.name);
@@ -1171,11 +1178,20 @@
                         ];
                         var actionClass = knownActions.includes(action) ? action : 'other';
 
+                        var displayName = p.name;
+                        if (p.name === 'profit.loss.report.view') displayName = 'Profit Loss: View Report Page';
+                        else if (p.name === 'profit.loss.cards.view') displayName = 'Profit Loss: Financial Cards';
+                        else if (p.name === 'profit.loss.zones.view') displayName = 'Profit Loss: Zone-Wise Cards';
+                        else if (p.name === 'profit.loss.discounts.view') displayName = 'Profit Loss: Discounts Breakdown';
+                        else if (p.name === 'profit.loss.quantities.view') displayName = 'Profit Loss: Quantities & Volume';
+                        else if (p.name === 'profit.loss.filters.view') displayName = 'Profit Loss: Search & Filters';
+                        else if (p.name === 'profit.loss.export') displayName = 'Profit Loss: Print & Export';
+
                         html += `
                             <div class="col-12 col-md-6 col-lg-4 col-xl-3 perm-item-wrapper" data-name="${p.name.toLowerCase()}">
                                 <div class="perm-item ${checked ? 'checked' : ''}" onclick="togglePerm('${p.id}')">
                                     <input type="checkbox" name="permissions[]" value="${p.name}" id="perm-${p.id}" ${checked ? 'checked' : ''} onclick="event.stopPropagation()">
-                                    <label for="perm-${p.id}" onclick="event.stopPropagation(); togglePerm('${p.id}')">${p.name}</label>
+                                    <label for="perm-${p.id}" onclick="event.stopPropagation(); togglePerm('${p.id}')" title="${p.name}">${displayName}</label>
                                     <span class="perm-action-badge ${actionClass}">${action}</span>
                                 </div>
                             </div>

@@ -18,32 +18,101 @@
     }
     .summary-pill-bar {
         display: flex;
-        align-items: center;
+        align-items: stretch;
         justify-content: space-between;
-        gap: 6px;
+        gap: 8px;
         overflow-x: auto;
         white-space: nowrap;
+        padding-bottom: 2px;
+    }
+    .summary-pill-bar::-webkit-scrollbar {
+        height: 5px;
+    }
+    .summary-pill-bar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+    .summary-pill-bar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
     }
     .stat-pill {
         flex: 1 1 0px;
-        padding: 6px 10px;
+        min-width: 140px;
+        padding: 7px 10px;
         border-radius: 8px;
         border: 1px solid #cbd5e1;
         background: #ffffff;
         text-align: center;
         box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .stat-pill:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.06);
     }
     .stat-pill .stat-label {
-        font-size: .60rem;
+        font-size: .62rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.4px;
-        margin-bottom: 1px;
+        margin-bottom: 2px;
     }
     .stat-pill .stat-val {
-        font-size: .88rem;
+        font-size: .92rem;
         font-weight: 800;
         line-height: 1.2;
+    }
+    .stat-pill .stat-sub {
+        font-size: .60rem;
+        font-weight: 600;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Modern Overview Card for Discounts & Quantities */
+    .overview-card {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        height: 100%;
+    }
+    .overview-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+    }
+    .overview-card .ov-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 3px;
+    }
+    .overview-card .ov-label {
+        font-size: .64rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    .overview-card .ov-val {
+        font-size: .95rem;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+    .overview-card .ov-sub {
+        font-size: .62rem;
+        font-weight: 600;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* Mobile Cards Styling */
@@ -204,6 +273,7 @@
 <div class="sale-report-container">
 
     {{-- DESKTOP FILTER HEADER CARD (d-none d-md-block Standard Pattern) --}}
+    @can('profit.loss.filters.view')
     <div class="card border-0 shadow-sm mb-2 no-print d-none d-md-block" style="border-radius: 10px;">
         <div class="card-body py-2 px-3">
             <form id="profitLossFormDesk">
@@ -238,9 +308,11 @@
                         <button type="button" class="btn btn-light border btn-sm px-3 fw-bold text-secondary d-inline-flex align-items-center btnResetTrigger" style="height: 32px; border-radius: 6px; font-size: .78rem; margin-right: 8px !important;">
                             <i class="fas fa-undo me-1"></i> Reset
                         </button>
+                        @can('profit.loss.export')
                         <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-bold d-inline-flex align-items-center btnPrintReport" style="height: 32px; border-radius: 6px; font-size: .78rem;">
                             <i class="fas fa-print me-1"></i> Print
                         </button>
+                        @endcan
                     </div>
                 </div>
 
@@ -287,8 +359,10 @@
             </form>
         </div>
     </div>
+    @endcan
 
     {{-- MOBILE FILTER HEADER CARD (d-md-none With Top Margin) --}}
+    @can('profit.loss.filters.view')
     <div class="card border-0 shadow-sm mb-3 no-print d-md-none mt-2" style="border-radius: 12px;">
         <div class="card-body p-3">
             <form id="profitLossFormMob">
@@ -366,111 +440,252 @@
                             <button type="button" class="btn btn-light border btn-sm flex-fill fw-bold text-secondary btnResetTrigger" style="font-size: 11px; margin-right: 8px !important;">
                                 <i class="fas fa-undo me-1"></i> Reset
                             </button>
+                            @can('profit.loss.export')
                             <button type="button" class="btn btn-outline-secondary btn-sm flex-fill fw-bold btnPrintReport" style="font-size: 11px;">
                                 <i class="fas fa-print me-1"></i> Print
                             </button>
+                            @endcan
                         </div>
                     </div>
                 </div>
             </form>
         </div>
     </div>
+    @endcan
 
-    {{-- DESKTOP SUMMARY METRIC PILL BAR (d-none d-md-block) --}}
-    <div class="card border-0 shadow-sm mb-2 d-none d-md-block" style="border-radius: 10px; background: #ffffff;">
+    {{-- SECTION 1: FINANCIAL PERFORMANCE & MARGINS --}}
+    @can('profit.loss.cards.view')
+    <div class="card border-0 shadow-sm mb-2 no-print" style="border-radius: 10px; background: #ffffff;">
         <div class="card-body p-2">
+            <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark" style="font-size: .76rem; letter-spacing: -0.1px;">
+                        <i class="fas fa-chart-line text-primary me-1.5"></i>Financial Performance
+                    </span>
+                    <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                        Margin: <strong class="text-success" id="cardProfitMarginBadge">0.0%</strong>
+                    </span>
+                </div>
+                <span class="text-muted small d-none d-md-inline" style="font-size: 11px;">
+                    <i class="fas fa-coins text-warning me-1"></i>Revenue, Cost & Profit
+                </span>
+            </div>
+
             <div class="summary-pill-bar">
-                
+                {{-- Gross Revenue --}}
+                <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
+                    <div class="stat-label text-secondary"><i class="fas fa-receipt me-1"></i>Gross Sales</div>
+                    <div class="stat-val text-dark" id="cardGrossRevenue">Rs 0</div>
+                    <div class="stat-sub text-muted">Before Deductions</div>
+                </div>
+
+                {{-- Total COGS --}}
+                <div class="stat-pill" style="background: #fffbeb; border-color: #fde68a;">
+                    <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-boxes-stacked me-1"></i>Total COGS</div>
+                    <div class="stat-val" style="color: #b45309;" id="cardCOGS">Rs 0</div>
+                    <div class="stat-sub" style="color: #d97706;">Product Cost</div>
+                </div>
+
+                {{-- Gross Profit --}}
                 <div class="stat-pill" style="background: #f0fdf4; border-color: #86efac;">
-                    <div class="stat-label text-success">Gross Profit</div>
+                    <div class="stat-label text-success"><i class="fas fa-arrow-trend-up me-1"></i>Gross Profit</div>
                     <div class="stat-val text-success" id="cardGrossProfit">Rs 0</div>
+                    <div class="stat-sub text-success">Revenue - COGS</div>
                 </div>
 
+                {{-- Total Expenses --}}
                 <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
-                    <div class="stat-label text-danger">Total Expenses</div>
+                    <div class="stat-label text-danger"><i class="fas fa-arrow-trend-down me-1"></i>Expenses</div>
                     <div class="stat-val text-danger" id="cardExpenses">Rs 0</div>
+                    <div class="stat-sub text-danger">Operating Costs</div>
                 </div>
 
+                {{-- Net Profit / Loss --}}
                 <div class="stat-pill" style="background: #f0f9ff; border-color: #bae6fd;">
-                    <div class="stat-label text-primary">Net Profit / Loss</div>
+                    <div class="stat-label text-primary"><i class="fas fa-scale-balanced me-1"></i>Net Profit / Loss</div>
                     <div class="stat-val text-primary" id="cardNetProfit">Rs 0</div>
+                    <div class="stat-sub text-primary">Bottom Line</div>
                 </div>
 
+                {{-- Partner 1 --}}
                 <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;">
                     <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #7c3aed;">
                         <i class="fas fa-user-tie"></i>
                         <span>Partner 1</span>
                         <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #d8b4fe !important; height: 18px;">
-                            <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 32px; font-size: 10px; outline: none; color: #7c3aed; background: transparent;" title="Change %">
+                            <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 30px; font-size: 10px; outline: none; color: #7c3aed; background: transparent;" title="Change %">
                             <span style="font-size: 9px; font-weight: 700; color: #7c3aed;">%</span>
                         </span>
                     </div>
                     <div class="stat-val" style="color: #7c3aed;" id="cardPartner1Profit">Rs 0</div>
+                    <div class="stat-sub" style="color: #7c3aed;">Equity Share</div>
                 </div>
 
+                {{-- Partner 2 --}}
                 <div class="stat-pill" style="background: #fff7ed; border-color: #fed7aa;">
                     <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #ea580c;">
                         <i class="fas fa-user-tie"></i>
                         <span>Partner 2</span>
                         <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #fed7aa !important; height: 18px;">
-                            <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 32px; font-size: 10px; outline: none; color: #ea580c; background: transparent;" title="Change %">
+                            <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 30px; font-size: 10px; outline: none; color: #ea580c; background: transparent;" title="Change %">
                             <span style="font-size: 9px; font-weight: 700; color: #ea580c;">%</span>
                         </span>
                     </div>
                     <div class="stat-val" style="color: #ea580c;" id="cardPartner2Profit">Rs 0</div>
+                    <div class="stat-sub" style="color: #ea580c;">Equity Share</div>
                 </div>
-
             </div>
         </div>
     </div>
+    @endcan
 
-    {{-- MOBILE SUMMARY METRIC GRID (d-md-none) --}}
-    <div class="row g-2 mb-3 d-md-none no-print px-1">
-        <div class="col-6">
-            <div class="mob-metric-card p-2">
-                <span class="mob-metric-label" style="font-size: 11px;"><i class="fas fa-arrow-up text-success me-1"></i>Gross Profit</span>
-                <div class="mob-metric-val text-success mt-1" id="mobCardGrossProfit" style="font-size: 14px;">Rs 0</div>
-            </div>
-        </div>
-        <div class="col-6">
-            <div class="mob-metric-card p-2">
-                <span class="mob-metric-label" style="font-size: 11px;"><i class="fas fa-arrow-down text-danger me-1"></i>Expenses</span>
-                <div class="mob-metric-val text-danger mt-1" id="mobCardExpenses" style="font-size: 14px;">Rs 0</div>
-            </div>
-        </div>
-        <div class="col-12 mt-1">
-            <div class="mob-metric-card p-2" style="background: #f0f9ff; border-color: #bae6fd;">
-                <span class="mob-metric-label text-primary" style="font-size: 11px;"><i class="fas fa-balance-scale me-1"></i>Net Profit / Loss</span>
-                <div class="mob-metric-val text-primary mt-1" id="mobCardNetProfit" style="font-size: 15px;">Rs 0</div>
-            </div>
-        </div>
-        <div class="col-6 mt-1">
-            <div class="mob-metric-card p-2" style="background: #faf5ff; border-color: #d8b4fe;">
-                <div class="mob-metric-label d-flex align-items-center justify-content-between" style="color: #7c3aed; font-size: 11px;">
-                    <span><i class="fas fa-user-tie me-1"></i>Partner 1</span>
-                    <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #d8b4fe !important; height: 18px;">
-                        <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 30px; font-size: 10px; outline: none; color: #7c3aed; background: transparent;" title="Change %">
-                        <span style="font-size: 9px; font-weight: 700; color: #7c3aed;">%</span>
+    {{-- SECTION 2: DISCOUNTS & TIER SUBSIDIES BREAKDOWN --}}
+    @can('profit.loss.discounts.view')
+    <div class="card border-0 shadow-sm mb-2 no-print" style="border-radius: 10px; background: #ffffff;">
+        <div class="card-body p-2">
+            <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark" style="font-size: .76rem; letter-spacing: -0.1px;">
+                        <i class="fas fa-percent text-danger me-1.5"></i>Discounts & Tier Subsidies Breakdown
+                    </span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5" style="font-size: 10px;">
+                        Total Discounts: <strong id="cardTotalDiscountHeader">Rs 0</strong>
                     </span>
                 </div>
-                <div class="mob-metric-val mt-1" style="color: #7c3aed; font-size: 14px;" id="mobCardPartner1Profit">Rs 0</div>
+                <span class="text-muted small d-none d-md-inline" style="font-size: 11px;">
+                    <i class="fas fa-filter text-primary me-1"></i>Recalculates per Zone / Customer filter
+                </span>
             </div>
-        </div>
-        <div class="col-6 mt-1">
-            <div class="mob-metric-card p-2" style="background: #fff7ed; border-color: #fed7aa;">
-                <div class="mob-metric-label d-flex align-items-center justify-content-between" style="color: #ea580c; font-size: 11px;">
-                    <span><i class="fas fa-user-tie me-1"></i>Partner 2</span>
-                    <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #fed7aa !important; height: 18px;">
-                        <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 30px; font-size: 10px; outline: none; color: #ea580c; background: transparent;" title="Change %">
-                        <span style="font-size: 9px; font-weight: 700; color: #ea580c;">%</span>
-                    </span>
+
+            <div class="row g-2">
+                {{-- Total Discount --}}
+                <div class="col-6 col-md">
+                    <div class="overview-card" style="background: #fef2f2; border-color: #fca5a5;">
+                        <div class="ov-header">
+                            <span class="ov-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</span>
+                        </div>
+                        <div class="ov-val text-danger" id="cardTotalDiscount">Rs 0</div>
+                        <div class="ov-sub text-danger opacity-75">All Deductions</div>
+                    </div>
                 </div>
-                <div class="mob-metric-val mt-1" style="color: #ea580c; font-size: 14px;" id="mobCardPartner2Profit">Rs 0</div>
+
+                {{-- Medical Store Discount --}}
+                <div class="col-6 col-md">
+                    <div class="overview-card" style="background: #ecfdf5; border-color: #a7f3d0;">
+                        <div class="ov-header">
+                            <span class="ov-label text-success"><i class="fas fa-prescription-bottle-medical me-1"></i>Medical Store</span>
+                        </div>
+                        <div class="ov-val text-success" id="cardMedicalDiscount">Rs 0</div>
+                        <div class="ov-sub text-success opacity-75">Pharmacy Tier Subsidies</div>
+                    </div>
+                </div>
+
+                {{-- Distribution Discount --}}
+                <div class="col-6 col-md">
+                    <div class="overview-card" style="background: #eff6ff; border-color: #bfdbfe;">
+                        <div class="ov-header">
+                            <span class="ov-label text-primary"><i class="fas fa-truck-fast me-1"></i>Distribution</span>
+                        </div>
+                        <div class="ov-val text-primary" id="cardDistDiscount">Rs 0</div>
+                        <div class="ov-sub text-primary opacity-75">Wholesale Tier Subsidies</div>
+                    </div>
+                </div>
+
+                {{-- Doctor Discount --}}
+                <div class="col-6 col-md">
+                    <div class="overview-card" style="background: #faf5ff; border-color: #e9d5ff;">
+                        <div class="ov-header">
+                            <span class="ov-label" style="color: #7c3aed;"><i class="fas fa-user-doctor me-1"></i>Doctor / Clinic</span>
+                        </div>
+                        <div class="ov-val" style="color: #7c3aed;" id="cardDoctorDiscount">Rs 0</div>
+                        <div class="ov-sub" style="color: #7c3aed; opacity: 0.75;">Practitioner Concessions</div>
+                    </div>
+                </div>
+
+                {{-- Other / Extra Discount --}}
+                <div class="col-12 col-md">
+                    <div class="overview-card" style="background: #fffbeb; border-color: #fde68a;">
+                        <div class="ov-header">
+                            <span class="ov-label" style="color: #b45309;"><i class="fas fa-file-invoice-dollar me-1"></i>Extra / Other</span>
+                        </div>
+                        <div class="ov-val" style="color: #b45309;" id="cardOtherDiscount">Rs 0</div>
+                        <div class="ov-sub" style="color: #b45309; opacity: 0.75;">Invoice & Manual Extra</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+    @endcan
+
+    {{-- SECTION 3: PRODUCT SALES QUANTITIES & VOLUME OVERVIEW --}}
+    @can('profit.loss.quantities.view')
+    <div class="card border-0 shadow-sm mb-2 no-print" style="border-radius: 10px; background: #ffffff;">
+        <div class="card-body p-2">
+            <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold text-dark" style="font-size: .76rem; letter-spacing: -0.1px;">
+                        <i class="fas fa-boxes-stacked text-primary me-1.5"></i>Product Sales Volume & Delivery Quantities
+                    </span>
+                    <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                        <span id="cardSalesCount">0 Sales</span> &bull; <span id="cardProductsCount">0 Products</span>
+                    </span>
+                </div>
+                <span class="text-muted small d-none d-md-inline" style="font-size: 11px;">
+                    <i class="fas fa-cubes text-secondary me-1"></i>Carton, Loose & Net Delivered Units
+                </span>
+            </div>
+
+            <div class="row g-2">
+                {{-- Total Sold Units --}}
+                <div class="col-6 col-md-3">
+                    <div class="overview-card" style="background: #f8fafc; border-color: #cbd5e1;">
+                        <div class="ov-header">
+                            <span class="ov-label text-dark"><i class="fas fa-box-open text-primary me-1"></i>Products Sold</span>
+                        </div>
+                        <div class="ov-val text-dark" id="cardSoldQty">0 Pcs</div>
+                        <div class="ov-sub text-muted" id="cardSoldPieces">0 Total Pieces Sold</div>
+                    </div>
+                </div>
+
+                {{-- Returns --}}
+                <div class="col-6 col-md-3">
+                    <div class="overview-card" style="background: #fef2f2; border-color: #fca5a5;">
+                        <div class="ov-header">
+                            <span class="ov-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sales Returns</span>
+                        </div>
+                        <div class="ov-val text-danger" id="cardReturnQty">0 Pcs</div>
+                        <div class="ov-sub text-danger" id="cardReturnAmount">Rs 0 Total Value</div>
+                    </div>
+                </div>
+
+                {{-- Net Delivered --}}
+                <div class="col-6 col-md-3">
+                    <div class="overview-card" style="background: #f0fdf4; border-color: #86efac;">
+                        <div class="ov-header">
+                            <span class="ov-label text-success"><i class="fas fa-truck-ramp-box me-1"></i>Net Delivered</span>
+                        </div>
+                        <div class="ov-val text-success" id="cardNetQty">0 Pcs</div>
+                        <div class="ov-sub text-success" id="cardNetPieces">0 Net Delivered Pieces</div>
+                    </div>
+                </div>
+
+                {{-- Net Revenue --}}
+                <div class="col-6 col-md-3">
+                    <div class="overview-card" style="background: #f0f9ff; border-color: #bae6fd;">
+                        <div class="ov-header">
+                            <span class="ov-label text-primary"><i class="fas fa-wallet me-1"></i>Net Revenue</span>
+                        </div>
+                        <div class="ov-val text-primary" id="cardNetRevenue">Rs 0</div>
+                        <div class="ov-sub text-primary opacity-75">Net Realized Revenue</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endcan
 
     {{-- ZONE-WISE PROFIT SUMMARY CARDS (UPPER CARDS) --}}
+    @can('profit.loss.zones.view')
     <div class="card border-0 shadow-sm mb-2 no-print" style="border-radius: 10px; background: #ffffff;" id="zoneProfitSection">
         <div class="card-body p-2">
             <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
@@ -494,6 +709,7 @@
             </div>
         </div>
     </div>
+    @endcan
 
     <div id="loader" style="display:none; text-align:center; padding: 20px;">
         <div class="spinner-border text-primary" role="status"></div>
@@ -812,16 +1028,53 @@ $(document).ready(function() {
         profitTable.draw();
         $('#mobProfitContainer').html(mobHtml || '<div class="text-center text-muted py-3 small">No item profitability data</div>');
 
-        // Cards (Desktop & Mobile)
-        let formattedGross = 'Rs ' + fmt(data.total_gross_profit);
-        let formattedExp   = 'Rs ' + fmt(data.total_expenses);
-        let formattedNet   = 'Rs ' + fmt(data.net_profit);
+        // 1. Financial Performance Cards
+        let s = data.summary || {};
+        let grossRevVal = parseFloat(s.gross_revenue || 0);
+        let cogsVal     = parseFloat(s.cogs || 0);
+        let netRevVal   = parseFloat(s.net_revenue || 0);
+        let grossProf   = parseFloat(data.total_gross_profit || s.gross_profit || 0);
+        let expVal      = parseFloat(data.total_expenses || s.expenses || 0);
+        let netProf     = parseFloat(data.net_profit || s.net_profit || 0);
+        let marginVal   = parseFloat(s.profit_margin || 0);
 
-        currentNetProfit = parseFloat(data.net_profit || 0);
+        currentNetProfit = netProf;
 
-        $('#cardGrossProfit, #mobCardGrossProfit').text(formattedGross);
-        $('#cardExpenses, #mobCardExpenses').text(formattedExp);
-        $('#cardNetProfit, #mobCardNetProfit').text(formattedNet);
+        $('#cardGrossRevenue').text('Rs ' + fmt(grossRevVal));
+        $('#cardCOGS').text('Rs ' + fmt(cogsVal));
+        $('#cardNetRevenue').text('Rs ' + fmt(netRevVal));
+        $('#cardGrossProfit, #mobCardGrossProfit').text('Rs ' + fmt(grossProf));
+        $('#cardExpenses, #mobCardExpenses').text('Rs ' + fmt(expVal));
+
+        let netProfColor = netProf >= 0 ? '#2563eb' : '#dc2626';
+        let netSign = netProf < 0 ? '-' : '';
+        $('#cardNetProfit, #mobCardNetProfit').text(netSign + 'Rs ' + fmt(Math.abs(netProf))).css('color', netProfColor);
+
+        let marginClass = marginVal >= 0 ? 'text-success' : 'text-danger';
+        $('#cardProfitMarginBadge').text(marginVal + '% Margin').removeClass('text-success text-danger').addClass(marginClass);
+
+        // 2. Customer Tier Discounts Breakdown Cards
+        let totalDiscVal = parseFloat(s.total_discount || 0);
+        let medDiscVal   = parseFloat(s.medical_discount || 0);
+        let distDiscVal  = parseFloat(s.distribution_discount || 0);
+        let docDiscVal   = parseFloat(s.doctor_discount || 0);
+        let otherDiscVal = parseFloat(s.other_discount || 0);
+
+        $('#cardTotalDiscount, #cardTotalDiscountHeader').text('Rs ' + fmt(totalDiscVal));
+        $('#cardMedicalDiscount').text('Rs ' + fmt(medDiscVal));
+        $('#cardDistDiscount').text('Rs ' + fmt(distDiscVal));
+        $('#cardDoctorDiscount').text('Rs ' + fmt(docDiscVal));
+        $('#cardOtherDiscount').text('Rs ' + fmt(otherDiscVal));
+
+        // 3. Product Sales Quantities & Volume Overview Cards
+        $('#cardSoldQty').text(s.sold_qty_display || '0 Pcs');
+        $('#cardSoldPieces').text(fmt(s.total_sold_pieces || 0) + ' Total Pieces Sold');
+        $('#cardReturnQty').text(s.return_qty_display || '0 Pcs');
+        $('#cardReturnAmount').text('Rs ' + fmt(s.return_amount || 0) + ' Total Value');
+        $('#cardNetQty').text(s.net_qty_display || '0 Pcs');
+        $('#cardNetPieces').text(fmt(s.net_sold_pieces || 0) + ' Net Delivered Pieces');
+        $('#cardSalesCount').text((s.sales_count || 0) + ' Sales');
+        $('#cardProductsCount').text((s.products_count || data.products.length || 0) + ' Products');
 
         updatePartnerShares();
 

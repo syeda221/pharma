@@ -523,12 +523,33 @@
             .rt_nav_header.horizontal-layout {
                 position: relative !important;
             }
-            .app-page-body {
-                padding-top: 35px !important;
-            }
             .main-content {
                 padding-top: 15px !important;
             }
+        }
+
+        /* Menu Arrow Dropdown Icon Fix (FontAwesome) */
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu-arrow {
+            display: inline-block !important;
+            margin-left: 6px !important;
+            font-size: 11px !important;
+            vertical-align: middle !important;
+            transition: transform 0.25s ease !important;
+        }
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item > .nav-link .menu-arrow:before {
+            font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "FontAwesome" !important;
+            content: "\f107" !important; /* fa-angle-down */
+            font-weight: 900 !important;
+            font-size: 11px !important;
+            display: inline-block !important;
+            speak: none;
+            line-height: 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item:hover > .nav-link .menu-arrow,
+        .rt_nav_header.horizontal-layout .nav-bottom .page-navigation > .nav-item.show-submenu > .nav-link .menu-arrow {
+            transform: rotate(-180deg) !important;
         }
     </style>
 
@@ -945,6 +966,10 @@
                                                     @can('customers.view')
                                                         <li><a href="{{ url('customers') }}"><i class="fas fa-user"></i>
                                                                 Customer</a></li>
+                                                        {{-- <li><a href="{{ route('customer-payments.bulk.create') }}"><i class="fas fa-hand-holding-usd text-success"></i>
+                                                                Bulk Recovery (Receiving)</a></li>
+                                                        <li><a href="{{ route('customer-payments.batches') }}"><i class="fas fa-history text-primary"></i>
+                                                                Recovery Batches</a></li> --}}
                                                     @endcan
                                                     @can('customer_types.view')
                                                         <li><a href="{{ route('customer-types.index') }}"><i class="fas fa-tags"></i>
@@ -954,15 +979,15 @@
                                                         <li><a href="{{ url('zone') }}"><i class="fas fa-map-marker-alt"></i>
                                                                 Zone</a></li>
                                                     @endcan
-                                                    @can('sales.officers.view')
+                                                    {{-- @can('sales.officers.view')
                                                         <li><a href="{{ url('sales-officers') }}"><i class="fas fa-user-tie"></i>
                                                                 Sales Officer</a></li>
-                                                    @endcan
-                                                    @can('receipts.voucher.view')
+                                                    @endcan --}}
+                                                    {{-- @can('receipts.voucher.view')
                                                         <li><a href="{{ route('all_recepit_vochers') }}"><i
                                                                     class="fas fa-file-invoice-dollar"></i>
                                                                 Receipt Vouchers</a></li>
-                                                    @endcan
+                                                    @endcan --}}
                                                     @can('sales.view')
                                                         <li><a href="{{ route('distributor-reports.index') }}"><i
                                                                     class="fas fa-chart-line"></i>
@@ -980,7 +1005,7 @@
                         <!-- Vouchers Menu -->
                         <li class="nav-item">
                             @canany(['vouchers.create', 'vouchers.view', 'all.vouchers.view', 'chart.of.accounts.view', 'expense.voucher.view', 'receipts.voucher.view',
-                                'journal.voucher.view', 'payment.voucher.view', 'income.voucher.view'])
+                                'journal.voucher.view', 'payment.voucher.view', 'income.voucher.view', 'customers.view'])
                                 <a href="#" class="nav-link">
                                     <i class="menu_icon fas fa-clipboard-list"></i>
                                     <span class="menu-title">Vouchers</span>
@@ -1006,10 +1031,14 @@
                                             <li><a href="{{ route('expense_categories.index') }}"><i
                                                         class="fa-solid fa-list-check"></i> Expense Categories</a></li>
                                         @endcan
-                                        @can('receipts.voucher.view')
+                                        @canany(['receipts.voucher.view', 'customers.view'])
                                             <li><a href="{{ route('all_recepit_vochers') }}"><i
                                                         class="fa-solid fa-wallet"></i> Receipts Voucher</a></li>
-                                        @endcan
+                                            <li><a href="{{ route('customer-payments.bulk.create') }}"><i
+                                                        class="fas fa-hand-holding-usd text-success"></i> Bulk Recovery (Receiving)</a></li>
+                                            <li><a href="{{ route('customer-payments.batches') }}"><i
+                                                        class="fas fa-history text-primary"></i> Recovery Batches</a></li>
+                                        @endcanany
                                         @can('journal.voucher.view')
                                             <li><a href="{{ route('vouchers.index', 'journal voucher') }}"><i
                                                         class="fa-solid fa-wallet"></i> Journal Voucher</a></li>

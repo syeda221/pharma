@@ -215,6 +215,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/customer/ledger/{id}', [CustomerController::class, 'getCustomerLedger']);
     Route::delete('/customer-payments/{id}', [CustomerController::class, 'destroy_payment'])->name('customer.payments.destroy');
 
+    // ── Bulk Customer Payments & Batch Recovery Routes ──
+    Route::get('/customer-payments/bulk', [\App\Http\Controllers\BulkCustomerPaymentController::class, 'create'])->name('customer-payments.bulk.create');
+    Route::post('/customer-payments/bulk', [\App\Http\Controllers\BulkCustomerPaymentController::class, 'store'])->name('customer-payments.bulk.store');
+    Route::get('/customer-payments/batches', [\App\Http\Controllers\BulkCustomerPaymentController::class, 'batchHistory'])->name('customer-payments.batches');
+    Route::get('/customer-payments/receipt/{id}', [\App\Http\Controllers\BulkCustomerPaymentController::class, 'singleReceipt'])->name('customer-payments.receipt');
+    Route::get('/customer-payments/batch-print/{batch_no}', [\App\Http\Controllers\BulkCustomerPaymentController::class, 'batchPrint'])->name('customer-payments.batch-print');
+    Route::get('/customer-payments/balance/{id}', [\App\Http\Controllers\BulkCustomerPaymentController::class, 'getCustomerBalance'])->name('customer-payments.balance');
+
     // Customer Type Routes
     Route::get('/customer-types', [CustomerTypeController::class, 'index'])->middleware('permission:customer_types.view')->name('customer-types.index');
     Route::post('/customer-types/store', [CustomerTypeController::class, 'store'])->middleware('permission:customer_types.create|customer_types.edit')->name('customer-types.store');

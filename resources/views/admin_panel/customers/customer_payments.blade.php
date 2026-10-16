@@ -11,8 +11,16 @@
                     <h4>Customer Payments & Recoveries</h4>
                     <h6>Manage Customer Receivables</h6>
                 </div>
-                <div class="page-btn d-flex justify-content-end col-lg-6">
-                    <button class="btn btn-outline-primary mb-2" data-bs-toggle="modal" data-bs-target="#paymentModal" onclick="clearPaymentForm()">Add Payment</button>
+                <div class="page-btn d-flex justify-content-end align-items-center gap-2 col-lg-6 flex-wrap">
+                    <a href="{{ route('customer-payments.bulk.create') }}" class="btn btn-primary mb-2 fw-bold">
+                        <i class="fas fa-hand-holding-usd me-1"></i> Bulk Customer Recovery
+                    </a>
+                    <a href="{{ route('customer-payments.batches') }}" class="btn btn-outline-secondary mb-2 fw-semibold">
+                        <i class="fas fa-history me-1"></i> Recovery Batches
+                    </a>
+                    <button class="btn btn-outline-primary mb-2" data-bs-toggle="modal" data-bs-target="#paymentModal" onclick="clearPaymentForm()">
+                        <i class="fas fa-plus me-1"></i> Single Payment
+                    </button>
                 </div>
             </div>
 
@@ -44,13 +52,18 @@
                                 <td>{{ $p->payment_method }}</td>
                                 <td>{{ $p->note }}</td>
                                 <td>
-                                    <form action="{{ route('customer.payments.destroy', $p->id) }}" method="POST" style="display:inline-block;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure to delete this payment?')">
-                                            Delete
-                                        </button>
-                                    </form>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <a href="{{ route('customer-payments.receipt', $p->id) }}" target="_blank" class="btn btn-sm btn-outline-primary p-1" title="Print Receipt">
+                                            <i class="fas fa-print"></i>
+                                        </a>
+                                        <form action="{{ route('customer.payments.destroy', $p->id) }}" method="POST" style="display:inline-block;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger p-1" onclick="return confirm('Are you sure to delete this payment?')" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             @endforeach

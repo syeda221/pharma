@@ -116,6 +116,18 @@ class AllModulesPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permName]);
         }
 
+        // Register Profit & Loss Report specific granular permissions
+        foreach ([
+            'profit.loss.cards.view',
+            'profit.loss.zones.view',
+            'profit.loss.discounts.view',
+            'profit.loss.quantities.view',
+            'profit.loss.filters.view',
+            'profit.loss.export',
+        ] as $plPerm) {
+            Permission::firstOrCreate(['name' => $plPerm]);
+        }
+
         // Grant all new permissions to Super Admin just in case (though Gate::before handles it)
         $superAdmin = Role::where('name', 'Super Admin')->first();
         if ($superAdmin) {

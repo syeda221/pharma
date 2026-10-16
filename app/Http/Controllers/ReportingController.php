@@ -812,6 +812,7 @@ class ReportingController extends Controller
         $products = $productsQuery->get();
         $productStats = [];
         $totalGrossProfit = 0;
+        $totalCogs = 0;
         $avgPriceMap = [];
 
         foreach ($products as $product) {
@@ -1017,6 +1018,7 @@ class ReportingController extends Controller
                     $grossProfit = $netSoldAmount - $costOfGoodsSold;
 
                     if ($soldQtyPieces > 0 || $returnedQtyPieces > 0) {
+                        $totalCogs += $costOfGoodsSold;
                         // Format Sold Qty Display
                         if ($product->size_mode === 'by_cartons') {
                             $cartonPpb = $vConv > 1 ? $vConv : $ppb;
@@ -1154,6 +1156,7 @@ class ReportingController extends Controller
                 $grossProfit = $netSoldAmount - $costOfGoodsSold;
 
                 if ($soldQtyPieces > 0 || $returnedQtyPieces > 0) {
+                    $totalCogs += $costOfGoodsSold;
                     $ppb = (float)($product->pieces_per_box ?? 1);
                     if ($ppb <= 0) $ppb = 1;
 
@@ -1317,6 +1320,7 @@ class ReportingController extends Controller
                         'profit' => $grossProfit
                     ];
                     $totalGrossProfit += $grossProfit;
+                    $totalCogs += $cogs;
                 }
             }
         }
@@ -1544,6 +1548,174 @@ class ReportingController extends Controller
         }
         unset($zs);
 
+        // 5. Global Sales, Quantity & Discount Overview (Reacting to all active filters)
+        $overviewSaleQuery = \App\Models\Sale::with(['customer_relation.customerTypeModel', 'items.product']);
+        if ($start && $end) {
+            $overviewSaleQuery->whereBetween('created_at', [$start, $end]);
+        }
+        if ($customerId && $customerId !== 'all') {
+            $overviewSaleQuery->where('customer_id', $customerId);
+        } elseif ($zoneCustomerIds !== null) {
+            $overviewSaleQuery->whereIn('customer_id', $zoneCustomerIds);
+        }
+
+        $overviewSales = $overviewSaleQuery->get();
+
+        $totalGrossRevenue = 0;
+        $totalNetRevenue = 0;
+        $totalItemDiscounts = 0;
+        $totalExtraDiscounts = 0;
+        $medicalDiscount = 0;
+        $distributionDiscount = 0;
+        $doctorDiscount = 0;
+        $otherDiscount = 0;
+        $totalSoldPieces = 0;
+        $totalSoldBoxes = 0;
+        $totalSoldLoose = 0;
+        $matchingSalesCount = 0;
+
+        foreach ($overviewSales as $sale) {
+            $cust = $sale->customer_relation;
+            $tiers = $cust ? $cust->discount_tiers : ['medical' => 0, 'doctor' => 0, 'distribution' => 0];
+            $saleTier = strtolower((string)$sale->discount_tier);
+            $extra = (float)($sale->total_extradiscount ?? 0);
+            $totalExtraDiscounts += $extra;
+            $totalNetRevenue += (float)$sale->total_net;
+            $hasMatchingItem = false;
+
+            foreach ($sale->items as $it) {
+                if ($productId && $productId !== 'all' && $it->product_id != $productId) {
+                    continue;
+                }
+                if ($categoryId && $categoryId !== 'all' && $it->product && $it->product->category_id != $categoryId) {
+                    continue;
+                }
+
+                $hasMatchingItem = true;
+                $gross = ($it->total + $it->discount_amount) > 0 ? (float)($it->total + $it->discount_amount) : ((float)$it->qty * (float)$it->price);
+                $totalGrossRevenue += $gross;
+
+                $discAmt = (float)$it->discount_amount;
+                $totalItemDiscounts += $discAmt;
+                $pieces = (float)$it->total_pieces;
+                $totalSoldPieces += $pieces;
+
+                // Cartons & loose pieces accumulation
+                $ppb = (float)($it->product->pieces_per_box ?? 1);
+                if ($ppb <= 0) $ppb = 1;
+                $boxes = (int) floor($pieces / $ppb);
+                $loose = (int) round($pieces - ($boxes * $ppb));
+                $totalSoldBoxes += $boxes;
+                $totalSoldLoose += $loose;
+
+                // Multi-tier and specific tier breakdown
+                if (str_contains($saleTier, 'medical') && str_contains($saleTier, 'distribution')) {
+                    $mPct = (float)($tiers['medical'] ?? 0);
+                    $dPct = (float)($tiers['distribution'] ?? 0);
+                    $sum = $mPct + $dPct;
+                    if ($sum > 0) {
+                        $medicalDiscount += ($discAmt * ($mPct / $sum));
+                        $distributionDiscount += ($discAmt * ($dPct / $sum));
+                    } else {
+                        $medicalDiscount += ($discAmt / 2);
+                        $distributionDiscount += ($discAmt / 2);
+                    }
+                } elseif (str_contains($saleTier, 'doctor') && str_contains($saleTier, 'distribution')) {
+                    $docPct = (float)($tiers['doctor'] ?? 0);
+                    $dPct = (float)($tiers['distribution'] ?? 0);
+                    $sum = $docPct + $dPct;
+                    if ($sum > 0) {
+                        $doctorDiscount += ($discAmt * ($docPct / $sum));
+                        $distributionDiscount += ($discAmt * ($dPct / $sum));
+                    } else {
+                        $doctorDiscount += ($discAmt / 2);
+                        $distributionDiscount += ($discAmt / 2);
+                    }
+                } elseif (str_contains($saleTier, 'medical') && str_contains($saleTier, 'doctor')) {
+                    $mPct = (float)($tiers['medical'] ?? 0);
+                    $docPct = (float)($tiers['doctor'] ?? 0);
+                    $sum = $mPct + $docPct;
+                    if ($sum > 0) {
+                        $medicalDiscount += ($discAmt * ($mPct / $sum));
+                        $doctorDiscount += ($discAmt * ($docPct / $sum));
+                    } else {
+                        $medicalDiscount += ($discAmt / 2);
+                        $doctorDiscount += ($discAmt / 2);
+                    }
+                } elseif (str_contains($saleTier, 'medical')) {
+                    $medicalDiscount += $discAmt;
+                } elseif (str_contains($saleTier, 'distribution') || str_contains($saleTier, 'dist')) {
+                    $distributionDiscount += $discAmt;
+                } elseif (str_contains($saleTier, 'doctor') || str_contains($saleTier, 'doc')) {
+                    $doctorDiscount += $discAmt;
+                } else {
+                    $cType = strtolower((string)($cust->customer_type ?? ''));
+                    if (str_contains($cType, 'medical')) {
+                        $medicalDiscount += $discAmt;
+                    } elseif (str_contains($cType, 'distribut')) {
+                        $distributionDiscount += $discAmt;
+                    } elseif (str_contains($cType, 'doctor')) {
+                        $doctorDiscount += $discAmt;
+                    } else {
+                        $otherDiscount += $discAmt;
+                    }
+                }
+            }
+
+            if ($hasMatchingItem) {
+                $matchingSalesCount++;
+            }
+        }
+
+        // Returns overview for active filter
+        $overviewRetQuery = DB::table('sale_return_items as sri')
+            ->join('sale_returns as sr', 'sr.id', '=', 'sri.sale_return_id');
+
+        if ($start && $end) {
+            $overviewRetQuery->whereBetween('sr.created_at', [$start, $end]);
+        }
+        if ($customerId && $customerId !== 'all') {
+            $overviewRetQuery->where('sr.customer_id', $customerId);
+        } elseif ($zoneCustomerIds !== null) {
+            $overviewRetQuery->whereIn('sr.customer_id', $zoneCustomerIds);
+        }
+        if ($productId && $productId !== 'all') {
+            $overviewRetQuery->where('sri.product_id', $productId);
+        }
+
+        $overviewReturns = $overviewRetQuery->select('sri.qty', 'sri.boxes', 'sri.loose_pieces', 'sri.line_total')->get();
+        $totalReturnPieces = (float) $overviewReturns->sum('qty');
+        $totalReturnBoxes  = (int) $overviewReturns->sum('boxes');
+        $totalReturnLoose  = (int) $overviewReturns->sum('loose_pieces');
+        $totalReturnAmount = (float) $overviewReturns->sum('line_total');
+
+        $grandTotalDiscount = $totalItemDiscounts + $totalExtraDiscounts;
+        $finalNetRevenue = max(0, $totalNetRevenue - $totalReturnAmount);
+        $finalNetPieces = max(0, $totalSoldPieces - $totalReturnPieces);
+
+        // Format Quantity Strings (Sold, Returned, Net Delivered)
+        $soldQtyDisplay = $totalSoldBoxes > 0 
+            ? ($totalSoldLoose > 0 ? "{$totalSoldBoxes} Ctn . {$totalSoldLoose} Pcs" : "{$totalSoldBoxes} Cartons")
+            : "{$totalSoldPieces} Pcs";
+
+        $returnQtyDisplay = $totalReturnBoxes > 0
+            ? ($totalReturnLoose > 0 ? "{$totalReturnBoxes} Ctn . {$totalReturnLoose} Pcs" : "{$totalReturnBoxes} Cartons")
+            : "{$totalReturnPieces} Pcs";
+
+        $finalNetBoxes = max(0, $totalSoldBoxes - $totalReturnBoxes);
+        $finalNetLoose = $totalSoldLoose - $totalReturnLoose;
+        if ($finalNetLoose < 0 && $finalNetBoxes > 0) {
+            $finalNetBoxes = max(0, $finalNetBoxes - 1);
+            $finalNetLoose = max(0, $finalNetLoose + 12);
+        }
+        $finalNetLoose = max(0, $finalNetLoose);
+
+        $netQtyDisplay = $finalNetBoxes > 0 
+            ? ($finalNetLoose > 0 ? "{$finalNetBoxes} Ctn . {$finalNetLoose} Pcs" : "{$finalNetBoxes} Cartons")
+            : "{$finalNetPieces} Pcs";
+
+        $profitMargin = $finalNetRevenue > 0 ? round((($totalGrossProfit - $totalExpenses) / $finalNetRevenue) * 100, 1) : 0;
+
         return response()->json([
             'products' => $productStats,
             'total_gross_profit' => round($totalGrossProfit, 2),
@@ -1551,6 +1723,31 @@ class ReportingController extends Controller
             'net_profit' => round($totalGrossProfit - $totalExpenses, 2),
             'top_customers' => $topCustomers,
             'zone_stats' => $zoneList,
+            'summary' => [
+                'gross_revenue' => round($totalGrossRevenue, 2),
+                'total_discount' => round($grandTotalDiscount, 2),
+                'medical_discount' => round($medicalDiscount, 2),
+                'distribution_discount' => round($distributionDiscount, 2),
+                'doctor_discount' => round($doctorDiscount, 2),
+                'other_discount' => round($otherDiscount + $totalExtraDiscounts, 2),
+                'return_amount' => round($totalReturnAmount, 2),
+                'net_revenue' => round($finalNetRevenue, 2),
+                'cogs' => round($totalCogs, 2),
+                'gross_profit' => round($totalGrossProfit, 2),
+                'expenses' => round($totalExpenses, 2),
+                'net_profit' => round($totalGrossProfit - $totalExpenses, 2),
+                'profit_margin' => $profitMargin,
+                'total_sold_pieces' => round($totalSoldPieces, 2),
+                'total_sold_cartons' => $totalSoldBoxes,
+                'total_sold_loose' => $totalSoldLoose,
+                'sold_qty_display' => $soldQtyDisplay,
+                'total_return_pieces' => round($totalReturnPieces, 2),
+                'return_qty_display' => $returnQtyDisplay,
+                'net_sold_pieces' => round($finalNetPieces, 2),
+                'net_qty_display' => $netQtyDisplay,
+                'sales_count' => $matchingSalesCount,
+                'products_count' => count($productStats),
+            ]
         ]);
     }
 
