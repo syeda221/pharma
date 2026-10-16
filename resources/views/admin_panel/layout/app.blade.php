@@ -852,8 +852,8 @@
                         <li class="nav-item mega-menu">
                             @canany(['products.view', 'discount.products.view', 'categories.view', 'subcategories.view',
                                 'brands.view', 'units.view', 'vendors.view', 'purchases.view', 'purchase_pos.create',
-                                'warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create',
-                                'sales.view', 'sales.create', 'customers.view', 'zones.view', 'sales.officers.view', 'receipts.voucher.view'])
+                                'warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create', 'stock.closing.view',
+                                'sales.view', 'sales.create', 'customers.view', 'zones.view', 'sales.officers.view', 'receipts.voucher.view', 'distributor.reports.view'])
                                 <a href="#" class="nav-link">
                                      <i class="menu_icon fas fa-cogs"></i>
                                      <span class="menu-title">Management</span>
@@ -924,7 +924,7 @@
                                             </div>
                                         @endcanany
                                         <!-- Accounts / Inventory -->
-                                        @canany(['warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create'])
+                                        @canany(['warehouse.view', 'warehouse.stock.view', 'stock.transfer.view', 'stock.adjust.view', 'stock.adjust.create', 'stock.closing.view'])
                                             <div class="col-group col-md-3">
                                                 <p class="category-heading">Inventory Management</p>
                                                 <ul class="submenu-item">
@@ -943,15 +943,17 @@
                                                     @canany(['stock.adjust.view', 'stock.adjust.create'])
                                                         <li><a href="{{ route('stock_adjustments.index') }}"><i
                                                                     class="fas fa-sliders-h"></i> Stock Adjustment</a></li>
+                                                    @endcanany
+                                                    @can('stock.closing.view')
                                                         <li><a href="{{ route('stock-closing.index') }}"><i
                                                                     class="fas fa-clipboard-check"></i> Stock Closing</a></li>
-                                                    @endcanany
+                                                    @endcan
                                                 </ul>
                                             </div>
                                         @endcanany
                                         <!-- Customers & Sales -->
                                         @canany(['sales.view', 'sales.create', 'customers.view', 'sales.officers.view',
-                                            'receipts.voucher.view', 'zones.view'])
+                                            'receipts.voucher.view', 'zones.view', 'distributor.reports.view'])
                                             <div class="col-group col-md-3">
                                                 <p class="category-heading">Sales & Customers</p>
                                                 <ul class="submenu-item">
@@ -988,7 +990,7 @@
                                                                     class="fas fa-file-invoice-dollar"></i>
                                                                 Receipt Vouchers</a></li>
                                                     @endcan --}}
-                                                    @can('sales.view')
+                                                    @can('distributor.reports.view')
                                                         <li><a href="{{ route('distributor-reports.index') }}"><i
                                                                     class="fas fa-chart-line"></i>
                                                                 Distributor Reports</a></li>
@@ -1005,7 +1007,7 @@
                         <!-- Vouchers Menu -->
                         <li class="nav-item">
                             @canany(['vouchers.create', 'vouchers.view', 'all.vouchers.view', 'chart.of.accounts.view', 'expense.voucher.view', 'receipts.voucher.view',
-                                'journal.voucher.view', 'payment.voucher.view', 'income.voucher.view', 'customers.view'])
+                                'journal.voucher.view', 'payment.voucher.view', 'income.voucher.view', 'bulk.customer.payments.view', 'bulk.customer.payments.create'])
                                 <a href="#" class="nav-link">
                                     <i class="menu_icon fas fa-clipboard-list"></i>
                                     <span class="menu-title">Vouchers</span>
@@ -1031,14 +1033,18 @@
                                             <li><a href="{{ route('expense_categories.index') }}"><i
                                                         class="fa-solid fa-list-check"></i> Expense Categories</a></li>
                                         @endcan
-                                        @canany(['receipts.voucher.view', 'customers.view'])
+                                        @can('receipts.voucher.view')
                                             <li><a href="{{ route('all_recepit_vochers') }}"><i
                                                         class="fa-solid fa-wallet"></i> Receipts Voucher</a></li>
+                                        @endcan
+                                        @can('bulk.customer.payments.create')
                                             <li><a href="{{ route('customer-payments.bulk.create') }}"><i
                                                         class="fas fa-hand-holding-usd text-success"></i> Bulk Recovery (Receiving)</a></li>
+                                        @endcan
+                                        @can('bulk.customer.payments.view')
                                             <li><a href="{{ route('customer-payments.batches') }}"><i
                                                         class="fas fa-history text-primary"></i> Recovery Batches</a></li>
-                                        @endcanany
+                                        @endcan
                                         @can('journal.voucher.view')
                                             <li><a href="{{ route('vouchers.index', 'journal voucher') }}"><i
                                                         class="fa-solid fa-wallet"></i> Journal Voucher</a></li>

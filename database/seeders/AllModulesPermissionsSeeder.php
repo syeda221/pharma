@@ -90,7 +90,10 @@ class AllModulesPermissionsSeeder extends Seeder
             'coupons',
             'web_orders',
             'settings',
-            'web_users'
+            'web_users',
+            'bulk.customer.payments',
+            'distributor.reports',
+            'stock.closing'
         ];
 
         // Standard actions

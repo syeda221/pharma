@@ -21,11 +21,11 @@ class MonthlyStockClosingController extends Controller
     private function checkPermission()
     {
         $user = auth()->user();
-        if ($user->email === 'admin@admin.com' || $user->hasRole('Super Admin') || $user->hasRole('Admin')) {
+        if ($user->email === 'admin@admin.com' || $user->hasRole('Super Admin') || $user->hasRole('Admin') || $user->hasRole('admin')) {
             return true;
         }
 
-        if ($user->can('stock.adjust.view') || $user->can('stock.adjust.create') || $user->can('warehouse.stock.view')) {
+        if ($user->can('stock.closing.view') || $user->can('stock.closing.create')) {
             return true;
         }
 

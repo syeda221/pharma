@@ -13,6 +13,11 @@ class DistributorReportController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        if (!$user || (!$user->can('distributor.reports.view') && !$user->hasRole('Super Admin') && !$user->hasRole('admin') && !$user->hasRole('Admin'))) {
+            abort(403, 'Unauthorized action. You do not have permission to view Distributor Reports.');
+        }
+
         $query = DistributorSalesReport::with('distributor', 'zone', 'items');
 
         if ($request->filled('distributor_id')) {
@@ -39,6 +44,11 @@ class DistributorReportController extends Controller
      */
     public function create()
     {
+        $user = auth()->user();
+        if (!$user || (!$user->can('distributor.reports.create') && !$user->hasRole('Super Admin') && !$user->hasRole('admin') && !$user->hasRole('Admin'))) {
+            abort(403, 'Unauthorized action. You do not have permission to create Distributor Reports.');
+        }
+
         $distributors = Customer::all();
         $zones = \App\Models\Zone::all();
         return view('distributor_report.create', compact('distributors', 'zones'));
@@ -77,6 +87,14 @@ class DistributorReportController extends Controller
      */
     public function storeReport(Request $request)
     {
+        $user = auth()->user();
+        if (!$user || (!$user->can('distributor.reports.create') && !$user->hasRole('Super Admin') && !$user->hasRole('admin') && !$user->hasRole('Admin'))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized action. You do not have permission to save Distributor Reports.'
+            ], 403);
+        }
+
         $request->validate([
             'distributor_id' => 'required|exists:customers,id',
             'zone_id' => 'nullable|exists:zones,id',

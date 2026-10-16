@@ -1095,13 +1095,22 @@
                     'purchase': 'fa-cart-plus',
                     'accounts': 'fa-calculator',
                     'profit': 'fa-chart-pie',
-                    'profit.loss.report': 'fa-chart-pie'
+                    'profit.loss.report': 'fa-chart-pie',
+                    'bulk.customer.payments': 'fa-hand-holding-usd',
+                    'distributor.reports': 'fa-chart-line',
+                    'stock.closing': 'fa-clipboard-check'
                 };
 
                 allPermissions.forEach(function(p) {
                     var module;
                     if (p.name.startsWith('profit.loss')) {
                         module = 'profit.loss.report';
+                    } else if (p.name.startsWith('bulk.customer.payments')) {
+                        module = 'bulk.customer.payments';
+                    } else if (p.name.startsWith('distributor.reports')) {
+                        module = 'distributor.reports';
+                    } else if (p.name.startsWith('stock.closing')) {
+                        module = 'stock.closing';
                     } else {
                         // Group by everything before the last dot (the action)
                         var parts = p.name.split('.');
@@ -1141,13 +1150,12 @@
 
                     // Icon logic: check first part of module (e.g. 'hr' from 'hr.employees')
                     var mainCategory = module.split('.')[0];
-                    var icon = moduleIcons[mainCategory] || 'fa-folder-open';
+                    var icon = moduleIcons[module] || moduleIcons[mainCategory] || 'fa-folder-open';
 
                     // Format Title: hr.employees -> HR Employees
                     var title = module.replace(/\./g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                         .replace('Hr ', 'HR ');
 
-                    var icon = moduleIcons[module] || moduleIcons[mainCategory] || 'fa-folder';
                     var checkedCount = perms.filter(p => assignedPerms.includes(p.name)).length;
 
                     var html = `
@@ -1186,6 +1194,18 @@
                         else if (p.name === 'profit.loss.quantities.view') displayName = 'Profit Loss: Quantities & Volume';
                         else if (p.name === 'profit.loss.filters.view') displayName = 'Profit Loss: Search & Filters';
                         else if (p.name === 'profit.loss.export') displayName = 'Profit Loss: Print & Export';
+                        else if (p.name === 'bulk.customer.payments.view') displayName = 'Recovery Batches & Receipts: View';
+                        else if (p.name === 'bulk.customer.payments.create') displayName = 'Bulk Customer Recovery: Create';
+                        else if (p.name === 'bulk.customer.payments.edit') displayName = 'Bulk Recovery: Edit';
+                        else if (p.name === 'bulk.customer.payments.delete') displayName = 'Bulk Recovery: Delete';
+                        else if (p.name === 'distributor.reports.view') displayName = 'Distributor Reports: View List';
+                        else if (p.name === 'distributor.reports.create') displayName = 'Distributor Reports: Add Report';
+                        else if (p.name === 'distributor.reports.edit') displayName = 'Distributor Reports: Edit';
+                        else if (p.name === 'distributor.reports.delete') displayName = 'Distributor Reports: Delete';
+                        else if (p.name === 'stock.closing.view') displayName = 'Stock Closing: View History';
+                        else if (p.name === 'stock.closing.create') displayName = 'Stock Closing: Perform Audit';
+                        else if (p.name === 'stock.closing.edit') displayName = 'Stock Closing: Edit Adjustment';
+                        else if (p.name === 'stock.closing.delete') displayName = 'Stock Closing: Delete Entry';
 
                         html += `
                             <div class="col-12 col-md-6 col-lg-4 col-xl-3 perm-item-wrapper" data-name="${p.name.toLowerCase()}">

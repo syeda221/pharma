@@ -22,6 +22,11 @@ class BulkCustomerPaymentController extends Controller
      */
     public function create()
     {
+        $user = auth()->user();
+        if (!$user || (!$user->can('bulk.customer.payments.create') && !$user->hasRole('Super Admin') && !$user->hasRole('admin') && !$user->hasRole('Admin'))) {
+            abort(403, 'Unauthorized action. You do not have permission to create Bulk Customer Recovery.');
+        }
+
         $customers = Customer::where(function ($q) {
             $q->where('status', 'active')
               ->orWhere('status', 1)
@@ -110,6 +115,14 @@ class BulkCustomerPaymentController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user || (!$user->can('bulk.customer.payments.create') && !$user->hasRole('Super Admin') && !$user->hasRole('admin') && !$user->hasRole('Admin'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action. You do not have permission to create Bulk Customer Recovery.',
+            ], 403);
+        }
+
         $request->validate([
             'payment_date' => 'required|date',
             'account_id'   => 'nullable|exists:accounts,id',
@@ -275,6 +288,11 @@ class BulkCustomerPaymentController extends Controller
      */
     public function batchHistory(Request $request)
     {
+        $user = auth()->user();
+        if (!$user || (!$user->can('bulk.customer.payments.view') && !$user->hasRole('Super Admin') && !$user->hasRole('admin') && !$user->hasRole('Admin'))) {
+            abort(403, 'Unauthorized action. You do not have permission to view Customer Recovery Batches.');
+        }
+
         $query = CustomerPayment::with(['customer', 'account', 'user'])
             ->whereNotNull('batch_no')
             ->orderBy('id', 'desc');
@@ -317,6 +335,11 @@ class BulkCustomerPaymentController extends Controller
      */
     public function singleReceipt($id)
     {
+        $user = auth()->user();
+        if (!$user || (!$user->can('bulk.customer.payments.view') && !$user->hasRole('Super Admin') && !$user->hasRole('admin') && !$user->hasRole('Admin'))) {
+            abort(403, 'Unauthorized action. You do not have permission to view Customer Recovery Receipts.');
+        }
+
         $payment = CustomerPayment::with(['customer', 'account', 'user'])->findOrFail($id);
 
         // Get ledger snapshot around this payment
@@ -344,6 +367,11 @@ class BulkCustomerPaymentController extends Controller
      */
     public function batchPrint($batch_no)
     {
+        $user = auth()->user();
+        if (!$user || (!$user->can('bulk.customer.payments.view') && !$user->hasRole('Super Admin') && !$user->hasRole('admin') && !$user->hasRole('Admin'))) {
+            abort(403, 'Unauthorized action. You do not have permission to print Batch Recovery Sheet.');
+        }
+
         $payments = CustomerPayment::with(['customer', 'account', 'user'])
             ->where('batch_no', $batch_no)
             ->orderBy('id', 'asc')
