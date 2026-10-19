@@ -946,5 +946,35 @@
                 });
             });
         });
+
+        // ============================================================
+        // DELETE SALE — Simple Confirmation + Form Submit
+        // ============================================================
+        function confirmDeleteSale(saleId, invoiceNo, saleStatus) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: `Do you want to delete sale ${invoiceNo}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Delete!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let form = document.getElementById('delete-sale-form');
+                    form.action = `/sales/${saleId}`;
+                    form.submit();
+                }
+            });
+        }
     </script>
+
+    {{-- Hidden form for DELETE Sale (method spoofing) --}}
+    <form id="delete-sale-form" method="POST" style="display:none;">
+        @csrf
+        @method('DELETE')
+    </form>
+
 @endsection
+

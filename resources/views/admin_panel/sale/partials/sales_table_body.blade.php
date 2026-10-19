@@ -342,6 +342,18 @@
                             </li>
                         @endcan
                     @endif
+
+                    @can('sales.delete')
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button type="button"
+                                class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger fw-bold"
+                                onclick="confirmDeleteSale({{ $sale->id }}, '{{ $sale->invoice_no }}', '{{ $sale->sale_status }}')">
+                                <i class="fas fa-trash-alt fa-fw"></i> Delete Sale
+                            </button>
+                        </li>
+                    @endcan
+
                 </ul>
             </div>
         </td>

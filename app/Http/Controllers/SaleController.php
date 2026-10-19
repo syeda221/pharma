@@ -2563,6 +2563,75 @@ class SaleController extends Controller
         return 'INV-'.date('YmdHis');
     }
 
+    /**
+     * Delete a Sale — reverse stock, account entries, and customer ledger
+     */
+    public function destroy($id)
+    {
+        $sale = Sale::with(['items.product', 'returns', 'customer_relation'])->findOrFail($id);
+
+        // --- Safety Check: Block if sale has returns ---
+        $hasActiveReturns = $sale->returns()->exists();
+
+        if ($hasActiveReturns) {
+            return redirect()->route('sale.index')
+                ->with('error', "Sale #{$sale->invoice_no} delete nahi ho sakti — is sale ke returns exist hain. Pehle returns cancel karain.");
+        }
+
+        DB::beginTransaction();
+        try {
+            // --- Step 1: Reverse Stock + Vouchers + Customer Ledger ---
+            // Only posted sales have financial impact; draft/booked do not
+            if ($sale->sale_status === 'posted') {
+                $this->rollbackPostedSale($sale);
+            }
+
+            // Reverse any journal entries directly linked to this Sale model
+            // (entries not covered by VoucherMaster e.g. recorded via JournalEntryService)
+            $directJournalEntries = \App\Models\JournalEntry::where('source_type', Sale::class)
+                ->where('source_id', $sale->id)
+                ->get();
+
+            foreach ($directJournalEntries as $je) {
+                $account = \App\Models\Account::find($je->account_id);
+                if ($account) {
+                    // Debit entry had increased balance → subtract back
+                    // Credit entry had decreased balance → add back
+                    $account->balance = ($account->balance ?? 0) - ($je->debit ?? 0) + ($je->credit ?? 0);
+                    $account->save();
+                }
+                $je->delete();
+            }
+
+            // --- Step 2: Clean up stock movements ---
+            DB::table('stock_movements')
+                ->where('ref_type', 'sale')
+                ->where('ref_id', $sale->id)
+                ->delete();
+
+            // --- Step 3: Delete Sale Items ---
+            \App\Models\SaleItem::where('sale_id', $sale->id)->delete();
+
+            // --- Step 4: Delete the Sale record ---
+            $invoiceNo = $sale->invoice_no;
+            $sale->delete();
+
+            DB::commit();
+
+            \Log::info("Sale #{$invoiceNo} deleted by User #" . auth()->id() . " — stock, ledger & accounts reversed.");
+
+            return redirect()->route('sale.index')
+                ->with('success', "Sale #{$invoiceNo} successfully delete ho gayi. Stock restore, account reverse aur customer ledger update ho gaya.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Sale Delete Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+
+            return redirect()->route('sale.index')
+                ->with('error', 'Sale delete karne mein error: ' . $e->getMessage());
+        }
+    }
+
     private function rollbackPostedSale(Sale $sale)
     {
         // 1. Restore Stock
