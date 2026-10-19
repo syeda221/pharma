@@ -1056,25 +1056,18 @@ $(document).ready(function() {
         let retVal      = parseFloat(s.return_amount || 0);
 
         $('#cardGrossRevenue').text('Rs ' + fmt(grossRevVal));
-        if (discVal > 0 || retVal > 0) {
-            $('#cardGrossRevenueSub').text('After Disc. & Returns')
-                .attr('title', 'Gross: Rs ' + fmt(rawGrossVal) + ' | Disc: -Rs ' + fmt(discVal) + ' | Ret: -Rs ' + fmt(retVal));
-        } else {
-            $('#cardGrossRevenueSub').text('Net Sales');
-        }
+        $('#cardGrossRevenueSub')
+            .text('After Disc. & Returns')
+            .attr('title', 'Gross: Rs ' + fmt(rawGrossVal) + ' | Disc: -Rs ' + fmt(discVal) + ' | Ret: -Rs ' + fmt(retVal));
         $('#cardCOGS').text('Rs ' + fmt(cogsVal));
         $('#cardBonusAmount').text('Rs ' + fmt(bonusAmtVal));
         $('#cardNetRevenue').text('Rs ' + fmt(netRevVal));
         let grossProfColor = grossProf >= 0 ? '#059669' : '#dc2626';
         let grossSign = grossProf < 0 ? '-' : '';
         $('#cardGrossProfit, #mobCardGrossProfit').text(grossSign + 'Rs ' + fmt(Math.abs(grossProf))).css('color', grossProfColor);
-        if (bonusAmtVal > 0) {
-            $('#cardGrossProfitSub').text('Revenue - COGS - Bonus')
-                .attr('title', 'Sales: Rs ' + fmt(grossRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal));
-        } else {
-            $('#cardGrossProfitSub').text('Revenue - COGS')
-                .attr('title', 'Sales: Rs ' + fmt(grossRevVal) + ' | COGS: -Rs ' + fmt(cogsVal));
-        }
+        $('#cardGrossProfitSub')
+            .text('Revenue - COGS - Bonus')
+            .attr('title', 'Sales: Rs ' + fmt(grossRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal));
         $('#cardExpenses, #mobCardExpenses').text('Rs ' + fmt(expVal));
 
         let netProfColor = netProf >= 0 ? '#2563eb' : '#dc2626';
