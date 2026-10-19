@@ -70,6 +70,12 @@
                                                         class="btn btn-sm btn-outline-primary" title="Print">
                                                         <i class="bi bi-printer"></i>
                                                     </a>
+                                                    @canany(['expense.voucher.edit', 'expense.voucher.create'])
+                                                    <a href="{{ route('expense_vochers.edit', $item->id) }}"
+                                                        class="btn btn-sm btn-outline-warning" title="Edit">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </a>
+                                                    @endcanany
                                                     @can('expense.voucher.delete')
                                                     <form action="{{ route('expense_vouchers.destroy', $item->id) }}" method="POST" class="d-inline delete-form">
                                                         @csrf
