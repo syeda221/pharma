@@ -45,6 +45,7 @@
         .kpi-card.kpi-net    { border-top: 3px solid #10b981; }
         .kpi-card.kpi-count  { border-top: 3px solid #0284c7; }
         .kpi-card.kpi-qty    { border-top: 3px solid #8b5cf6; background: #faf5ff; }
+        .kpi-card.kpi-bonus  { border-top: 3px solid #f59e0b; background: #fffbeb; }
         .kpi-card.kpi-pharma { border-top: 3px solid #0284c7; background: #f0f9ff; }
         .kpi-card.kpi-doc    { border-top: 3px solid #059669; background: #f0fdf4; }
         .kpi-card.kpi-dist   { border-top: 3px solid #6366f1; background: #f5f3ff; }
@@ -487,6 +488,13 @@
                         <div class="kpi-sub" style="color:#7c3aed; opacity:0.8;">Sold / Bonus Qty</div>
                     </div>
 
+                    {{-- Bonus Amount / Worth --}}
+                    <div class="kpi-card kpi-bonus">
+                        <div class="kpi-label" style="color:#d97706;">Bonus Amount</div>
+                        <div class="kpi-value" style="color:#d97706;" id="statTotalBonusAmount">Rs. {{ number_format($stats['total_bonus_amount'] ?? 0, 2) }}</div>
+                        <div class="kpi-sub" style="color:#d97706; opacity:0.85;">At Base Price</div>
+                    </div>
+
                     {{-- Pharmacy Discount --}}
                     <div class="kpi-card kpi-pharma">
                         <div class="kpi-label" style="color:#0284c7;">Pharmacy</div>
@@ -765,6 +773,7 @@
                             let soldText = Number(response.stats.total_qty || 0).toLocaleString();
                             let bonusText = Number(response.stats.total_bonus_qty || 0).toLocaleString();
                             $('#statTotalQty').text(soldText + ' / ' + bonusText);
+                            $('#statTotalBonusAmount').text('Rs. ' + Number(response.stats.total_bonus_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statTotalGross').text('Rs. ' + Number(response.stats.total_gross || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             $('#statTotalDiscount').text('Rs. ' + Number(response.stats.total_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
                             let discSubHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 9.5px;">Line: Rs. ' + Number(response.stats.inline_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';

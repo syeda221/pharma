@@ -768,8 +768,6 @@
                                                         $returnedQty = $returnedQtyMap['PROD_' . $item->product_id];
                                                     }
 
-                                                    $netPieces = max(0, (float)$item->total_pieces - $returnedQty);
-
                                                     $variantData = [];
                                                     if ($item->color) {
                                                         try {
@@ -779,6 +777,14 @@
                                                         } catch (\Exception $e) {
                                                             $variantData = [];
                                                         }
+                                                    }
+
+                                                    // Extract bonus pieces
+                                                    $bonusPieces = 0;
+                                                    if (!empty($item->bonus_qty) && (float)$item->bonus_qty > 0) {
+                                                        $bonusPieces = (float)$item->bonus_qty;
+                                                    } elseif ($variantData && isset($variantData['bonus']) && $variantData['bonus'] !== '-' && is_numeric($variantData['bonus'])) {
+                                                        $bonusPieces = (float)$variantData['bonus'];
                                                     }
 
                                                     // Check live product variant data for updated pack size / conversion factor
@@ -826,13 +832,29 @@
 
                                                     if ($ppb <= 0) $ppb = 1;
 
+                                                    // Calculate actual Billed Pieces (excluding free bonus pieces)
+                                                    $totalPhysicalPieces = (float)($item->total_pieces ?? 0);
+                                                    $billedPieces = max(0, $totalPhysicalPieces - $bonusPieces);
+
+                                                    // Fallback if total_pieces was not set or equaled bonus
+                                                    if ($billedPieces <= 0 && (float)($item->qty ?? 0) > 0) {
+                                                        if ($sizeMode === 'by_cartons' && $ppb > 1) {
+                                                            $billedPieces = (float)$item->qty * $ppb;
+                                                        } else {
+                                                            $billedPieces = (float)$item->qty;
+                                                        }
+                                                    }
+
+                                                    $netBilledPieces = max(0, $billedPieces - $returnedQty);
+                                                    $netTotalPieces = $netBilledPieces + $bonusPieces;
+
                                                     $cartons = 0;
                                                     $loose = 0;
                                                     if ($ppb > 0) {
-                                                        $cartons = floor($netPieces / $ppb);
-                                                        $loose = $netPieces % $ppb;
+                                                        $cartons = floor($netBilledPieces / $ppb);
+                                                        $loose = $netBilledPieces % $ppb;
                                                     } else {
-                                                        $loose = $netPieces;
+                                                        $loose = $netBilledPieces;
                                                     }
 
                                                     // Determine Sub-Unit Mode and Toggle Button configuration for Edit
@@ -840,7 +862,7 @@
                                                     $toggleText = 'Kg';
                                                     $toggleBtnClass = 'd-none';
                                                     $displayQty = $cartons;
-                                                    $itemTotalPieces = (float)$netPieces;
+                                                    $itemTotalPieces = (float)$netTotalPieces;
                                                     $isPcs = false;
 
                                                     if ($sizeMode === 'by_cartons') {
@@ -853,38 +875,43 @@
                                                             $unitMode = 'pcs';
                                                             $toggleText = 'Pcs';
                                                             $toggleBtnClass = 'btn-outline-info';
-                                                            $displayQty = (float) $netPieces;
-                                                            $itemTotalPieces = (float) $netPieces;
+                                                            $displayQty = (float) $netBilledPieces;
+                                                            $itemTotalPieces = (float) $netTotalPieces;
                                                         } else {
                                                             $unitMode = 'ctn';
                                                             $toggleText = 'Ctn';
                                                             $toggleBtnClass = 'btn-outline-success';
                                                             // In Carton dot notation: e.g. 1 carton + 6 loose pieces is '1.6'
                                                             $displayQty = $loose > 0 ? "{$cartons}.{$loose}" : $cartons;
-                                                            $itemTotalPieces = ($cartons * $ppb) + $loose;
+                                                            $itemTotalPieces = (float) $netTotalPieces;
                                                         }
                                                     } elseif ($sizeMode === 'by_kg') {
                                                         $unitMode = 'kg';
                                                         $toggleText = 'Kg';
                                                         $toggleBtnClass = 'btn-outline-primary';
-                                                        $displayQty = (float) $netPieces;
+                                                        $displayQty = (float) $netBilledPieces;
+                                                        $itemTotalPieces = (float) $netTotalPieces;
                                                     } elseif ($sizeMode === 'by_gm') {
                                                         $unitMode = 'gm';
                                                         $toggleText = 'Gm';
                                                         $toggleBtnClass = 'btn-outline-info';
-                                                        $displayQty = (float) $netPieces;
+                                                        $displayQty = (float) $netBilledPieces;
+                                                        $itemTotalPieces = (float) $netTotalPieces;
                                                     } elseif ($sizeMode === 'by_feet') {
                                                         $unitMode = 'ft';
                                                         $toggleText = 'Ft';
                                                         $toggleBtnClass = 'btn-outline-primary';
-                                                        $displayQty = (float) $netPieces;
+                                                        $displayQty = (float) $netBilledPieces;
+                                                        $itemTotalPieces = (float) $netTotalPieces;
                                                     } elseif ($sizeMode === 'by_meter') {
                                                         $unitMode = 'm';
                                                         $toggleText = 'Mtr';
                                                         $toggleBtnClass = 'btn-outline-primary';
-                                                        $displayQty = (float) $netPieces;
+                                                        $displayQty = (float) $netBilledPieces;
+                                                        $itemTotalPieces = (float) $netTotalPieces;
                                                     } else {
-                                                        $displayQty = (float) $netPieces;
+                                                        $displayQty = (float) $netBilledPieces;
+                                                        $itemTotalPieces = (float) $netTotalPieces;
                                                     }
 
                                                     // Format returned quantity matching unit mode (carton.loose if by_cartons)
@@ -1003,7 +1030,7 @@
                                                             </button>
                                                         </div>
                                                         @if($returnedQty > 0)
-                                                            <div class="text-danger fw-bold" style="font-size: 0.65rem; line-height: 1.1; margin-top: 2px;" title="Original Sold: {{ (float)$item->total_pieces }} pcs, Returned: {{ $retDisplayQty }} ({{ (float)$returnedQty }} pcs)">
+                                                            <div class="text-danger fw-bold" style="font-size: 0.65rem; line-height: 1.1; margin-top: 2px;" title="Original Sold: {{ (float)$billedPieces }} pcs, Returned: {{ $retDisplayQty }} ({{ (float)$returnedQty }} pcs)">
                                                                 -{{ $retDisplayQty }} ret
                                                             </div>
                                                         @endif
@@ -1042,7 +1069,7 @@
                                                             class="form-control total-pieces text-end input-readonly fw-semibold"
                                                             name="total_pieces[]" readonly value="{{ $itemTotalPieces }}"
                                                             placeholder="0" tabindex="-1">
-                                                        <input type="hidden" class="sales-qty" name="qty[]" value="{{ $isPcs ? $itemTotalPieces : ($cartons . ($loose > 0 ? '.' . $loose : '')) }}">
+                                                        <input type="hidden" class="sales-qty" name="qty[]" value="{{ $isPcs ? $netBilledPieces : ($cartons . ($loose > 0 ? '.' . $loose : '')) }}">
                                                     </td>
 
                                                     <!-- Price/Piece -->
@@ -1217,14 +1244,30 @@
                                 </div>
 
                                 <div id="rvWrapper" class="mb-3">
-                                    <div class="d-flex gap-2 align-items-center mb-2 rv-row">
-                                        <select class="form-select form-select-sm rv-account bg-light fw-bold" name="receipt_account_id[]" style="font-size:0.78rem;">
-                                            @foreach ($accounts as $acc)
-                                                <option value="{{ $acc->id }}" {{ str_contains(strtolower($acc->title), 'cash') || str_contains(strtolower($acc->title), 'easypaisa') ? 'selected' : '' }}>{{ $acc->title }}</option>
-                                            @endforeach
-                                        </select>
-                                        <input type="number" step="0.01" class="form-control form-control-sm text-end rv-amount fw-bold" name="receipt_amount[]" value="{{ $sale->cash > 0 ? $sale->cash : '' }}" placeholder="0.00" style="width: 110px; font-size:0.8rem;">
-                                    </div>
+                                    @if (!empty($existingPayments) && count($existingPayments) > 0)
+                                        @foreach ($existingPayments as $pIndex => $payment)
+                                            <div class="d-flex gap-2 align-items-center mb-2 rv-row">
+                                                <select class="form-select form-select-sm rv-account bg-light fw-bold" name="receipt_account_id[]" style="font-size:0.78rem;">
+                                                    @foreach ($accounts as $acc)
+                                                        <option value="{{ $acc->id }}" {{ $payment['account_id'] == $acc->id ? 'selected' : '' }}>{{ $acc->title }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <input type="number" step="0.01" class="form-control form-control-sm text-end rv-amount fw-bold" name="receipt_amount[]" value="{{ $payment['amount'] > 0 ? $payment['amount'] : '' }}" placeholder="0.00" style="width: 110px; font-size:0.8rem;">
+                                                @if ($pIndex > 0)
+                                                    <button type="button" class="btn btn-outline-danger btn-sm btnRemRV" style="padding: 2px 6px; font-size: 0.75rem; height: 28px;">&times;</button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="d-flex gap-2 align-items-center mb-2 rv-row">
+                                            <select class="form-select form-select-sm rv-account bg-light fw-bold" name="receipt_account_id[]" style="font-size:0.78rem;">
+                                                @foreach ($accounts as $acc)
+                                                    <option value="{{ $acc->id }}" {{ ($sale->account_id ? $sale->account_id == $acc->id : (str_contains(strtolower($acc->title), 'cash') || str_contains(strtolower($acc->title), 'easypaisa'))) ? 'selected' : '' }}>{{ $acc->title }}</option>
+                                                @endforeach
+                                            </select>
+                                            <input type="number" step="0.01" class="form-control form-control-sm text-end rv-amount fw-bold" name="receipt_amount[]" value="{{ $sale->cash > 0 ? $sale->cash : '' }}" placeholder="0.00" style="width: 110px; font-size:0.8rem;">
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <button type="button" class="btn btn-save-complete w-100 mt-auto py-2 d-flex align-items-center justify-content-center gap-2" id="btnSaveAndComplete">
@@ -1265,7 +1308,7 @@
                         <span class="text-danger fw-bold" style="font-size:0.76rem;">Change A/C:</span>
                         <select class="form-select form-select-sm bg-light fw-bold text-danger border-danger" id="bottomChangeAccountId" style="width: 135px; font-size:0.75rem; height: 30px; padding: 2px 6px;">
                             @foreach ($accounts as $acc)
-                                <option value="{{ $acc->id }}" {{ ($sale->change_account_id == $acc->id || str_contains(strtolower($acc->title), 'cash')) ? 'selected' : '' }}>{{ $acc->title }}</option>
+                                <option value="{{ $acc->id }}" {{ ($sale->change_account_id ? $sale->change_account_id == $acc->id : str_contains(strtolower($acc->title), 'cash')) ? 'selected' : '' }}>{{ $acc->title }}</option>
                             @endforeach
                         </select>
                     </div>

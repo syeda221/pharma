@@ -1,4 +1,4 @@
-﻿@extends('admin_panel.layout.app')
+@extends('admin_panel.layout.app')
 
 @section('content')
     <style>
@@ -347,6 +347,7 @@
                                             value="{{ $item['size_mode'] ?? 'by_pieces' }}">
                                         <input type="hidden" name="pieces_per_m2[]" class="pieces-per-m2"
                                             value="{{ $item['pieces_per_m2'] ?? 0 }}">
+                                        <input type="hidden" name="billable_qty[]" class="billable-qty" value="0">
 
                                         <td>
                                             <input type="text" class="form-control fw-bold"
@@ -361,10 +362,24 @@
                                                 value="{{ $item['size_val'] ?? '-' }}" readonly>
                                         </td>
 
-                                        {{-- Color --}}
+                                        {{-- BONUS --}}
                                         <td>
-                                            <input type="text" class="form-control text-center"
-                                                value="{{ $item['color_val'] ?? '-' }}" readonly>
+                                            @if (($item['bonus_qty'] ?? 0) > 0)
+                                                <div class="text-center">
+                                                    <span class="badge bg-light text-dark border px-2 py-1 mb-1" style="font-size: 0.8rem;">
+                                                        {{ (float)$item['bonus_val'] }}
+                                                    </span>
+                                                    <input type="number" name="return_bonus[]" class="form-control form-control-sm text-center return-bonus-input mx-auto"
+                                                        style="max-width: 65px; font-size: 0.8rem; padding: 2px 4px;"
+                                                        value="0" min="0" max="{{ $item['remaining_bonus'] ?? $item['bonus_qty'] }}"
+                                                        data-max-bonus="{{ $item['remaining_bonus'] ?? $item['bonus_qty'] }}"
+                                                        title="Bonus Pieces to Return">
+                                                    <small class="text-muted d-block" style="font-size: 0.65rem;">Ret Bonus</small>
+                                                </div>
+                                            @else
+                                                <input type="text" class="form-control text-center" value="-" readonly>
+                                                <input type="hidden" name="return_bonus[]" class="return-bonus-input" value="0">
+                                            @endif
                                         </td>
 
                                         <td><input type="text" class="form-control text-center"
@@ -383,7 +398,7 @@
                                                 readonly>
                                             <small class="text-muted d-block text-end" style="font-size: 0.65rem;">
                                                 @if (($item['size_mode'] ?? '') == 'by_size')
-                                                    Per MÂ²
+                                                    Per M²
                                                 @elseif(($item['size_mode'] ?? '') == 'by_cartons')
                                                     Per Box
                                                 @else
@@ -395,28 +410,31 @@
                                         {{-- Purchased Qty (Read Only) --}}
                                         <td>
                                             @php
-                                                $original = $item['original_qty'] ?? $item['qty'];
-                                                $returned = $item['returned_qty'] ?? 0;
-                                                $netRemaining = $item['max_returnable'] ?? ($original - $returned);
+                                                $purchased = $item['purchased_qty'] ?? $item['qty'];
+                                                $remPurchased = $item['remaining_purchased'] ?? $purchased;
+                                                $remBonus = $item['remaining_bonus'] ?? ($item['bonus_qty'] ?? 0);
+                                                $remTotal = $item['max_returnable'] ?? ($remPurchased + $remBonus);
                                                 $ppb = $item['pieces_per_box'] ?? 1;
                                                 
                                                 // Format remaining pieces to Box.Piece
                                                 if ($ppb > 1) {
-                                                    $remBoxes = floor($netRemaining / $ppb);
-                                                    $remPcs = $netRemaining % $ppb;
+                                                    $remBoxes = floor($remPurchased / $ppb);
+                                                    $remPcs = $remPurchased % $ppb;
                                                     $remDisplay = $remBoxes . ($remPcs > 0 ? '.'.$remPcs : '');
                                                 } else {
-                                                    $remDisplay = $netRemaining;
+                                                    $remDisplay = $remPurchased;
                                                 }
                                             @endphp
                                             <div class="text-center">
                                                 <span class="fw-bold text-dark fs-6">{{ $remDisplay }}</span>
-                                                <small class="text-muted d-block" style="font-size: 0.65rem;">Remaining Pieces: {{ $netRemaining }}</small>
+                                                <small class="text-muted d-block" style="font-size: 0.65rem;">Purchased: {{ $remPurchased }}</small>
+                                                @if ($remBonus > 0)
+                                                    <small class="text-info d-block" style="font-size: 0.65rem;">+{{ $remBonus }} Bonus (Max: {{ $remTotal }})</small>
+                                                @endif
                                             </div>
-                                            @if ($returned > 0)
+                                            @if (($item['returned_qty'] ?? 0) > 0)
                                                 <div class="mt-1 pt-1 border-top" style="font-size: 0.65rem;">
-                                                    <span class="text-danger">Returned: {{ $returned }}</span>
-                                                    <span class="text-muted ms-1">/ {{ $original }}</span>
+                                                    <span class="text-danger">Returned: {{ $item['returned_qty'] }}</span>
                                                 </div>
                                             @endif
                                         </td>
@@ -426,7 +444,7 @@
                                         <td>
                                             <input type="text" name="qty_box[]"
                                                 class="form-control text-center quantity-box" value="0"
-                                                placeholder="0.0" {{ $netRemaining <= 0 ? 'readonly' : '' }}>
+                                                placeholder="0.0" {{ $remTotal <= 0 ? 'readonly' : '' }}>
                                             <small class="text-muted" style="font-size: 0.7rem;">Format: Box.Piece</small>
                                         </td>
 
@@ -434,9 +452,13 @@
                                         <td>
                                             <input type="number" name="qty[]"
                                                 class="form-control text-center fw-bold text-primary quantity"
-                                                value="0" readonly min="0" max="{{ $netRemaining }}"
-                                                data-max="{{ $netRemaining }}" data-original="{{ $original }}"
-                                                data-returned="{{ $returned }}">
+                                                value="0" readonly min="0" max="{{ $remTotal }}"
+                                                data-max="{{ $remTotal }}"
+                                                data-max-purchased="{{ $remPurchased }}"
+                                                data-max-bonus="{{ $remBonus }}"
+                                                data-original="{{ $purchased }}"
+                                                data-returned="{{ $item['returned_qty'] ?? 0 }}">
+                                            <div class="pieces-info-badge text-center mt-1"></div>
                                         </td>
 
                                         <td><input type="text" name="total[]"
@@ -614,25 +636,65 @@
             }
 
             function recalcRow($row) {
-                const qty = num($row.find('.quantity').val()); // Pieces (Total)
+                const totalPieces = num($row.find('.quantity').val()); // Pieces (Total Return)
                 const price = num($row.find('.price').val()); // Price (Unit Price)
                 const sizeMode = $row.find('.size-mode').val();
                 const ppm2 = num($row.find('.pieces-per-m2').val());
                 const ppb = num($row.find('.pieces-per-box').val()) || 1;
 
+                const maxPurchased = num($row.find('.quantity').attr('data-max-purchased'));
+                const maxBonus = num($row.find('.quantity').attr('data-max-bonus'));
+
+                let bonusPieces = 0;
+                let billablePieces = 0;
+
+                const $bonusInput = $row.find('.return-bonus-input');
+                if ($bonusInput.length && $bonusInput.attr('data-manual-change') === 'true') {
+                    bonusPieces = Math.min(num($bonusInput.val()), maxBonus, totalPieces);
+                    billablePieces = Math.max(0, totalPieces - bonusPieces);
+                    if (billablePieces > maxPurchased) {
+                        billablePieces = maxPurchased;
+                    }
+                } else {
+                    // Default: billable takes priority up to maxPurchased, extra is bonus
+                    billablePieces = Math.min(totalPieces, maxPurchased);
+                    bonusPieces = Math.min(Math.max(0, totalPieces - billablePieces), maxBonus);
+                    if ($bonusInput.length) {
+                        $bonusInput.val(bonusPieces);
+                    }
+                }
+
+                $row.find('.billable-qty').val(billablePieces);
+
                 let total = 0;
 
                 if (sizeMode === 'by_size') {
-                    total = qty * ppm2 * price;
+                    total = billablePieces * ppm2 * price;
                 } else if (sizeMode === 'by_cartons' || sizeMode === 'by_carton') {
-                    // Price is Per Box, qty is Total Pieces
-                    total = ppb > 0 ? (qty / ppb) * price : qty * price;
+                    // Price is Per Box, qty is Billable Pieces
+                    total = ppb > 0 ? (billablePieces / ppb) * price : billablePieces * price;
                 } else {
                     // Price is Per Piece
-                    total = qty * price;
+                    total = billablePieces * price;
                 }
 
                 $row.find('.row-total').val(total.toFixed(2));
+
+                // Helper badge under Total Return Pieces
+                const $infoBadge = $row.find('.pieces-info-badge');
+                if ($infoBadge.length) {
+                    if (totalPieces > 0) {
+                        if (bonusPieces > 0 && billablePieces > 0) {
+                            $infoBadge.html(`<span class="text-success fw-bold" style="font-size: 0.65rem;">${billablePieces} Billed + ${bonusPieces} Bonus</span>`);
+                        } else if (bonusPieces > 0) {
+                            $infoBadge.html(`<span class="text-warning fw-bold" style="font-size: 0.65rem;">${bonusPieces} Bonus (Free)</span>`);
+                        } else {
+                            $infoBadge.html(`<span class="text-primary" style="font-size: 0.65rem;">${billablePieces} Billed</span>`);
+                        }
+                    } else {
+                        $infoBadge.html('');
+                    }
+                }
             }
 
             function recalcSummary() {
@@ -671,10 +733,14 @@
                 $('#returnItems tr').each(function() {
                     const $row = $(this);
                     const maxQty = parseFloat($row.find('.quantity').attr('data-max')) || 0;
+                    const maxBonus = parseFloat($row.find('.quantity').attr('data-max-bonus')) || 0;
                     const ppb = parseFloat($row.find('.pieces-per-box').val()) || 1;
 
                     // Set Total Pieces
                     $row.find('.quantity').val(maxQty);
+                    if ($row.find('.return-bonus-input').length) {
+                        $row.find('.return-bonus-input').val(maxBonus).removeAttr('data-manual-change');
+                    }
 
                     // Calculate Box.Piece representation
                     let boxDisplay = '';
@@ -770,6 +836,8 @@
                     totalPieces = boxes; // If no box size, inputs are pieces
                 }
 
+                $row.find('.return-bonus-input').removeAttr('data-manual-change');
+
                 // Update Read-Only Total Pieces
                 $row.find('.quantity').val(totalPieces);
 
@@ -777,6 +845,44 @@
                 $row.find('.quantity').trigger('input');
             });
 
+            // Return Bonus Input Logic
+            $(document).on('input change', '.return-bonus-input', function() {
+                const $row = $(this).closest('tr');
+                const maxBonus = num($row.find('.quantity').attr('data-max-bonus'));
+                let bVal = num($(this).val());
+                if (bVal > maxBonus) {
+                    bVal = maxBonus;
+                    $(this).val(bVal);
+                }
+                if (bVal < 0) {
+                    bVal = 0;
+                    $(this).val(0);
+                }
+                $(this).attr('data-manual-change', 'true');
+
+                const maxPurchased = num($row.find('.quantity').attr('data-max-purchased'));
+                const currentTotal = num($row.find('.quantity').val());
+                // Current billed part
+                const currentBilled = Math.min(currentTotal, maxPurchased);
+                const newTotal = currentBilled + bVal;
+
+                $row.find('.quantity').val(newTotal);
+
+                // Update Box Input
+                const ppb = num($row.find('.pieces-per-box').val()) || 1;
+                let boxDisplay = '';
+                if (ppb > 1) {
+                    const boxes = Math.floor(newTotal / ppb);
+                    const pieces = newTotal % ppb;
+                    boxDisplay = boxes + (pieces > 0 ? '.' + pieces : '');
+                } else {
+                    boxDisplay = newTotal;
+                }
+                $row.find('.quantity-box').val(boxDisplay);
+
+                recalcRow($row);
+                recalcSummary();
+            });
 
             // Events
             $(document).on('input', '.quantity, .price, #extraDiscount', function() {
@@ -794,7 +900,7 @@
                         // Show warning
                         if (!$(this).next('.text-danger').length) {
                             $(this).after('<small class="text-danger d-block">Max: ' + maxReturnable +
-                                ' pieces (Purchased Qty)</small>');
+                                ' pieces (Total Returnable)</small>');
                         }
 
                         setTimeout(() => {

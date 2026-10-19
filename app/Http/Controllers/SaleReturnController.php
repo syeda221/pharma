@@ -78,6 +78,14 @@ class SaleReturnController extends Controller
             $item->size_val = $sizeStr;
             $item->color_val = $colorStr;
 
+            // Extract bonus quantity
+            $bQty = (float)($item->bonus_qty ?? 0);
+            if ($bQty <= 0 && is_array($variant) && !empty($variant['bonus']) && is_numeric($variant['bonus'])) {
+                $bQty = (float)$variant['bonus'];
+            }
+            $item->bonus_val = $bQty > 0 ? (float)$bQty : ($variant['bonus'] ?? '-');
+            $item->bonus_qty = $bQty;
+
             // Add product details
             $item->item_name = $product->product_name ?? $product->item_name ?? 'Unknown';
             $item->item_code = $product->product_code ?? $product->item_code ?? '';
@@ -139,13 +147,32 @@ class SaleReturnController extends Controller
             
             $item->size_mode = $product->size_mode ?? 'by_pieces';
             $item->pieces_per_m2 = $product->m2_of_box ?? 0;
-            $item->unit = $item->unit ?? 'pc';
-            
             // Quantity calculations
-            $item->qty = $item->total_pieces ?? $item->qty ?? 0;
-            $item->original_qty = $item->qty;
+            // $item->total_pieces includes bonus quantity ($bQty).
+            // The purchased/sold quantity is total_pieces - bonus_qty.
+            $totalPieces = (float)($item->total_pieces ?? 0);
+            if ($totalPieces > 0) {
+                $purchasedPieces = max(0, $totalPieces - $bQty);
+            } else {
+                $purchasedPieces = (float)($item->qty ?? 0);
+                $totalPieces = $purchasedPieces + $bQty;
+            }
+
+            // Calculate remaining purchased pieces and remaining bonus pieces
+            $remPurchased = max(0, $purchasedPieces - min($alreadyReturned, $purchasedPieces));
+            $alreadyReturnedBonus = max(0, $alreadyReturned - $purchasedPieces);
+            $remBonus = max(0, $bQty - $alreadyReturnedBonus);
+            $maxReturnableTotal = max(0, $totalPieces - $alreadyReturned);
+
+            $item->qty = $purchasedPieces;
+            $item->purchased_qty = $purchasedPieces;
+            $item->bonus_qty = $bQty;
+            $item->total_physical_pieces = $totalPieces;
+            $item->remaining_purchased = $remPurchased;
+            $item->remaining_bonus = $remBonus;
+            $item->original_qty = $purchasedPieces;
             $item->returned_qty = $alreadyReturned;
-            $item->max_returnable = max(0, $item->qty - $alreadyReturned);
+            $item->max_returnable = $maxReturnableTotal;
             
             // Pricing: use actual sale price (price_per_piece from POS/Sale), not product master price
             $item->price = (!empty($item->price_per_piece) && $item->price_per_piece > 0) 
@@ -304,13 +331,26 @@ class SaleReturnController extends Controller
 
                 if ($ppb <= 0) $ppb = 1;
 
+                // Determine billable quantity (excluding free bonus)
+                $billableQty = $qty;
+                if (isset($request->billable_qty[$idx]) && is_numeric($request->billable_qty[$idx])) {
+                    $billableQty = (float) $request->billable_qty[$idx];
+                } elseif (isset($request->return_bonus[$idx]) && is_numeric($request->return_bonus[$idx])) {
+                    $bRet = (float) $request->return_bonus[$idx];
+                    $billableQty = max(0, $qty - $bRet);
+                }
+                if ($billableQty > $qty) {
+                    $billableQty = $qty;
+                }
+                $bonusReturnQty = max(0, $qty - $billableQty);
+
                 // Calculate Line Total Logic based on size mode
                 if ($sizeMode === 'by_size') {
-                    $lineTotal = round($ppm2 * $qty * $price, 2);
+                    $lineTotal = round($ppm2 * $billableQty * $price, 2);
                 } elseif ($sizeMode === 'by_cartons' || $sizeMode === 'by_carton') {
-                    $lineTotal = round(($ppb > 0 ? ($qty / $ppb) : $qty) * $price, 2);
+                    $lineTotal = round(($ppb > 0 ? ($billableQty / $ppb) : $billableQty) * $price, 2);
                 } else {
-                    $lineTotal = round($qty * $price, 2);
+                    $lineTotal = round($billableQty * $price, 2);
                 }
                 
                 $lineTotal -= $itemDisc;
@@ -386,7 +426,7 @@ class SaleReturnController extends Controller
                     'qty' => $stockQty,
                     'ref_type' => 'SALE_RETURN',
                     'ref_id' => $return->id,
-                    'note' => "Return #{$nextInvoice}",
+                    'note' => "Return #{$nextInvoice}" . ($bonusReturnQty > 0 ? " (incl. {$bonusReturnQty} bonus)" : ""),
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
@@ -464,7 +504,14 @@ class SaleReturnController extends Controller
 
             // Update Sale Status (only if it is a full return)
             if ($sale) {
-                $totalSold = $sale->items->sum('total_pieces');
+                $totalSold = $sale->items->sum(function($item) {
+                    $bonus = (float)($item->bonus_qty ?? 0);
+                    $total = (float)($item->total_pieces ?? 0);
+                    if ($total > 0) {
+                        return max(0, $total - $bonus);
+                    }
+                    return (float)($item->qty ?? 0);
+                });
                 $totalReturned = SaleReturnItem::join('sale_returns', 'sale_returns.id', '=', 'sale_return_items.sale_return_id')
                     ->where('sale_returns.sale_id', $sale->id)
                     ->sum('sale_return_items.qty');

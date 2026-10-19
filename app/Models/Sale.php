@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Sale extends Model
 {
     protected $fillable = [
-        'customer_id', 'reference', 'total_amount_Words', 'total_bill_amount',
+        'customer_id', 'account_id', 'reference', 'total_amount_Words', 'total_bill_amount',
         'total_extradiscount', 'total_net', 'cash', 'card', 'change', 'change_account_id',
         'total_items', 'discount_type', 'sale_status', 'invoice_no', 'is_booking'
     ];
@@ -16,6 +16,11 @@ class Sale extends Model
     public function customer_relation()
     {
         return $this->belongsTo(Customer::class, 'customer_id', 'id');
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(Account::class, 'account_id', 'id');
     }
 
     public function change_account()

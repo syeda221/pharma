@@ -869,10 +869,12 @@ class ReportingController extends Controller
                 $salesList = $saleQuery->select(
                     'sale_items.total_pieces',
                     'sale_items.qty',
+                    'sale_items.bonus_qty',
                     'sale_items.total',
                     'sale_items.color',
                     'sales.total_extradiscount',
-                    'sales.total_bill_amount'
+                    'sales.total_bill_amount',
+                    'sales.sale_status'
                 )->get();
 
                 // Fetch confirmed web sales
@@ -903,6 +905,8 @@ class ReportingController extends Controller
                     $salesListArray[] = (object) [
                         'total_pieces' => $wItem->total_pieces,
                         'qty' => $wItem->qty,
+                        'bonus_qty' => 0,
+                        'sale_status' => 'posted',
                         'total' => $wItem->total,
                         'total_extradiscount' => $wItem->total_extradiscount,
                         'total_bill_amount' => $wItem->total_bill_amount,
@@ -981,8 +985,23 @@ class ReportingController extends Controller
                     $soldAmount = 0;
                     foreach ($salesList as $sItem) {
                         if ($this->matchSaleItemToVariant($sItem, $v)) {
+                            $bQty = (float)($sItem->bonus_qty ?? 0);
+                            $vData = null;
+                            if (!empty($sItem->color)) {
+                                $b64 = base64_decode($sItem->color, true);
+                                $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($sItem->color, true);
+                            }
+                            if ($bQty <= 0 && is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
+                                $bQty = (float)$vData['bonus'];
+                            }
+                            if (isset($sItem->sale_status) && ($sItem->sale_status === 'returned' || $sItem->sale_status == 1)) {
+                                $bQty = 0;
+                            }
+
+                            $billedPieces = max(0, (float)$sItem->total_pieces - $bQty);
+
                             $soldQty += (float) $sItem->qty;
-                            $soldQtyPieces += (float) $sItem->total_pieces;
+                            $soldQtyPieces += $billedPieces;
                             
                             $itemNet = (float) $sItem->total;
                             if ($sItem->total_bill_amount > 0 && $sItem->total_extradiscount > 0) {
@@ -1109,17 +1128,35 @@ class ReportingController extends Controller
                 $salesList = $saleQuery->select(
                     'sale_items.total_pieces',
                     'sale_items.qty',
+                    'sale_items.bonus_qty',
+                    'sale_items.color',
                     'sale_items.total',
                     'sales.total_extradiscount',
-                    'sales.total_bill_amount'
+                    'sales.total_bill_amount',
+                    'sales.sale_status'
                 )->get();
 
                 $soldQty = 0;
                 $soldQtyPieces = 0;
                 $soldAmount = 0;
                 foreach ($salesList as $sItem) {
+                    $bQty = (float)($sItem->bonus_qty ?? 0);
+                    $vData = null;
+                    if (!empty($sItem->color)) {
+                        $b64 = base64_decode($sItem->color, true);
+                        $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($sItem->color, true);
+                    }
+                    if ($bQty <= 0 && is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
+                        $bQty = (float)$vData['bonus'];
+                    }
+                    if (isset($sItem->sale_status) && ($sItem->sale_status === 'returned' || $sItem->sale_status == 1)) {
+                        $bQty = 0;
+                    }
+
+                    $billedPieces = max(0, (float)$sItem->total_pieces - $bQty);
+
                     $soldQty += (float) $sItem->qty;
-                    $soldQtyPieces += (float) $sItem->total_pieces;
+                    $soldQtyPieces += $billedPieces;
                     
                     $itemNet = (float) $sItem->total;
                     if ($sItem->total_bill_amount > 0 && $sItem->total_extradiscount > 0) {
@@ -1250,10 +1287,13 @@ class ReportingController extends Controller
             'sale_items.product_name',
             'sale_items.total_pieces',
             'sale_items.qty',
+            'sale_items.bonus_qty',
+            'sale_items.color',
             'sale_items.total',
             'sale_items.purchase_price',
             'sales.total_extradiscount',
-            'sales.total_bill_amount'
+            'sales.total_bill_amount',
+            'sales.sale_status'
         )->get();
 
         if ($manualSalesList->isNotEmpty()) {
@@ -1266,9 +1306,24 @@ class ReportingController extends Controller
                 $cogs = 0;
 
                 foreach ($mItems as $sItem) {
+                    $bQty = (float)($sItem->bonus_qty ?? 0);
+                    $vData = null;
+                    if (!empty($sItem->color)) {
+                        $b64 = base64_decode($sItem->color, true);
+                        $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($sItem->color, true);
+                    }
+                    if ($bQty <= 0 && is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
+                        $bQty = (float)$vData['bonus'];
+                    }
+                    if (isset($sItem->sale_status) && ($sItem->sale_status === 'returned' || $sItem->sale_status == 1)) {
+                        $bQty = 0;
+                    }
+
+                    $billedPieces = max(0, (float)$sItem->total_pieces - $bQty);
+
                     $soldQty += (float) $sItem->qty;
-                    $soldQtyPieces += (float) $sItem->total_pieces;
-                    $cogs += ((float) $sItem->total_pieces) * ((float) $sItem->purchase_price);
+                    $soldQtyPieces += $billedPieces;
+                    $cogs += $billedPieces * ((float) $sItem->purchase_price);
 
                     $itemNet = (float) $sItem->total;
                     if ($sItem->total_bill_amount > 0 && $sItem->total_extradiscount > 0) {
@@ -1397,9 +1452,12 @@ class ReportingController extends Controller
                 'sale_items.purchase_price',
                 'sale_items.color',
                 'sale_items.total_pieces',
+                'sale_items.qty',
+                'sale_items.bonus_qty',
                 'sale_items.total',
                 'sales.total_extradiscount',
-                'sales.total_bill_amount'
+                'sales.total_bill_amount',
+                'sales.sale_status'
             )->get();
 
             $custRevenue = 0;
@@ -1460,8 +1518,22 @@ class ReportingController extends Controller
                     $itemNet -= ($item->total_extradiscount * $proportion);
                 }
 
+                $bQty = (float)($item->bonus_qty ?? 0);
+                $vData = null;
+                if (!empty($item->color)) {
+                    $b64 = base64_decode($item->color, true);
+                    $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($item->color, true);
+                }
+                if ($bQty <= 0 && is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
+                    $bQty = (float)$vData['bonus'];
+                }
+                if (isset($item->sale_status) && ($item->sale_status === 'returned' || $item->sale_status == 1)) {
+                    $bQty = 0;
+                }
+                $custSoldPieces = max(0, (float)($item->total_pieces ?? 0) - $bQty);
+
                 $custRevenue += $itemNet;
-                $custCogs += (float) ($item->total_pieces ?? 0) * $avgPrice;
+                $custCogs += $custSoldPieces * $avgPrice;
             }
 
             // Sale returns for this customer
@@ -1573,15 +1645,16 @@ class ReportingController extends Controller
         $totalSoldBoxes = 0;
         $totalSoldLoose = 0;
         $matchingSalesCount = 0;
+        $totalBonusQty = 0;
+        $totalBonusAmount = 0;
 
         foreach ($overviewSales as $sale) {
             $cust = $sale->customer_relation;
             $tiers = $cust ? $cust->discount_tiers : ['medical' => 0, 'doctor' => 0, 'distribution' => 0];
             $saleTier = strtolower((string)$sale->discount_tier);
             $extra = (float)($sale->total_extradiscount ?? 0);
-            $totalExtraDiscounts += $extra;
-            $totalNetRevenue += (float)$sale->total_net;
             $hasMatchingItem = false;
+            $isSaleReturned = ($sale->sale_status === 'returned' || $sale->sale_status == 1);
 
             foreach ($sale->items as $it) {
                 if ($productId && $productId !== 'all' && $it->product_id != $productId) {
@@ -1597,7 +1670,83 @@ class ReportingController extends Controller
 
                 $discAmt = (float)$it->discount_amount;
                 $totalItemDiscounts += $discAmt;
-                $pieces = (float)$it->total_pieces;
+
+                $itNet = (float)$it->total;
+                if ($sale->total_bill_amount > 0 && $extra > 0) {
+                    $prop = $itNet / (float)$sale->total_bill_amount;
+                    $itemExtraDisc = $extra * $prop;
+                    $itNet -= $itemExtraDisc;
+                    $totalExtraDiscounts += $itemExtraDisc;
+                }
+                $totalNetRevenue += $itNet;
+
+                // Bonus Quantity & Amount at Base Price
+                $bQty = 0;
+                if (!$isSaleReturned) {
+                    $bQty = (float)($it->bonus_qty ?? 0);
+                    $vData = null;
+                    if (!empty($it->color)) {
+                        $b64 = base64_decode($it->color, true);
+                        $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($it->color, true);
+                    }
+                    if ($bQty <= 0 && is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
+                        $bQty = (float)$vData['bonus'];
+                    }
+
+                    if ($bQty > 0) {
+                        $basePrice = 0;
+                        if (!empty($it->purchase_price) && (float)$it->purchase_price > 0) {
+                            $basePrice = (float)$it->purchase_price;
+                        } elseif (is_array($vData) && isset($vData['purch_price']) && is_numeric($vData['purch_price']) && (float)$vData['purch_price'] > 0) {
+                            $basePrice = (float)$vData['purch_price'];
+                        } elseif (is_array($vData) && isset($vData['purchase_price']) && is_numeric($vData['purchase_price']) && (float)$vData['purchase_price'] > 0) {
+                            $basePrice = (float)$vData['purchase_price'];
+                        } elseif (is_array($vData) && isset($vData['base_price']) && is_numeric($vData['base_price']) && (float)$vData['base_price'] > 0) {
+                            $basePrice = (float)$vData['base_price'];
+                        } elseif ($it->product) {
+                            if (!empty($it->product->color)) {
+                                $prodVariants = json_decode($it->product->color, true);
+                                if (is_array($prodVariants)) {
+                                    $matchedVar = null;
+                                    if (!empty($vData['barcode'])) {
+                                        $matchedVar = collect($prodVariants)->firstWhere('barcode', $vData['barcode']);
+                                    }
+                                    if (!$matchedVar && !empty($vData['name'])) {
+                                        $matchedVar = collect($prodVariants)->firstWhere('name', $vData['name']);
+                                    }
+                                    if (!$matchedVar && count($prodVariants) === 1) {
+                                        $matchedVar = $prodVariants[0];
+                                    }
+                                    if ($matchedVar && isset($matchedVar['purch_price']) && (float)$matchedVar['purch_price'] > 0) {
+                                        $basePrice = (float)$matchedVar['purch_price'];
+                                    } elseif ($matchedVar && isset($matchedVar['purchase_price']) && (float)$matchedVar['purchase_price'] > 0) {
+                                        $basePrice = (float)$matchedVar['purchase_price'];
+                                    }
+                                }
+                            }
+                            if ($basePrice <= 0 && (float)($it->product->purchase_price_per_piece ?? 0) > 0) {
+                                $basePrice = (float)$it->product->purchase_price_per_piece;
+                            } elseif ($basePrice <= 0 && (float)($it->product->purchase_price_per_box ?? 0) > 0) {
+                                $basePrice = (float)$it->product->purchase_price_per_box;
+                            }
+                        }
+
+                        if ($basePrice <= 0) {
+                            $basePrice = (float)($it->price ?? 0);
+                            if ($basePrice <= 0 && is_array($vData) && !empty($vData['sale_price']) && is_numeric($vData['sale_price'])) {
+                                $basePrice = (float)$vData['sale_price'];
+                            }
+                            if ($basePrice <= 0 && $it->product) {
+                                $basePrice = (float)($it->product->sale_price_per_piece ?? 0);
+                            }
+                        }
+
+                        $totalBonusQty += $bQty;
+                        $totalBonusAmount += ($bQty * $basePrice);
+                    }
+                }
+
+                $pieces = max(0, (float)$it->total_pieces - $bQty);
                 $totalSoldPieces += $pieces;
 
                 // Cartons & loose pieces accumulation
@@ -1714,17 +1863,20 @@ class ReportingController extends Controller
             ? ($finalNetLoose > 0 ? "{$finalNetBoxes} Ctn . {$finalNetLoose} Pcs" : "{$finalNetBoxes} Cartons")
             : "{$finalNetPieces} Pcs";
 
-        $profitMargin = $finalNetRevenue > 0 ? round((($totalGrossProfit - $totalExpenses) / $finalNetRevenue) * 100, 1) : 0;
+        $adjustedGrossProfit = $totalGrossProfit - $totalBonusAmount;
+        $adjustedNetProfit = $adjustedGrossProfit - $totalExpenses;
+        $profitMargin = $finalNetRevenue > 0 ? round(($adjustedNetProfit / $finalNetRevenue) * 100, 1) : 0;
 
         return response()->json([
             'products' => $productStats,
-            'total_gross_profit' => round($totalGrossProfit, 2),
+            'total_gross_profit' => round($adjustedGrossProfit, 2),
             'total_expenses' => round($totalExpenses, 2),
-            'net_profit' => round($totalGrossProfit - $totalExpenses, 2),
+            'net_profit' => round($adjustedNetProfit, 2),
             'top_customers' => $topCustomers,
             'zone_stats' => $zoneList,
             'summary' => [
-                'gross_revenue' => round($totalGrossRevenue, 2),
+                'raw_gross_revenue' => round($totalGrossRevenue, 2),
+                'gross_revenue' => round(max(0, $totalGrossRevenue - $grandTotalDiscount - $totalReturnAmount), 2),
                 'total_discount' => round($grandTotalDiscount, 2),
                 'medical_discount' => round($medicalDiscount, 2),
                 'distribution_discount' => round($distributionDiscount, 2),
@@ -1733,9 +1885,11 @@ class ReportingController extends Controller
                 'return_amount' => round($totalReturnAmount, 2),
                 'net_revenue' => round($finalNetRevenue, 2),
                 'cogs' => round($totalCogs, 2),
-                'gross_profit' => round($totalGrossProfit, 2),
+                'bonus_amount' => round($totalBonusAmount, 2),
+                'bonus_qty' => round($totalBonusQty, 2),
+                'gross_profit' => round($adjustedGrossProfit, 2),
                 'expenses' => round($totalExpenses, 2),
-                'net_profit' => round($totalGrossProfit - $totalExpenses, 2),
+                'net_profit' => round($adjustedNetProfit, 2),
                 'profit_margin' => $profitMargin,
                 'total_sold_pieces' => round($totalSoldPieces, 2),
                 'total_sold_cartons' => $totalSoldBoxes,

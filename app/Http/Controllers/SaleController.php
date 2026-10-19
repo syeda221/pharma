@@ -131,20 +131,74 @@ class SaleController extends Controller
             $sale->returned_qty = $returnedQty;
 
             $saleBonus = 0;
+            $saleBonusAmount = 0;
             if ($sale->items && $sale->items->count() > 0) {
                 foreach ($sale->items as $item) {
                     $bQty = (float)($item->bonus_qty ?? 0);
-                    if ($bQty <= 0 && !empty($item->color)) {
+                    $vData = null;
+                    if (!empty($item->color)) {
                         $b64 = base64_decode($item->color, true);
                         $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($item->color, true);
-                        if (is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
-                            $bQty = (float)$vData['bonus'];
+                    }
+                    if ($bQty <= 0 && is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
+                        $bQty = (float)$vData['bonus'];
+                    }
+
+                    // Base Price (purch_price / purchase_price / base_price)
+                    $basePrice = 0;
+                    if (!empty($item->purchase_price) && (float)$item->purchase_price > 0) {
+                        $basePrice = (float)$item->purchase_price;
+                    } elseif (is_array($vData) && isset($vData['purch_price']) && is_numeric($vData['purch_price']) && (float)$vData['purch_price'] > 0) {
+                        $basePrice = (float)$vData['purch_price'];
+                    } elseif (is_array($vData) && isset($vData['purchase_price']) && is_numeric($vData['purchase_price']) && (float)$vData['purchase_price'] > 0) {
+                        $basePrice = (float)$vData['purchase_price'];
+                    } elseif (is_array($vData) && isset($vData['base_price']) && is_numeric($vData['base_price']) && (float)$vData['base_price'] > 0) {
+                        $basePrice = (float)$vData['base_price'];
+                    } elseif ($item->product) {
+                        if (!empty($item->product->color)) {
+                            $prodVariants = json_decode($item->product->color, true);
+                            if (is_array($prodVariants)) {
+                                $matchedVar = null;
+                                if (!empty($vData['barcode'])) {
+                                    $matchedVar = collect($prodVariants)->firstWhere('barcode', $vData['barcode']);
+                                }
+                                if (!$matchedVar && !empty($vData['name'])) {
+                                    $matchedVar = collect($prodVariants)->firstWhere('name', $vData['name']);
+                                }
+                                if (!$matchedVar && count($prodVariants) === 1) {
+                                    $matchedVar = $prodVariants[0];
+                                }
+                                if ($matchedVar && isset($matchedVar['purch_price']) && (float)$matchedVar['purch_price'] > 0) {
+                                    $basePrice = (float)$matchedVar['purch_price'];
+                                } elseif ($matchedVar && isset($matchedVar['purchase_price']) && (float)$matchedVar['purchase_price'] > 0) {
+                                    $basePrice = (float)$matchedVar['purchase_price'];
+                                }
+                            }
+                        }
+                        if ($basePrice <= 0 && (float)($item->product->purchase_price_per_piece ?? 0) > 0) {
+                            $basePrice = (float)$item->product->purchase_price_per_piece;
+                        } elseif ($basePrice <= 0 && (float)($item->product->purchase_price_per_box ?? 0) > 0) {
+                            $basePrice = (float)$item->product->purchase_price_per_box;
                         }
                     }
+
+                    // Fallback to sale price if base price is not defined anywhere
+                    if ($basePrice <= 0) {
+                        $basePrice = (float)($item->price ?? 0);
+                        if ($basePrice <= 0 && is_array($vData) && !empty($vData['sale_price']) && is_numeric($vData['sale_price'])) {
+                            $basePrice = (float)$vData['sale_price'];
+                        }
+                        if ($basePrice <= 0 && $item->product) {
+                            $basePrice = (float)($item->product->sale_price_per_piece ?? 0);
+                        }
+                    }
+
                     $saleBonus += $bQty;
+                    $saleBonusAmount += ($bQty * $basePrice);
                 }
             }
             $sale->bonus_qty = $saleBonus;
+            $sale->bonus_amount = $saleBonusAmount;
 
             $origQty = $sale->total_items > 0 ? (float) $sale->total_items : (float) $sale->qty;
             $effTotalPieces = max(0, $origQty - $returnedQty);
@@ -152,9 +206,11 @@ class SaleController extends Controller
 
             if ($sale->sale_status === 'returned' || $sale->sale_status == 1) {
                 $sale->effective_bonus_qty = 0;
+                $sale->effective_bonus_amount = 0;
                 $sale->effective_sold_qty = 0;
             } else {
                 $sale->effective_bonus_qty = $saleBonus;
+                $sale->effective_bonus_amount = $saleBonusAmount;
                 $sale->effective_sold_qty = max(0, $effTotalPieces - $saleBonus);
             }
 
@@ -277,6 +333,7 @@ class SaleController extends Controller
             'total_count' => $sales->count(),
             'total_qty' => (float) $sales->sum('effective_sold_qty'),
             'total_bonus_qty' => (float) $sales->sum('effective_bonus_qty'),
+            'total_bonus_amount' => (float) $sales->sum('effective_bonus_amount'),
             'total_all_qty' => (float) $sales->sum('effective_qty'),
             'total_gross' => (float) $sales->sum('effective_gross'),
             'total_net' => (float) $sales->sum('effective_net'),
@@ -1158,11 +1215,65 @@ class SaleController extends Controller
             ->orderBy('title')
             ->get();
 
-        // 3. Reuse nextInvoiceNumber var for current invoice no (view expects this variable name)
+        // 3. Fetch existing payment accounts & amounts for this sale
+        $existingPayments = [];
+
+        // Try VoucherMaster (Auto-Receipt for this sale)
+        $receiptVoucher = \App\Models\VoucherMaster::with('details')
+            ->where('voucher_type', \App\Models\VoucherMaster::TYPE_RECEIPT)
+            ->where('remarks', 'like', "%#{$sale->invoice_no}%")
+            ->latest()
+            ->first();
+
+        if ($receiptVoucher && $receiptVoucher->details) {
+            foreach ($receiptVoucher->details as $detail) {
+                if ((float)$detail->debit > 0) {
+                    $existingPayments[] = [
+                        'account_id' => $detail->account_id,
+                        'amount' => (float)$detail->debit,
+                    ];
+                }
+            }
+        }
+
+        // Fallback to JournalEntry if no VoucherMaster
+        if (empty($existingPayments)) {
+            $journalEntries = \App\Models\JournalEntry::where('description', 'like', "%#{$sale->invoice_no}%")
+                ->where('debit', '>', 0)
+                ->whereHas('account.head', function($q) {
+                    $q->whereIn('name', ['Cash', 'Bank']);
+                })
+                ->get();
+
+            foreach ($journalEntries as $entry) {
+                $existingPayments[] = [
+                    'account_id' => $entry->account_id,
+                    'amount' => (float)$entry->debit,
+                ];
+            }
+        }
+
+        // Fallback to sale->account_id or default cash
+        if (empty($existingPayments)) {
+            $chosenAccId = $sale->account_id;
+            if (!$chosenAccId) {
+                $defaultAcc = $accounts->first(function($a) {
+                    return str_contains(strtolower($a->title), 'cash') || str_contains(strtolower($a->title), 'easypaisa');
+                }) ?: $accounts->first();
+                $chosenAccId = $defaultAcc ? $defaultAcc->id : null;
+            }
+
+            $existingPayments[] = [
+                'account_id' => $chosenAccId,
+                'amount' => (float)($sale->cash > 0 ? $sale->cash : 0),
+            ];
+        }
+
+        // 4. Reuse nextInvoiceNumber var for current invoice no (view expects this variable name)
         $nextInvoiceNumber = $sale->invoice_no;
 
-        // 4. Return the Edit Sale View
-        return view('admin_panel.sale.edit_sale', compact('warehouse', 'customer', 'nextInvoiceNumber', 'accounts', 'sale', 'recentProducts', 'allSeries', 'activePrefix'));
+        // 5. Return the Edit Sale View
+        return view('admin_panel.sale.edit_sale', compact('warehouse', 'customer', 'nextInvoiceNumber', 'accounts', 'sale', 'recentProducts', 'allSeries', 'activePrefix', 'existingPayments'));
     }
 
     public function updatesale(Request $request, $id)
@@ -1644,6 +1755,22 @@ class SaleController extends Controller
             $sale->cash = (float) ($request->cash ?? 0);
             $sale->change = ($sale->cash - $sale->total_net);
             $sale->change_account_id = $request->input('change_account_id') ?: null;
+
+            $receiptAccounts = $request->input('receipt_account_id', []);
+            $firstAccountId = null;
+            if (is_array($receiptAccounts)) {
+                foreach ($receiptAccounts as $accId) {
+                    if (!empty($accId)) {
+                        $firstAccountId = (int) $accId;
+                        break;
+                    }
+                }
+            }
+            if ($firstAccountId) {
+                $sale->account_id = $firstAccountId;
+            } elseif ($request->filled('account_id')) {
+                $sale->account_id = (int) $request->input('account_id');
+            }
 
             if ($isWalkin && $sale->change < -0.05) {
                 throw \Illuminate\Validation\ValidationException::withMessages([

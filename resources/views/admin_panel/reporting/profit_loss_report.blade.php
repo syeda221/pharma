@@ -476,7 +476,7 @@
                 <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
                     <div class="stat-label text-secondary"><i class="fas fa-receipt me-1"></i>Gross Sales</div>
                     <div class="stat-val text-dark" id="cardGrossRevenue">Rs 0</div>
-                    <div class="stat-sub text-muted">Before Deductions</div>
+                    <div class="stat-sub text-muted" id="cardGrossRevenueSub">After Disc. & Returns</div>
                 </div>
 
                 {{-- Total COGS --}}
@@ -486,11 +486,18 @@
                     <div class="stat-sub" style="color: #d97706;">Product Cost</div>
                 </div>
 
+                {{-- Bonus Amount --}}
+                <div class="stat-pill" style="background: #fffbeb; border-color: #f59e0b;">
+                    <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-gift me-1"></i>Bonus Amount</div>
+                    <div class="stat-val" style="color: #b45309;" id="cardBonusAmount">Rs 0</div>
+                    <div class="stat-sub" style="color: #d97706;">At Base Price</div>
+                </div>
+
                 {{-- Gross Profit --}}
-                <div class="stat-pill" style="background: #f0fdf4; border-color: #86efac;">
-                    <div class="stat-label text-success"><i class="fas fa-arrow-trend-up me-1"></i>Gross Profit</div>
+                <div class="stat-pill" style="background: #f0fdf4; border-color: #86efac;" id="cardGrossProfitBox">
+                    <div class="stat-label text-success" id="cardGrossProfitLabel"><i class="fas fa-arrow-trend-up me-1"></i>Gross Profit</div>
                     <div class="stat-val text-success" id="cardGrossProfit">Rs 0</div>
-                    <div class="stat-sub text-success">Revenue - COGS</div>
+                    <div class="stat-sub text-success" id="cardGrossProfitSub">Revenue - COGS - Bonus</div>
                 </div>
 
                 {{-- Total Expenses --}}
@@ -603,7 +610,7 @@
                 </div>
 
                 {{-- Other / Extra Discount --}}
-                <div class="col-12 col-md">
+                <div class="col-6 col-md">
                     <div class="overview-card" style="background: #fffbeb; border-color: #fde68a;">
                         <div class="ov-header">
                             <span class="ov-label" style="color: #b45309;"><i class="fas fa-file-invoice-dollar me-1"></i>Extra / Other</span>
@@ -871,7 +878,9 @@ $(document).ready(function() {
     var currentNetProfit = 0;
 
     function fmt(n) {
-        return Math.round(parseFloat(n)).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        let num = parseFloat(n) || 0;
+        let decimals = (num % 1 !== 0) ? 2 : 0;
+        return num.toLocaleString(undefined, {minimumFractionDigits: decimals, maximumFractionDigits: 2});
     }
 
     // Load saved partner percentages if available
@@ -1040,10 +1049,32 @@ $(document).ready(function() {
 
         currentNetProfit = netProf;
 
+        let bonusAmtVal = parseFloat(s.bonus_amount || 0);
+
+        let rawGrossVal = parseFloat(s.raw_gross_revenue || 0);
+        let discVal     = parseFloat(s.total_discount || 0);
+        let retVal      = parseFloat(s.return_amount || 0);
+
         $('#cardGrossRevenue').text('Rs ' + fmt(grossRevVal));
+        if (discVal > 0 || retVal > 0) {
+            $('#cardGrossRevenueSub').text('After Disc. & Returns')
+                .attr('title', 'Gross: Rs ' + fmt(rawGrossVal) + ' | Disc: -Rs ' + fmt(discVal) + ' | Ret: -Rs ' + fmt(retVal));
+        } else {
+            $('#cardGrossRevenueSub').text('Net Sales');
+        }
         $('#cardCOGS').text('Rs ' + fmt(cogsVal));
+        $('#cardBonusAmount').text('Rs ' + fmt(bonusAmtVal));
         $('#cardNetRevenue').text('Rs ' + fmt(netRevVal));
-        $('#cardGrossProfit, #mobCardGrossProfit').text('Rs ' + fmt(grossProf));
+        let grossProfColor = grossProf >= 0 ? '#059669' : '#dc2626';
+        let grossSign = grossProf < 0 ? '-' : '';
+        $('#cardGrossProfit, #mobCardGrossProfit').text(grossSign + 'Rs ' + fmt(Math.abs(grossProf))).css('color', grossProfColor);
+        if (bonusAmtVal > 0) {
+            $('#cardGrossProfitSub').text('Revenue - COGS - Bonus')
+                .attr('title', 'Sales: Rs ' + fmt(grossRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal));
+        } else {
+            $('#cardGrossProfitSub').text('Revenue - COGS')
+                .attr('title', 'Sales: Rs ' + fmt(grossRevVal) + ' | COGS: -Rs ' + fmt(cogsVal));
+        }
         $('#cardExpenses, #mobCardExpenses').text('Rs ' + fmt(expVal));
 
         let netProfColor = netProf >= 0 ? '#2563eb' : '#dc2626';
