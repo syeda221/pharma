@@ -2,6 +2,106 @@
 
 @section('content')
     <style>
+        /* Modern Overview Card for Discounts (Matching Profit-Loss Report) */
+        .overview-card {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            height: 100%;
+        }
+        .overview-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+        }
+        .overview-card .ov-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+        .overview-card .ov-label {
+            font-size: .64rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .overview-card .ov-val {
+            font-size: .95rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .overview-card .ov-sub {
+            font-size: .62rem;
+            font-weight: 600;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Summary Pill Bar & Stat Pills (Matching Profit-Loss Report) */
+        .summary-pill-bar {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 8px;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 2px;
+        }
+        .summary-pill-bar::-webkit-scrollbar {
+            height: 5px;
+        }
+        .summary-pill-bar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .summary-pill-bar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .stat-pill {
+            flex: 1 1 0px;
+            min-width: 140px;
+            padding: 7px 10px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            text-align: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .stat-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+        }
+        .stat-pill .stat-label {
+            font-size: .62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 2px;
+        }
+        .stat-pill .stat-val {
+            font-size: .92rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .stat-pill .stat-sub {
+            font-size: .60rem;
+            font-weight: 600;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         /* Minimal KPI Strip */
         .kpi-strip {
             display: flex;
@@ -443,79 +543,109 @@
                     </div>
                 </div>
 
-                {{-- KPI Stat Strip — all 7 cards in one minimal row --}}
-                <div class="kpi-strip mb-3">
+                {{-- Primary KPI Strip (Sequence: Gross Sales, Total COGS, Bonus Amount, Invoices, Product Qty / Bonus) --}}
+                <div class="summary-pill-bar mb-3">
 
-                    {{-- Gross Total --}}
-                    <div class="kpi-card kpi-gross">
-                        <div class="kpi-label">Gross Total</div>
-                        <div class="kpi-value text-dark" id="statTotalGross">Rs. {{ number_format($stats['total_gross'] ?? 0, 2) }}</div>
+                    {{-- 1. Gross Sales --}}
+                    <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
+                        <div class="stat-label text-secondary"><i class="fas fa-receipt me-1 text-primary"></i>Gross Sales</div>
+                        @php $gTot = (float)($stats['total_gross'] ?? 0); @endphp
+                        <div class="stat-val text-dark" id="statTotalGross">Rs {{ $gTot == floor($gTot) ? number_format($gTot, 0) : number_format($gTot, 2) }}</div>
+                        <div class="stat-sub text-muted" id="statGrossRevenueSub">After Disc. & Returns</div>
                     </div>
 
-                    {{-- Total Discounts --}}
-                    <div class="kpi-card kpi-disc">
-                        <div class="kpi-label">Discounts</div>
-                        <div class="kpi-value text-danger" id="statTotalDiscount">Rs. {{ number_format($stats['total_discount'] ?? 0, 2) }}</div>
-                        <div id="statDiscountSub" class="kpi-sub">
-                            Line: Rs. {{ number_format($stats['inline_discount'] ?? 0, 2) }}
-                            @if(($stats['additional_discount'] ?? 0) > 0)
-                                &nbsp;· Extra: Rs. {{ number_format($stats['additional_discount'] ?? 0, 2) }}
-                            @endif
-                        </div>
+                    {{-- 2. Total COGS --}}
+                    <div class="stat-pill" style="background: #fffbeb; border-color: #fde68a;">
+                        <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-boxes-stacked me-1"></i>Total COGS</div>
+                        @php $cogsTot = (float)($stats['total_cogs'] ?? 0); @endphp
+                        <div class="stat-val" style="color: #b45309;" id="statTotalCOGS">Rs {{ $cogsTot == floor($cogsTot) ? number_format($cogsTot, 0) : number_format($cogsTot, 2) }}</div>
+                        <div class="stat-sub" style="color: #d97706;">Product Cost</div>
                     </div>
 
-                    {{-- Net Revenue --}}
-                    <div class="kpi-card kpi-net">
-                        <div class="kpi-label">Net Revenue</div>
-                        <div class="kpi-value text-success" id="statTotalNet">Rs. {{ number_format($stats['total_net'] ?? 0, 2) }}</div>
+                    {{-- 3. Bonus Amount --}}
+                    <div class="stat-pill" style="background: #fffbeb; border-color: #f59e0b;">
+                        <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-gift me-1"></i>Bonus Amount</div>
+                        @php $bAmt = (float)($stats['total_bonus_amount'] ?? 0); @endphp
+                        <div class="stat-val" style="color: #b45309;" id="statTotalBonusAmount">Rs {{ $bAmt == floor($bAmt) ? number_format($bAmt, 0) : number_format($bAmt, 2) }}</div>
+                        <div class="stat-sub" style="color: #d97706;">At Base Price</div>
                     </div>
 
-                    {{-- Invoices Count --}}
-                    <div class="kpi-card kpi-count">
-                        <div class="kpi-label">Invoices</div>
-                        <div class="kpi-value text-dark" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</div>
-                        <div id="statStatusCounts" class="kpi-sub">
+                    {{-- 4. Gross Profit --}}
+                    @php
+                        $gpTot = (float)($stats['total_gross_profit'] ?? 0);
+                        $gpColor = $gpTot >= 0 ? '#059669' : '#dc2626';
+                        $gpBg = $gpTot >= 0 ? '#f0fdf4' : '#fef2f2';
+                        $gpBorder = $gpTot >= 0 ? '#86efac' : '#fca5a5';
+                        $gpSign = $gpTot < 0 ? '-' : '';
+                        $gpAbs = abs($gpTot);
+                    @endphp
+                    <div class="stat-pill" style="background: {{ $gpBg }}; border-color: {{ $gpBorder }};" id="statGrossProfitBox">
+                        <div class="stat-label" style="color: {{ $gpColor }};" id="statGrossProfitLabel"><i class="fas fa-arrow-trend-up me-1"></i>Gross Profit</div>
+                        <div class="stat-val" style="color: {{ $gpColor }};" id="statTotalGrossProfit">{{ $gpSign }}Rs {{ $gpAbs == floor($gpAbs) ? number_format($gpAbs, 0) : number_format($gpAbs, 2) }}</div>
+                        <div class="stat-sub" style="color: {{ $gpColor }};" id="statGrossProfitSub">Revenue - COGS - Bonus</div>
+                    </div>
+
+                    {{-- 5. Invoices Count --}}
+                    <div class="stat-pill" style="background: #ffffff; border-color: #cbd5e1;">
+                        <div class="stat-label text-secondary"><i class="fas fa-file-invoice me-1 text-info"></i>Invoices</div>
+                        <div class="stat-val text-dark" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</div>
+                        <div id="statStatusCounts" class="stat-sub">
                             P:{{ $stats['posted_count'] ?? 0 }}
                             @if(($stats['booked_count'] ?? 0) > 0) &nbsp;B:{{ $stats['booked_count'] ?? 0 }} @endif
                             @if(($stats['returned_count'] ?? 0) > 0) &nbsp;R:{{ $stats['returned_count'] ?? 0 }} @endif
                         </div>
                     </div>
 
-                    {{-- Products Sold Qty / Bonus --}}
-                    <div class="kpi-card kpi-qty">
-                        <div class="kpi-label" style="color:#7c3aed;">Product Qty / Bonus</div>
-                        <div class="kpi-value" style="color:#7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }}</div>
-                        <div class="kpi-sub" style="color:#7c3aed; opacity:0.8;">Sold / Bonus Qty</div>
+                    {{-- 5. Products Sold Qty / Bonus --}}
+                    <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;">
+                        <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-cubes me-1"></i>Product Qty / Bonus</div>
+                        <div class="stat-val" style="color: #7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }}</div>
+                        <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;">Sold / Bonus Qty</div>
                     </div>
 
-                    {{-- Bonus Amount / Worth --}}
-                    <div class="kpi-card kpi-bonus">
-                        <div class="kpi-label" style="color:#d97706;">Bonus Amount</div>
-                        <div class="kpi-value" style="color:#d97706;" id="statTotalBonusAmount">Rs. {{ number_format($stats['total_bonus_amount'] ?? 0, 2) }}</div>
-                        <div class="kpi-sub" style="color:#d97706; opacity:0.85;">At Base Price</div>
+                </div>
+
+                {{-- Discount Cards Strip (Matching Top Row with Backgrounds) --}}
+                <div class="summary-pill-bar mb-3">
+                    {{-- 1. Total Discount --}}
+                    <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
+                        <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
+                        @php $tDisc = (float)($stats['total_discount'] ?? 0); @endphp
+                        <div class="stat-val text-danger" id="statTotalDiscount">Rs {{ $tDisc == floor($tDisc) ? number_format($tDisc, 0) : number_format($tDisc, 2) }}</div>
+                        <div class="stat-sub text-danger opacity-75">All Deductions</div>
                     </div>
 
-                    {{-- Pharmacy Discount --}}
-                    <div class="kpi-card kpi-pharma">
-                        <div class="kpi-label" style="color:#0284c7;">Pharmacy</div>
-                        <div class="kpi-value" style="color:#0284c7;" id="statDiscountMed">Rs. {{ number_format($stats['discount_medical'] ?? 0, 2) }}</div>
-                        <div class="kpi-sub" style="color:#0284c7; opacity:0.75;">Inline Disc · Medical</div>
+                    {{-- 2. Medical Store Discount --}}
+                    <div class="stat-pill" style="background: #ecfdf5; border-color: #a7f3d0;">
+                        <div class="stat-label text-success"><i class="fas fa-prescription-bottle-medical me-1"></i>Medical Store</div>
+                        @php $mDisc = (float)($stats['discount_medical'] ?? 0); @endphp
+                        <div class="stat-val text-success" id="statDiscountMed">Rs {{ $mDisc == floor($mDisc) ? number_format($mDisc, 0) : number_format($mDisc, 2) }}</div>
+                        <div class="stat-sub text-success opacity-75">Pharmacy Tier Subsidies</div>
                     </div>
 
-                    {{-- Doctor Discount --}}
-                    <div class="kpi-card kpi-doc">
-                        <div class="kpi-label" style="color:#059669;">Doctor</div>
-                        <div class="kpi-value" style="color:#059669;" id="statDiscountDoc">Rs. {{ number_format($stats['discount_doctor'] ?? 0, 2) }}</div>
-                        <div class="kpi-sub" style="color:#059669; opacity:0.75;">Inline Disc · Doctor</div>
+                    {{-- 3. Distribution Discount --}}
+                    <div class="stat-pill" style="background: #eff6ff; border-color: #bfdbfe;">
+                        <div class="stat-label text-primary"><i class="fas fa-truck-fast me-1"></i>Distribution</div>
+                        @php $distDisc = (float)($stats['discount_distribution'] ?? 0); @endphp
+                        <div class="stat-val text-primary" id="statDiscountDist">Rs {{ $distDisc == floor($distDisc) ? number_format($distDisc, 0) : number_format($distDisc, 2) }}</div>
+                        <div class="stat-sub text-primary opacity-75">Wholesale Tier Subsidies</div>
                     </div>
 
-                    {{-- Distribution Discount --}}
-                    <div class="kpi-card kpi-dist">
-                        <div class="kpi-label" style="color:#6366f1;">Distribution</div>
-                        <div class="kpi-value" style="color:#6366f1;" id="statDiscountDist">Rs. {{ number_format($stats['discount_distribution'] ?? 0, 2) }}</div>
-                        <div class="kpi-sub" style="color:#6366f1; opacity:0.75;">Inline Disc · Distribution</div>
+                    {{-- 4. Doctor Discount --}}
+                    <div class="stat-pill" style="background: #faf5ff; border-color: #e9d5ff;">
+                        <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-user-doctor me-1"></i>Doctor / Clinic</div>
+                        @php $docDisc = (float)($stats['discount_doctor'] ?? 0); @endphp
+                        <div class="stat-val" style="color: #7c3aed;" id="statDiscountDoc">Rs {{ $docDisc == floor($docDisc) ? number_format($docDisc, 0) : number_format($docDisc, 2) }}</div>
+                        <div class="stat-sub" style="color: #7c3aed; opacity: 0.75;">Practitioner Concessions</div>
                     </div>
 
+                    {{-- 5. Other / Extra Discount --}}
+                    <div class="stat-pill" style="background: #fffbeb; border-color: #fde68a;">
+                        <div class="stat-label" style="color: #b45309;"><i class="fas fa-file-invoice-dollar me-1"></i>Extra / Other</div>
+                        @php $oDisc = (float)($stats['discount_other'] ?? ($stats['additional_discount'] ?? 0)); @endphp
+                        <div class="stat-val" style="color: #b45309;" id="statDiscountOther">Rs {{ $oDisc == floor($oDisc) ? number_format($oDisc, 0) : number_format($oDisc, 2) }}</div>
+                        <div class="stat-sub" style="color: #b45309; opacity: 0.75;">Invoice & Manual Extra</div>
+                    </div>
                 </div>
 
                 {{-- Status Filter Pills --}}
@@ -770,21 +900,45 @@
                         
                         // Update Stat Cards dynamically if present
                         if (response.stats) {
+                            let fmt = function(n) {
+                                let num = parseFloat(n) || 0;
+                                let decimals = (num % 1 !== 0) ? 2 : 0;
+                                return num.toLocaleString(undefined, {minimumFractionDigits: decimals, maximumFractionDigits: 2});
+                            };
+
                             let soldText = Number(response.stats.total_qty || 0).toLocaleString();
                             let bonusText = Number(response.stats.total_bonus_qty || 0).toLocaleString();
+                            $('#statTotalGross').text('Rs ' + fmt(response.stats.total_gross));
+                            $('#statTotalCOGS').text('Rs ' + fmt(response.stats.total_cogs));
+                            $('#statTotalBonusAmount').text('Rs ' + fmt(response.stats.total_bonus_amount));
+
+                            // Gross Profit
+                            let gpVal = parseFloat(response.stats.total_gross_profit || 0);
+                            let gpColor = gpVal >= 0 ? '#059669' : '#dc2626';
+                            let gpBg = gpVal >= 0 ? '#f0fdf4' : '#fef2f2';
+                            let gpBorder = gpVal >= 0 ? '#86efac' : '#fca5a5';
+                            let gpSign = gpVal < 0 ? '-' : '';
+                            $('#statTotalGrossProfit').text(gpSign + 'Rs ' + fmt(Math.abs(gpVal))).css('color', gpColor);
+                            $('#statGrossProfitLabel, #statGrossProfitSub').css('color', gpColor);
+                            $('#statGrossProfitBox').css({'background': gpBg, 'border-color': gpBorder});
+
+                            $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
                             $('#statTotalQty').text(soldText + ' / ' + bonusText);
-                            $('#statTotalBonusAmount').text('Rs. ' + Number(response.stats.total_bonus_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statTotalGross').text('Rs. ' + Number(response.stats.total_gross || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statTotalDiscount').text('Rs. ' + Number(response.stats.total_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            let discSubHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 9.5px;">Line: Rs. ' + Number(response.stats.inline_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
-                            if (Number(response.stats.additional_discount || 0) > 0) {
-                                discSubHtml += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 9.5px;">Extra: Rs. ' + Number(response.stats.additional_discount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
-                            }
-                            $('#statDiscountSub').html(discSubHtml);
-                            $('#statDiscountMed').text('Rs. ' + Number(response.stats.discount_medical || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statDiscountDoc').text('Rs. ' + Number(response.stats.discount_doctor || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statDiscountDist').text('Rs. ' + Number(response.stats.discount_distribution || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-                            $('#statTotalNet').text('Rs. ' + Number(response.stats.total_net || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+
+                            // Discount Cards (Matching image)
+                            let totDisc   = parseFloat(response.stats.total_discount || 0);
+                            let medDisc   = parseFloat(response.stats.discount_medical || 0);
+                            let distDisc  = parseFloat(response.stats.discount_distribution || 0);
+                            let docDisc   = parseFloat(response.stats.discount_doctor || 0);
+                            let otherDisc = parseFloat(response.stats.discount_other !== undefined ? response.stats.discount_other : (response.stats.additional_discount || 0));
+
+                            $('#statTotalDiscount').text('Rs ' + fmt(totDisc));
+                            $('#statTotalDiscountHeader').text('Rs ' + fmt(totDisc));
+                            $('#statDiscountMed').text('Rs ' + fmt(medDisc));
+                            $('#statDiscountDist').text('Rs ' + fmt(distDisc));
+                            $('#statDiscountDoc').text('Rs ' + fmt(docDisc));
+                            $('#statDiscountOther').text('Rs ' + fmt(otherDisc));
+
                             let statusHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 9.5px;"><i class="fas fa-check-circle me-0.5"></i> Posted: ' + (response.stats.posted_count || 0) + '</span>';
                             if (Number(response.stats.booked_count || 0) > 0) {
                                 statusHtml += '<span class="badge bg-info-subtle text-info border border-info-subtle ms-1" style="font-size: 9.5px;">Booked: ' + (response.stats.booked_count || 0) + '</span>';

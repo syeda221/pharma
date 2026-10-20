@@ -115,6 +115,47 @@
         text-overflow: ellipsis;
     }
 
+    /* Expenses Toggle Group */
+    .expense-toggle-group {
+        display: inline-flex;
+        align-items: center;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 20px;
+        padding: 2px;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .btn-expense-mode {
+        border: none;
+        outline: none;
+        background: transparent;
+        color: #64748b;
+        font-size: .68rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: all 0.18s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        user-select: none;
+    }
+    .btn-expense-mode:hover {
+        color: #1e293b;
+    }
+    .btn-expense-mode.active-with {
+        background: #ffffff;
+        color: #dc2626 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+    .btn-expense-mode.active-without {
+        background: #ffffff;
+        color: #059669 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+
     /* Mobile Cards Styling */
     .mob-card {
         border-radius: 12px;
@@ -457,8 +498,8 @@
     @can('profit.loss.cards.view')
     <div class="card border-0 shadow-sm mb-2 no-print" style="border-radius: 10px; background: #ffffff;">
         <div class="card-body p-2">
-            <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
-                <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center justify-content-between mb-1.5 px-1 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="fw-bold text-dark" style="font-size: .76rem; letter-spacing: -0.1px;">
                         <i class="fas fa-chart-line text-primary me-1.5"></i>Financial Performance
                     </span>
@@ -466,9 +507,22 @@
                         Margin: <strong class="text-success" id="cardProfitMarginBadge">0.0%</strong>
                     </span>
                 </div>
-                <span class="text-muted small d-none d-md-inline" style="font-size: 11px;">
-                    <i class="fas fa-coins text-warning me-1"></i>Revenue, Cost & Profit
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small d-none d-lg-inline" style="font-size: 11px;">
+                        <i class="fas fa-coins text-warning me-1"></i>Revenue, Cost & Profit
+                    </span>
+                    {{-- Toggle: With Expenses vs Without Expenses --}}
+                    <div class="expense-toggle-group" id="expenseToggleGroup" title="Toggle expenses deduction from Profit & Equity Share">
+                        <button type="button" class="btn-expense-mode active-with" data-mode="with" id="btnModeWithExpenses">
+                            <i class="fas fa-receipt"></i>
+                            <span>With Expenses</span>
+                        </button>
+                        <button type="button" class="btn-expense-mode" data-mode="without" id="btnModeWithoutExpenses">
+                            <i class="fas fa-eye-slash"></i>
+                            <span>Without Expenses</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="summary-pill-bar">
@@ -501,21 +555,21 @@
                 </div>
 
                 {{-- Total Expenses --}}
-                <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
-                    <div class="stat-label text-danger"><i class="fas fa-arrow-trend-down me-1"></i>Expenses</div>
+                <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;" id="cardExpensesBox">
+                    <div class="stat-label text-danger" id="cardExpensesLabel"><i class="fas fa-arrow-trend-down me-1"></i>Expenses</div>
                     <div class="stat-val text-danger" id="cardExpenses">Rs 0</div>
-                    <div class="stat-sub text-danger">Operating Costs</div>
+                    <div class="stat-sub text-danger" id="cardExpensesSub">Operating Costs</div>
                 </div>
 
                 {{-- Net Profit / Loss --}}
-                <div class="stat-pill" style="background: #f0f9ff; border-color: #bae6fd;">
-                    <div class="stat-label text-primary"><i class="fas fa-scale-balanced me-1"></i>Net Profit / Loss</div>
+                <div class="stat-pill" style="background: #f0f9ff; border-color: #bae6fd;" id="cardNetProfitBox">
+                    <div class="stat-label text-primary" id="cardNetProfitLabel"><i class="fas fa-scale-balanced me-1"></i>Net Profit / Loss</div>
                     <div class="stat-val text-primary" id="cardNetProfit">Rs 0</div>
-                    <div class="stat-sub text-primary">Bottom Line</div>
+                    <div class="stat-sub text-primary" id="cardNetProfitSub">Bottom Line</div>
                 </div>
 
                 {{-- Partner 1 --}}
-                <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;">
+                <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;" id="cardPartner1Box">
                     <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #7c3aed;">
                         <i class="fas fa-user-tie"></i>
                         <span>Partner 1</span>
@@ -525,11 +579,11 @@
                         </span>
                     </div>
                     <div class="stat-val" style="color: #7c3aed;" id="cardPartner1Profit">Rs 0</div>
-                    <div class="stat-sub" style="color: #7c3aed;">Equity Share</div>
+                    <div class="stat-sub" style="color: #7c3aed;" id="cardPartner1ProfitSub">Equity Share</div>
                 </div>
 
                 {{-- Partner 2 --}}
-                <div class="stat-pill" style="background: #fff7ed; border-color: #fed7aa;">
+                <div class="stat-pill" style="background: #fff7ed; border-color: #fed7aa;" id="cardPartner2Box">
                     <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #ea580c;">
                         <i class="fas fa-user-tie"></i>
                         <span>Partner 2</span>
@@ -539,7 +593,7 @@
                         </span>
                     </div>
                     <div class="stat-val" style="color: #ea580c;" id="cardPartner2Profit">Rs 0</div>
-                    <div class="stat-sub" style="color: #ea580c;">Equity Share</div>
+                    <div class="stat-sub" style="color: #ea580c;" id="cardPartner2ProfitSub">Equity Share</div>
                 </div>
             </div>
         </div>
@@ -876,6 +930,38 @@ $(document).ready(function() {
 
     var myChart = null;
     var currentNetProfit = 0;
+    var lastReportResponse = null;
+    var currentExpenseMode = localStorage.getItem('profit_loss_expense_mode') || 'with';
+
+    function applyToggleUI(mode) {
+        if (mode === 'without') {
+            $('#btnModeWithoutExpenses').addClass('active-without');
+            $('#btnModeWithExpenses').removeClass('active-with');
+        } else {
+            $('#btnModeWithExpenses').addClass('active-with');
+            $('#btnModeWithoutExpenses').removeClass('active-without');
+        }
+    }
+    applyToggleUI(currentExpenseMode);
+
+    $(document).on('click', '#btnModeWithExpenses', function(e) {
+        e.preventDefault();
+        setExpenseMode('with');
+    });
+
+    $(document).on('click', '#btnModeWithoutExpenses', function(e) {
+        e.preventDefault();
+        setExpenseMode('without');
+    });
+
+    function setExpenseMode(mode) {
+        currentExpenseMode = mode;
+        localStorage.setItem('profit_loss_expense_mode', mode);
+        applyToggleUI(mode);
+        if (lastReportResponse) {
+            renderFinancialCards(lastReportResponse);
+        }
+    }
 
     function fmt(n) {
         let num = parseFloat(n) || 0;
@@ -947,6 +1033,75 @@ $(document).ready(function() {
 
     $('.btnPrintReport').on('click', () => window.print());
 
+
+    function renderFinancialCards(data) {
+        if (!data) return;
+        let s = data.summary || {};
+        let grossRevVal = parseFloat(s.gross_revenue || 0);
+        let cogsVal     = parseFloat(s.cogs || 0);
+        let netRevVal   = parseFloat(s.net_revenue || 0);
+        let grossProf   = parseFloat(data.total_gross_profit || s.gross_profit || 0);
+        let rawExpenses = parseFloat(data.total_expenses || s.expenses || 0);
+        let bonusAmtVal = parseFloat(s.bonus_amount || 0);
+        let rawGrossVal = parseFloat(s.raw_gross_revenue || 0);
+        let discVal     = parseFloat(s.total_discount || 0);
+        let retVal      = parseFloat(s.return_amount || 0);
+
+        let isWithout = (currentExpenseMode === 'without');
+        let netProf = isWithout ? grossProf : (grossProf - rawExpenses);
+        currentNetProfit = netProf;
+
+        let marginVal = netRevVal > 0 ? ((netProf / netRevVal) * 100).toFixed(1) : 0;
+
+        $('#cardGrossRevenue').text('Rs ' + fmt(grossRevVal));
+        $('#cardGrossRevenueSub')
+            .text('After Disc. & Returns')
+            .attr('title', 'Gross: Rs ' + fmt(rawGrossVal) + ' | Disc: -Rs ' + fmt(discVal) + ' | Ret: -Rs ' + fmt(retVal));
+        $('#cardCOGS').text('Rs ' + fmt(cogsVal));
+        $('#cardBonusAmount').text('Rs ' + fmt(bonusAmtVal));
+        $('#cardNetRevenue').text('Rs ' + fmt(netRevVal));
+
+        let grossProfColor = grossProf >= 0 ? '#059669' : '#dc2626';
+        let grossSign = grossProf < 0 ? '-' : '';
+        $('#cardGrossProfit, #mobCardGrossProfit').text(grossSign + 'Rs ' + fmt(Math.abs(grossProf))).css('color', grossProfColor);
+        $('#cardGrossProfitSub')
+            .text('Revenue - COGS - Bonus')
+            .attr('title', 'Sales: Rs ' + fmt(grossRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal));
+
+        // Expenses Stat Pill
+        if (isWithout) {
+            $('#cardExpensesBox').css({'background': '#f8fafc', 'border-color': '#e2e8f0'});
+            $('#cardExpensesLabel').html('<i class="fas fa-arrow-trend-down me-1 text-muted"></i>Expenses <span class="badge bg-secondary text-white" style="font-size: 8px; padding: 1px 4px; vertical-align: middle;">EXCLUDED</span>').removeClass('text-danger').addClass('text-secondary');
+            $('#cardExpenses, #mobCardExpenses').html('<span class="text-secondary">Rs 0</span>').css('color', '#64748b');
+            $('#cardExpensesSub').html('<span class="text-muted" title="Actual Expenses: Rs ' + fmt(rawExpenses) + '">Excluded (Total: Rs ' + fmt(rawExpenses) + ')</span>').removeClass('text-danger').addClass('text-muted');
+        } else {
+            $('#cardExpensesBox').css({'background': '#fef2f2', 'border-color': '#fca5a5'});
+            $('#cardExpensesLabel').html('<i class="fas fa-arrow-trend-down me-1"></i>Expenses').removeClass('text-secondary').addClass('text-danger');
+            $('#cardExpenses, #mobCardExpenses').text('Rs ' + fmt(rawExpenses)).css('color', '#dc2626');
+            $('#cardExpensesSub').text('Operating Costs').removeClass('text-muted').addClass('text-danger');
+        }
+
+        // Net Profit / Loss Stat Pill
+        let netProfColor = netProf >= 0 ? '#2563eb' : '#dc2626';
+        let netSign = netProf < 0 ? '-' : '';
+        $('#cardNetProfit, #mobCardNetProfit').text(netSign + 'Rs ' + fmt(Math.abs(netProf))).css('color', netProfColor);
+
+        if (isWithout) {
+            $('#cardNetProfitSub').html('<span class="text-success fw-bold"><i class="fas fa-bolt me-1"></i>Before Expenses (=Gross)</span>');
+            $('#cardPartner1ProfitSub').text('Equity Share (No Exp.)');
+            $('#cardPartner2ProfitSub').text('Equity Share (No Exp.)');
+        } else {
+            $('#cardNetProfitSub').text('Bottom Line');
+            $('#cardPartner1ProfitSub').text('Equity Share');
+            $('#cardPartner2ProfitSub').text('Equity Share');
+        }
+
+        let marginClass = marginVal >= 0 ? 'text-success' : 'text-danger';
+        $('#cardProfitMarginBadge').text(marginVal + '% Margin' + (isWithout ? ' (Gross)' : '')).removeClass('text-success text-danger').addClass(marginClass);
+
+        updatePartnerShares();
+    }
+
     function fetchReport() {
         $('#loader').show();
 
@@ -967,10 +1122,12 @@ $(document).ready(function() {
                 zone_id: zoneId,
                 product_id: prodId,
                 category_id: catId,
-                customer_id: custId
+                customer_id: custId,
+                without_expenses: currentExpenseMode === 'without' ? 1 : 0
             },
             success: function(response) {
                 $('#loader').hide();
+                lastReportResponse = response;
                 renderReport(response);
             },
             error: function() {
@@ -1037,45 +1194,10 @@ $(document).ready(function() {
         profitTable.draw();
         $('#mobProfitContainer').html(mobHtml || '<div class="text-center text-muted py-3 small">No item profitability data</div>');
 
-        // 1. Financial Performance Cards
+        // 1. Financial Performance Cards (Respects With/Without Expenses Toggle)
         let s = data.summary || {};
-        let grossRevVal = parseFloat(s.gross_revenue || 0);
-        let cogsVal     = parseFloat(s.cogs || 0);
-        let netRevVal   = parseFloat(s.net_revenue || 0);
-        let grossProf   = parseFloat(data.total_gross_profit || s.gross_profit || 0);
-        let expVal      = parseFloat(data.total_expenses || s.expenses || 0);
-        let netProf     = parseFloat(data.net_profit || s.net_profit || 0);
-        let marginVal   = parseFloat(s.profit_margin || 0);
+        renderFinancialCards(data);
 
-        currentNetProfit = netProf;
-
-        let bonusAmtVal = parseFloat(s.bonus_amount || 0);
-
-        let rawGrossVal = parseFloat(s.raw_gross_revenue || 0);
-        let discVal     = parseFloat(s.total_discount || 0);
-        let retVal      = parseFloat(s.return_amount || 0);
-
-        $('#cardGrossRevenue').text('Rs ' + fmt(grossRevVal));
-        $('#cardGrossRevenueSub')
-            .text('After Disc. & Returns')
-            .attr('title', 'Gross: Rs ' + fmt(rawGrossVal) + ' | Disc: -Rs ' + fmt(discVal) + ' | Ret: -Rs ' + fmt(retVal));
-        $('#cardCOGS').text('Rs ' + fmt(cogsVal));
-        $('#cardBonusAmount').text('Rs ' + fmt(bonusAmtVal));
-        $('#cardNetRevenue').text('Rs ' + fmt(netRevVal));
-        let grossProfColor = grossProf >= 0 ? '#059669' : '#dc2626';
-        let grossSign = grossProf < 0 ? '-' : '';
-        $('#cardGrossProfit, #mobCardGrossProfit').text(grossSign + 'Rs ' + fmt(Math.abs(grossProf))).css('color', grossProfColor);
-        $('#cardGrossProfitSub')
-            .text('Revenue - COGS - Bonus')
-            .attr('title', 'Sales: Rs ' + fmt(grossRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal));
-        $('#cardExpenses, #mobCardExpenses').text('Rs ' + fmt(expVal));
-
-        let netProfColor = netProf >= 0 ? '#2563eb' : '#dc2626';
-        let netSign = netProf < 0 ? '-' : '';
-        $('#cardNetProfit, #mobCardNetProfit').text(netSign + 'Rs ' + fmt(Math.abs(netProf))).css('color', netProfColor);
-
-        let marginClass = marginVal >= 0 ? 'text-success' : 'text-danger';
-        $('#cardProfitMarginBadge').text(marginVal + '% Margin').removeClass('text-success text-danger').addClass(marginClass);
 
         // 2. Customer Tier Discounts Breakdown Cards
         let totalDiscVal = parseFloat(s.total_discount || 0);

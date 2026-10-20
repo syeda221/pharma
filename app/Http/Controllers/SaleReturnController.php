@@ -178,7 +178,22 @@ class SaleReturnController extends Controller
             $item->price = (!empty($item->price_per_piece) && $item->price_per_piece > 0) 
                 ? $item->price_per_piece 
                 : ($item->price ?? $item->per_price ?? 0);
-            $item->discount = $item->discount ?? $item->per_discount ?? 0;
+            // Discount calculations from sale item
+            $discPercent = (float)($item->discount_percent ?? 0);
+            $discAmount = (float)($item->discount_amount ?? 0);
+            $purchasedQty = (float)($item->purchased_qty > 0 ? $item->purchased_qty : ($item->qty > 0 ? $item->qty : 1));
+
+            $discountPerPiece = 0;
+            if ($discPercent > 0) {
+                $discountPerPiece = round(($item->price * $discPercent) / 100, 4);
+            } elseif ($discAmount > 0 && $purchasedQty > 0) {
+                $discountPerPiece = round($discAmount / $purchasedQty, 4);
+            }
+
+            $item->discount_percent = $discPercent;
+            $item->discount_amount = $discAmount;
+            $item->discount_per_piece = $discountPerPiece;
+            $item->discount = $discountPerPiece;
         });
         
         return view('admin_panel.sale.sale_return.create', compact('sale', 'accounts', 'returnedQtyMap'));
@@ -346,14 +361,17 @@ class SaleReturnController extends Controller
 
                 // Calculate Line Total Logic based on size mode
                 if ($sizeMode === 'by_size') {
-                    $lineTotal = round($ppm2 * $billableQty * $price, 2);
+                    $lineGross = round($ppm2 * $billableQty * $price, 2);
                 } elseif ($sizeMode === 'by_cartons' || $sizeMode === 'by_carton') {
-                    $lineTotal = round(($ppb > 0 ? ($billableQty / $ppb) : $billableQty) * $price, 2);
+                    $lineGross = round(($ppb > 0 ? ($billableQty / $ppb) : $billableQty) * $price, 2);
                 } else {
-                    $lineTotal = round($billableQty * $price, 2);
+                    $lineGross = round($billableQty * $price, 2);
                 }
                 
-                $lineTotal -= $itemDisc;
+                if ($itemDisc > $lineGross) {
+                    $itemDisc = $lineGross;
+                }
+                $lineTotal = round(max(0, $lineGross - $itemDisc), 2);
 
                 // Calculate boxes and loose pieces
                 $boxes = floor($qty / $ppb);
@@ -431,7 +449,7 @@ class SaleReturnController extends Controller
                     'updated_at' => $now,
                 ];
 
-                $subtotal += $lineTotal;
+                $subtotal += $lineGross;
                 $totalItemDiscount += $itemDisc;
             }
 

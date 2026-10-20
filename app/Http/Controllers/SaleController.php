@@ -132,6 +132,7 @@ class SaleController extends Controller
 
             $saleBonus = 0;
             $saleBonusAmount = 0;
+            $saleCogs = 0;
             if ($sale->items && $sale->items->count() > 0) {
                 foreach ($sale->items as $item) {
                     $bQty = (float)($item->bonus_qty ?? 0);
@@ -195,10 +196,29 @@ class SaleController extends Controller
 
                     $saleBonus += $bQty;
                     $saleBonusAmount += ($bQty * $basePrice);
+
+                    $soldPieces = max(0, (float)($item->total_pieces ?? $item->qty) - $bQty);
+                    $saleCogs += ($soldPieces * $basePrice);
                 }
             }
             $sale->bonus_qty = $saleBonus;
             $sale->bonus_amount = $saleBonusAmount;
+
+            $returnCogs = 0;
+            if ($sale->returns && $sale->returns->count() > 0) {
+                foreach ($sale->returns as $ret) {
+                    if ($ret->items) {
+                        foreach ($ret->items as $rItem) {
+                            $rPrice = (float)($rItem->purchase_price ?? 0);
+                            if ($rPrice <= 0 && $rItem->product) {
+                                $rPrice = (float)($rItem->product->purchase_price_per_piece ?? 0);
+                            }
+                            $returnCogs += ((float)$rItem->qty * $rPrice);
+                        }
+                    }
+                }
+            }
+            $sale->effective_cogs = ($sale->sale_status === 'returned' || $sale->sale_status == 1) ? 0 : max(0, $saleCogs - $returnCogs);
 
             $origQty = $sale->total_items > 0 ? (float) $sale->total_items : (float) $sale->qty;
             $effTotalPieces = max(0, $origQty - $returnedQty);
@@ -329,20 +349,30 @@ class SaleController extends Controller
             }
         });
 
+        $totDisc = (float) $sales->sum('effective_total_discount');
+        $medDisc = (float) $sales->sum('tier_medical_discount');
+        $docDisc = (float) $sales->sum('tier_doctor_discount');
+        $distDisc = (float) $sales->sum('tier_distribution_discount');
+        $otherDisc = max(0, $totDisc - ($medDisc + $docDisc + $distDisc));
+
         $stats = [
             'total_count' => $sales->count(),
             'total_qty' => (float) $sales->sum('effective_sold_qty'),
             'total_bonus_qty' => (float) $sales->sum('effective_bonus_qty'),
             'total_bonus_amount' => (float) $sales->sum('effective_bonus_amount'),
             'total_all_qty' => (float) $sales->sum('effective_qty'),
-            'total_gross' => (float) $sales->sum('effective_gross'),
+            'raw_gross' => (float) $sales->sum('effective_gross'),
+            'total_gross' => (float) $sales->sum('effective_net'),
+            'total_cogs' => (float) $sales->sum('effective_cogs'),
+            'total_gross_profit' => (float) $sales->sum('effective_net') - (float) $sales->sum('effective_cogs') - (float) $sales->sum('effective_bonus_amount'),
             'total_net' => (float) $sales->sum('effective_net'),
             'inline_discount' => (float) $sales->sum('effective_inline_discount'),
             'additional_discount' => (float) $sales->sum('effective_additional_discount'),
-            'total_discount' => (float) $sales->sum('effective_total_discount'),
-            'discount_medical' => (float) $sales->sum('tier_medical_discount'),
-            'discount_doctor' => (float) $sales->sum('tier_doctor_discount'),
-            'discount_distribution' => (float) $sales->sum('tier_distribution_discount'),
+            'total_discount' => $totDisc,
+            'discount_medical' => $medDisc,
+            'discount_doctor' => $docDisc,
+            'discount_distribution' => $distDisc,
+            'discount_other' => $otherDisc,
             'posted_count' => $sales->where('sale_status', 'posted')->count(),
             'draft_count' => $sales->where('sale_status', 'draft')->count(),
             'booked_count' => $sales->where('sale_status', 'booked')->count(),

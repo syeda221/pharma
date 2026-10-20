@@ -341,7 +341,12 @@
                                         <input type="hidden" name="color[]" value="{{ $item['color'] ?? '' }}">
                                         {{-- Hidden Discount to preserve refund math if needed --}}
                                         <input type="hidden" name="item_disc[]" class="item_disc"
-                                            value="{{ $item['discount'] ?? 0 }}">
+                                            value="0">
+                                        <input type="hidden" name="disc_per_piece[]" class="disc-per-piece"
+                                            value="{{ (float)($item['discount_per_piece'] ?? 0) }}">
+                                        <input type="hidden" name="disc_percent[]" class="disc-percent"
+                                            value="{{ (float)($item['discount_percent'] ?? 0) }}">
+                                        <input type="hidden" name="row_gross[]" class="row-gross" value="0">
                                         <input type="hidden" name="unit[]" value="{{ $item['unit'] ?? 'pc' }}">
                                         <input type="hidden" name="size_mode[]" class="size-mode"
                                             value="{{ $item['size_mode'] ?? 'by_pieces' }}">
@@ -405,6 +410,11 @@
                                                     Per Pc
                                                 @endif
                                             </small>
+                                            @if (($item['discount_per_piece'] ?? 0) > 0)
+                                                <small class="text-danger d-block text-end fw-semibold" style="font-size: 0.65rem;" title="Item Discount">
+                                                    Disc: {{ (float)$item['discount_percent'] > 0 ? (float)$item['discount_percent'].'%' : 'Rs. '.number_format($item['discount_per_piece'], 2) }}
+                                                </small>
+                                            @endif
                                         </td>
 
                                         {{-- Purchased Qty (Read Only) --}}
@@ -463,6 +473,7 @@
 
                                         <td><input type="text" name="total[]"
                                                 class="form-control text-end fw-bold row-total" value="0.00" readonly>
+                                            <div class="row-disc-badge text-end" style="font-size: 0.65rem;"></div>
                                         </td>
                                         <td class="text-center">
                                             <button type="button"
@@ -666,19 +677,47 @@
 
                 $row.find('.billable-qty').val(billablePieces);
 
-                let total = 0;
+                let grossTotal = 0;
 
                 if (sizeMode === 'by_size') {
-                    total = billablePieces * ppm2 * price;
+                    grossTotal = billablePieces * ppm2 * price;
                 } else if (sizeMode === 'by_cartons' || sizeMode === 'by_carton') {
                     // Price is Per Box, qty is Billable Pieces
-                    total = ppb > 0 ? (billablePieces / ppb) * price : billablePieces * price;
+                    grossTotal = ppb > 0 ? (billablePieces / ppb) * price : billablePieces * price;
                 } else {
                     // Price is Per Piece
-                    total = billablePieces * price;
+                    grossTotal = billablePieces * price;
                 }
 
-                $row.find('.row-total').val(total.toFixed(2));
+                // Discount calculation for returned billable pieces
+                const discPerPiece = num($row.find('.disc-per-piece').val());
+                const discPercent = num($row.find('.disc-percent').val());
+                let rowDiscount = 0;
+                if (discPercent > 0) {
+                    rowDiscount = Math.round((grossTotal * discPercent) / 100 * 100) / 100;
+                } else if (discPerPiece > 0) {
+                    rowDiscount = Math.round(billablePieces * discPerPiece * 100) / 100;
+                }
+
+                if (rowDiscount > grossTotal) {
+                    rowDiscount = grossTotal;
+                }
+
+                const netRowTotal = Math.max(0, grossTotal - rowDiscount);
+
+                $row.find('.item_disc').val(rowDiscount.toFixed(2));
+                $row.find('.row-gross').val(grossTotal.toFixed(2));
+                $row.find('.row-total').val(netRowTotal.toFixed(2));
+
+                // Show discount subtext under row total
+                const $discBadge = $row.find('.row-disc-badge');
+                if ($discBadge.length) {
+                    if (rowDiscount > 0) {
+                        $discBadge.html(`<span class="text-danger fw-semibold" style="font-size: 0.65rem;">Disc: -Rs. ${rowDiscount.toFixed(2)}</span>`);
+                    } else {
+                        $discBadge.html('');
+                    }
+                }
 
                 // Helper badge under Total Return Pieces
                 const $infoBadge = $row.find('.pieces-info-badge');
@@ -698,22 +737,26 @@
             }
 
             function recalcSummary() {
-                let billAmount = 0;
+                let grossSubtotal = 0;
+                let totalItemDiscount = 0;
                 let totalQty = 0;
 
                 $('#returnItems tr').each(function() {
                     const qty = num($(this).find('.quantity').val());
-                    const rowTotal = num($(this).find('.row-total').val());
+                    const rowGross = num($(this).find('.row-gross').val());
+                    const rowDisc = num($(this).find('.item_disc').val());
 
-                    billAmount += rowTotal;
+                    grossSubtotal += rowGross;
+                    totalItemDiscount += rowDisc;
                     totalQty += qty;
                 });
 
                 const extraDiscount = num($('#extraDiscount').val()); // Deduction
 
-                const net = billAmount - extraDiscount;
+                const net = Math.max(0, grossSubtotal - totalItemDiscount - extraDiscount);
 
-                $('#billAmount').val(billAmount.toFixed(2));
+                $('#billAmount').val(grossSubtotal.toFixed(2));
+                $('#itemDiscount').val(totalItemDiscount.toFixed(2));
                 $('#netAmount').val(net.toFixed(2));
 
                 if (net > 0) {

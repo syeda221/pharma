@@ -1863,15 +1863,27 @@ class ReportingController extends Controller
             ? ($finalNetLoose > 0 ? "{$finalNetBoxes} Ctn . {$finalNetLoose} Pcs" : "{$finalNetBoxes} Cartons")
             : "{$finalNetPieces} Pcs";
 
+        $withoutExpenses = filter_var($request->input('without_expenses', false), FILTER_VALIDATE_BOOLEAN)
+            || $request->input('without_expenses') === '1'
+            || $request->input('without_expenses') === 1;
+
         $adjustedGrossProfit = $totalGrossProfit - $totalBonusAmount;
-        $adjustedNetProfit = $adjustedGrossProfit - $totalExpenses;
+        $netProfitWithExpenses = $adjustedGrossProfit - $totalExpenses;
+        $netProfitWithoutExpenses = $adjustedGrossProfit;
+
+        $adjustedNetProfit = $withoutExpenses ? $netProfitWithoutExpenses : $netProfitWithExpenses;
         $profitMargin = $finalNetRevenue > 0 ? round(($adjustedNetProfit / $finalNetRevenue) * 100, 1) : 0;
+        $profitMarginWithExpenses = $finalNetRevenue > 0 ? round(($netProfitWithExpenses / $finalNetRevenue) * 100, 1) : 0;
+        $profitMarginWithoutExpenses = $finalNetRevenue > 0 ? round(($netProfitWithoutExpenses / $finalNetRevenue) * 100, 1) : 0;
 
         return response()->json([
             'products' => $productStats,
             'total_gross_profit' => round($adjustedGrossProfit, 2),
             'total_expenses' => round($totalExpenses, 2),
             'net_profit' => round($adjustedNetProfit, 2),
+            'net_profit_with_expenses' => round($netProfitWithExpenses, 2),
+            'net_profit_without_expenses' => round($netProfitWithoutExpenses, 2),
+            'without_expenses' => $withoutExpenses,
             'top_customers' => $topCustomers,
             'zone_stats' => $zoneList,
             'summary' => [
@@ -1890,7 +1902,11 @@ class ReportingController extends Controller
                 'gross_profit' => round($adjustedGrossProfit, 2),
                 'expenses' => round($totalExpenses, 2),
                 'net_profit' => round($adjustedNetProfit, 2),
+                'net_profit_with_expenses' => round($netProfitWithExpenses, 2),
+                'net_profit_without_expenses' => round($netProfitWithoutExpenses, 2),
                 'profit_margin' => $profitMargin,
+                'profit_margin_with_expenses' => $profitMarginWithExpenses,
+                'profit_margin_without_expenses' => $profitMarginWithoutExpenses,
                 'total_sold_pieces' => round($totalSoldPieces, 2),
                 'total_sold_cartons' => $totalSoldBoxes,
                 'total_sold_loose' => $totalSoldLoose,
