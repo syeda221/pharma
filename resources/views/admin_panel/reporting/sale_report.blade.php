@@ -1,4 +1,4 @@
-﻿@extends('admin_panel.layout.app')
+@extends('admin_panel.layout.app')
 
 @section('content')
 <style>
@@ -262,8 +262,13 @@
                 </div>
 
                 <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
-                    <div class="stat-label text-secondary">Gross Sale</div>
-                    <div class="stat-val text-secondary" id="pillGrossSale">Rs 0</div>
+                    <div class="stat-label text-secondary">Gross (TP)</div>
+                    <div class="stat-val text-dark" id="pillGrossSale">Rs 0</div>
+                </div>
+
+                <div class="stat-pill" style="background: #fff7ed; border-color: #fdba74;">
+                    <div class="stat-label" style="color: #c2410c;">Discounts</div>
+                    <div class="stat-val" style="color: #ea580c;" id="pillDiscounts">Rs 0</div>
                 </div>
 
                 <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
@@ -311,8 +316,14 @@
         </div>
         <div class="col-6 mb-1">
             <div class="mob-metric-card">
-                <span class="mob-metric-label"><i class="fas fa-wallet text-secondary me-1"></i>Gross Sale</span>
-                <div class="mob-metric-val text-secondary mt-1" id="mobPillGrossSale">Rs 0</div>
+                <span class="mob-metric-label"><i class="fas fa-wallet text-secondary me-1"></i>Gross (TP)</span>
+                <div class="mob-metric-val text-dark mt-1" id="mobPillGrossSale">Rs 0</div>
+            </div>
+        </div>
+        <div class="col-6 mb-1">
+            <div class="mob-metric-card">
+                <span class="mob-metric-label"><i class="fas fa-tags text-warning me-1"></i>Discounts</span>
+                <div class="mob-metric-val mt-1" style="color: #ea580c;" id="mobPillDiscounts">Rs 0</div>
             </div>
         </div>
         <div class="col-6 mb-1">
@@ -367,8 +378,9 @@
                             <th>Products</th>
                             <th style="width:75px;" class="text-center">Qty</th>
                             <th style="width:85px;" class="text-end">Price</th>
-                            <th style="width:90px;" class="text-end">Total</th>
-                            <th style="width:95px;" class="text-end">Net</th>
+                            <th style="width:95px;" class="text-end">Gross (TP)</th>
+                            <th style="width:85px;" class="text-end">Disc</th>
+                            <th style="width:95px;" class="text-end">Net Sale</th>
                             <th style="width:135px;">Returns</th>
                         </tr>
                     </thead>
@@ -438,16 +450,17 @@
                     let html = "";
                     let mobHtml = "";
                     let grandQty = 0,
-                        grandTotal = 0,
+                        grandGross = 0,
+                        grandDisc = 0,
                         grandNet = 0,
                         grandReturn = 0;
 
                     if (salesData.length === 0) {
-                        html = `<tr><td colspan="11" class="text-center text-muted py-5 fw-bold"><i class="fas fa-folder-open fa-2x d-block mb-2 text-secondary"></i>No sales records found for the selected date range.</td></tr>`;
+                        html = `<tr><td colspan="12" class="text-center text-muted py-5 fw-bold"><i class="fas fa-folder-open fa-2x d-block mb-2 text-secondary"></i>No sales records found for the selected date range.</td></tr>`;
                         mobHtml = `<div class="card border-0 shadow-sm rounded-3 text-center py-4 bg-white"><div class="card-body py-4 text-muted"><i class="fas fa-folder-open fa-2x mb-2 text-secondary"></i><p class="small fw-bold mb-0">No Sales Data Found</p></div></div>`;
                         $('#saleBody').html(html);
                         $('#saleMobileContainer').html(mobHtml);
-                        updateSingleLineSummary(0, 0, 0, 0, 0);
+                        updateSingleLineSummary(0, 0, 0, 0, 0, 0);
                         return;
                     }
 
@@ -456,13 +469,17 @@
                         let qtyArr = s.qty ? s.qty.split(',') : ['0'];
                         let qtyPiecesArr = s.total_pieces ? s.total_pieces.split(',') : (s.qty_decimal ? s.qty_decimal.split(',') : qtyArr);
                         let price = s.per_price ? s.per_price.split(',').join('<br>') : '-';
-                        let total = s.per_total ? s.per_total.split(',').join('<br>') : '-';
 
                         let rowQty = qtyPiecesArr.reduce((a, b) => parseFloat(a) + parseFloat(b || 0), 0);
                         grandQty += rowQty;
 
-                        let rowTotal = s.per_total ? s.per_total.split(',').reduce((a, b) => parseFloat(a) + parseFloat(b || 0), 0) : 0;
-                        grandTotal += parseFloat(rowTotal);
+                        let rowGross = parseFloat(s.gross_amount || 0);
+                        if (rowGross === 0 && s.per_total) {
+                            rowGross = s.per_total.split(',').reduce((a, b) => parseFloat(a) + parseFloat(b || 0), 0);
+                        }
+                        let rowDisc = parseFloat(s.discount_amount || 0);
+                        grandGross += rowGross;
+                        grandDisc += rowDisc;
                         grandNet += parseFloat(s.total_net || 0);
 
                         let returnHtml = "";
@@ -478,7 +495,7 @@
                         let invDisplay = s.invoice_no || ('INVSLE-' + s.id);
 
                         // Desktop Row
-                        html += `<tr data-qty="${rowQty}" data-total="${rowTotal}" data-net="${s.total_net}" data-return="${returnTotal}">
+                        html += `<tr data-qty="${rowQty}" data-gross="${rowGross}" data-discount="${rowDisc}" data-net="${s.total_net}" data-return="${returnTotal}">
                             <td class="text-center text-muted fw-bold">${i+1}</td>
                             <td class="small text-nowrap">${s.created_at}</td>
                             <td class="font-monospace fw-bold text-primary">${invDisplay}</td>
@@ -487,8 +504,9 @@
                             <td>${products}</td>
                             <td class="fw-semibold text-center">${qtyArr.join('<br>')}</td>
                             <td class="text-end">${price}</td>
-                            <td class="text-end">${total}</td>
-                            <td class="fw-bold text-dark text-end">${parseFloat(s.total_net || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                            <td class="text-end fw-semibold">Rs ${rowGross.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                            <td class="text-end text-danger">${rowDisc > 0 ? 'Rs ' + rowDisc.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '-'}</td>
+                            <td class="fw-bold text-dark text-end">Rs ${parseFloat(s.total_net || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                             <td>${returnHtml || '-'}</td>
                         </tr>`;
 
@@ -512,15 +530,19 @@
                             </div>
                             <div class="border-top pt-2">
                                 <div class="row g-1 text-center" style="font-size: 11px;">
-                                    <div class="col-4 border-end">
+                                    <div class="col-3 border-end">
                                         <span class="text-muted d-block" style="font-size: 10px;">Qty</span>
                                         <strong class="text-dark">${rowQty}</strong>
                                     </div>
-                                    <div class="col-4 border-end">
+                                    <div class="col-3 border-end">
                                         <span class="text-muted d-block" style="font-size: 10px;">Gross</span>
-                                        <strong class="text-dark">Rs ${parseFloat(rowTotal).toLocaleString(undefined, {minimumFractionDigits:2})}</strong>
+                                        <strong class="text-dark">Rs ${rowGross.toLocaleString(undefined, {minimumFractionDigits:2})}</strong>
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-3 border-end">
+                                        <span class="text-muted d-block" style="font-size: 10px;">Disc</span>
+                                        <strong class="text-danger">${rowDisc > 0 ? 'Rs ' + rowDisc.toLocaleString(undefined, {minimumFractionDigits:2}) : '-'}</strong>
+                                    </div>
+                                    <div class="col-3">
                                         <span class="text-muted d-block" style="font-size: 10px;">Net Sale</span>
                                         <strong class="text-success">Rs ${parseFloat(s.total_net).toLocaleString(undefined, {minimumFractionDigits:2})}</strong>
                                     </div>
@@ -534,7 +556,8 @@
                         <td colspan="6" class="text-end">Grand Total:</td>
                         <td id="grandQty" class="text-center">${grandQty.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                         <td>-</td>
-                        <td id="grandTotal" class="text-end">${grandTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                        <td id="grandGross" class="text-end">${grandGross.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                        <td id="grandDiscount" class="text-end text-danger">${grandDisc.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                         <td id="grandNet" class="text-end">${grandNet.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                         <td id="grandReturn">${grandReturn.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                     </tr>`;
@@ -542,12 +565,12 @@
                     $('#saleBody').html(html);
                     $('#saleMobileContainer').html(mobHtml);
 
-                    updateSingleLineSummary(salesData.length, grandQty, grandTotal, grandReturn, grandNet);
+                    updateSingleLineSummary(salesData.length, grandQty, grandGross, grandDisc, grandReturn, grandNet);
                 },
                 error: function(xhr) {
                     $(".loader").hide();
                     $(".sale-table-wrap").show();
-                    $('#saleBody').html(`<tr><td colspan="11" class="text-center text-danger py-4 fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> Failed to load sales data. Please check connection and try again.</td></tr>`);
+                    $('#saleBody').html(`<tr><td colspan="12" class="text-center text-danger py-4 fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> Failed to load sales data. Please check connection and try again.</td></tr>`);
                 }
             });
         }
@@ -567,13 +590,14 @@
         loadSaleReport();
 
         // Function to update Summary Metrics (Desktop & Mobile)
-        function updateSingleLineSummary(count, qty, gross, returns, net) {
+        function updateSingleLineSummary(count, qty, gross, discount, returns, net) {
             let grossProfit   = net - currentCogs;
             let currentProfit = grossProfit - currentExpenses;
 
             let formattedCount = count.toLocaleString();
             let formattedQty   = qty.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + ' Pcs';
             let formattedGross = 'Rs ' + gross.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+            let formattedDisc  = 'Rs ' + discount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
             let formattedRet   = 'Rs ' + returns.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
             let formattedNet   = 'Rs ' + net.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
             let formattedGP    = 'Rs ' + grossProfit.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -584,6 +608,7 @@
             $('#pillTotalInvoices').text(formattedCount);
             $('#pillTotalQty').text(formattedQty);
             $('#pillGrossSale').text(formattedGross);
+            $('#pillDiscounts').text(formattedDisc);
             $('#pillTotalReturns').text(formattedRet);
             $('#pillNetSale').text(formattedNet);
             $('#pillGrossProfit').text(formattedGP);
@@ -594,6 +619,7 @@
             $('#mobPillTotalInvoices').text(formattedCount);
             $('#mobPillTotalQty').text(formattedQty);
             $('#mobPillGrossSale').text(formattedGross);
+            $('#mobPillDiscounts').text(formattedDisc);
             $('#mobPillTotalReturns').text(formattedRet);
             $('#mobPillNetSale').text(formattedNet);
             $('#mobPillGrossProfit').text(formattedGP);
@@ -622,7 +648,7 @@
         // Export CSV Handler
         $(document).on('click', '.btnExportCsvTrigger', function() {
             let csv = [];
-            csv.push(['#', 'Date & Time', 'Invoice', 'Customer', 'Reference', 'Products', 'Qty', 'Price', 'Total', 'Net Amount', 'Returns'].join(','));
+            csv.push(['#', 'Date & Time', 'Invoice', 'Customer', 'Reference', 'Products', 'Qty', 'Price', 'Gross (TP)', 'Discount', 'Net Amount', 'Returns'].join(','));
             $('#saleBody tr').each(function() {
                 if ($(this).attr('id') === 'grandTotalRow') return;
                 let row = [];

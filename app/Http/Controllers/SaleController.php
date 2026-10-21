@@ -210,17 +210,41 @@ class SaleController extends Controller
                     if ($ret->items) {
                         foreach ($ret->items as $rItem) {
                             $rPrice = (float)($rItem->purchase_price ?? 0);
+                            $rvData = null;
+                            if (!empty($rItem->color)) {
+                                $b64 = base64_decode($rItem->color, true);
+                                $rvData = ($b64 !== false) ? json_decode($b64, true) : json_decode($rItem->color, true);
+                            }
+                            if ($rPrice <= 0 && is_array($rvData) && isset($rvData['purch_price']) && (float)$rvData['purch_price'] > 0) {
+                                $rPrice = (float)$rvData['purch_price'];
+                            }
                             if ($rPrice <= 0 && $rItem->product) {
-                                $rPrice = (float)($rItem->product->purchase_price_per_piece ?? 0);
+                                if (!empty($rItem->product->color)) {
+                                    $prodVariants = json_decode($rItem->product->color, true);
+                                    if (is_array($prodVariants)) {
+                                        $matchedVar = null;
+                                        if (!empty($rvData['barcode'])) $matchedVar = collect($prodVariants)->firstWhere('barcode', $rvData['barcode']);
+                                        if (!$matchedVar && !empty($rvData['name'])) $matchedVar = collect($prodVariants)->firstWhere('name', $rvData['name']);
+                                        if (!$matchedVar && count($prodVariants) === 1) $matchedVar = $prodVariants[0];
+                                        if ($matchedVar && isset($matchedVar['purch_price']) && (float)$matchedVar['purch_price'] > 0) {
+                                            $rPrice = (float)$matchedVar['purch_price'];
+                                        }
+                                    }
+                                }
+                                if ($rPrice <= 0 && (float)($rItem->product->purchase_price_per_piece ?? 0) > 0) {
+                                    $rPrice = (float)$rItem->product->purchase_price_per_piece;
+                                }
                             }
                             $returnCogs += ((float)$rItem->qty * $rPrice);
                         }
                     }
                 }
             }
+            $sale->sale_cogs = ($sale->sale_status === 'returned' || $sale->sale_status == 1) ? 0 : $saleCogs;
+            $sale->return_cogs = ($sale->sale_status === 'returned' || $sale->sale_status == 1) ? 0 : $returnCogs;
             $sale->effective_cogs = ($sale->sale_status === 'returned' || $sale->sale_status == 1) ? 0 : max(0, $saleCogs - $returnCogs);
 
-            $origQty = $sale->total_items > 0 ? (float) $sale->total_items : (float) $sale->qty;
+            $origQty = $sale->items && $sale->items->count() > 0 ? (float) $sale->items->sum('total_pieces') : ($sale->total_items > 0 ? (float) $sale->total_items : (float) $sale->qty);
             $effTotalPieces = max(0, $origQty - $returnedQty);
             $sale->effective_qty = $effTotalPieces;
 
@@ -307,7 +331,7 @@ class SaleController extends Controller
                     foreach ($activeTiersArray as $t) {
                         $pct = (float)($tiers[$t] ?? 0);
                         if ($pct > 0) {
-                            $amt = round(($grossSubtotal * $pct) / 100, 2);
+                            $amt = round(($sale->effective_gross * $pct) / 100, 2);
                             if ($t === 'medical') $tierMedicalDisc += $amt;
                             elseif ($t === 'doctor') $tierDoctorDisc += $amt;
                             elseif ($t === 'distribution') $tierDistributionDisc += $amt;
@@ -315,7 +339,7 @@ class SaleController extends Controller
                     }
                 } else {
                     // Fallback: assign remaining inline discount to doctor tier (standard)
-                    $tierDoctorDisc += $inlineVal;
+                    $tierDoctorDisc += ($sale->effective_inline_discount ?? $inlineVal);
                 }
             }
 
@@ -355,16 +379,60 @@ class SaleController extends Controller
         $distDisc = (float) $sales->sum('tier_distribution_discount');
         $otherDisc = max(0, $totDisc - ($medDisc + $docDisc + $distDisc));
 
+        $rawInvoiceNet = (float) $sales->sum(function($s) {
+            return ($s->sale_status === 'returned' || $s->sale_status == 1) ? 0 : (float) $s->total_net;
+        });
+        $totalReturned = (float) $sales->sum('total_returned');
+        $effectiveGross = (float) $sales->sum('effective_gross');
+        $rawGross = (float) $sales->sum(function($s) {
+            $inlineVal = $s->items ? (float) $s->items->sum('discount_amount') : 0;
+            $billAmount = $s->total_bill_amount > 0 ? (float) $s->total_bill_amount : (float) $s->per_total;
+            return $billAmount + $inlineVal;
+        });
+        $returnGross = max(0, $rawGross - $effectiveGross);
+
+        $rawSaleCogs = (float) $sales->sum('sale_cogs');
+        $rawReturnCogs = (float) $sales->sum('return_cogs');
+        $totalCogs = max(0, $rawSaleCogs - $rawReturnCogs);
+
+        $totalItemsPieces = (float) $sales->sum(function($s) {
+            return $s->items ? (float)$s->items->sum('total_pieces') : 0;
+        });
+        $totalBonusPieces = (float) $sales->sum('effective_bonus_qty');
+        $allReturnQuery = DB::table('sale_return_items as sri')
+            ->join('sale_returns as sr', 'sr.id', '=', 'sri.sale_return_id');
+        if ($request->customer_id && $request->customer_id !== 'all') {
+            $allReturnQuery->where('sr.customer_id', $request->customer_id);
+        }
+        if ($request->start_date && $request->end_date) {
+            $allReturnQuery->whereBetween('sr.created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
+        }
+        $totalReturnPieces = (float) $allReturnQuery->sum('sri.qty');
+        $effectiveSoldPieces = max(0, $totalItemsPieces - $totalBonusPieces - $totalReturnPieces);
+
+        $rawDiscount = (float) $sales->sum(function($s) {
+            $inlineVal = $s->items ? (float) $s->items->sum('discount_amount') : 0;
+            $extra = (float)($s->total_extradiscount ?? 0);
+            return $inlineVal + $extra;
+        });
+        $invoicedNet = (float) $sales->sum('total_net');
+
         $stats = [
             'total_count' => $sales->count(),
-            'total_qty' => (float) $sales->sum('effective_sold_qty'),
-            'total_bonus_qty' => (float) $sales->sum('effective_bonus_qty'),
+            'total_qty' => $effectiveSoldPieces > 0 ? $effectiveSoldPieces : (float) $sales->sum('effective_sold_qty'),
+            'total_bonus_qty' => $totalBonusPieces,
             'total_bonus_amount' => (float) $sales->sum('effective_bonus_amount'),
             'total_all_qty' => (float) $sales->sum('effective_qty'),
-            'raw_gross' => (float) $sales->sum('effective_gross'),
+            'raw_gross' => $rawGross,
+            'raw_discount' => $rawDiscount,
+            'invoiced_net' => $invoicedNet,
+            'return_gross' => $returnGross,
+            'effective_gross' => $effectiveGross,
+            'raw_invoice_net' => $rawInvoiceNet,
+            'total_returned' => $totalReturned,
             'total_gross' => (float) $sales->sum('effective_net'),
-            'total_cogs' => (float) $sales->sum('effective_cogs'),
-            'total_gross_profit' => (float) $sales->sum('effective_net') - (float) $sales->sum('effective_cogs') - (float) $sales->sum('effective_bonus_amount'),
+            'total_cogs' => $totalCogs,
+            'total_gross_profit' => (float) $sales->sum('effective_net') - $totalCogs - (float) $sales->sum('effective_bonus_amount'),
             'total_net' => (float) $sales->sum('effective_net'),
             'inline_discount' => (float) $sales->sum('effective_inline_discount'),
             'additional_discount' => (float) $sales->sum('effective_additional_discount'),

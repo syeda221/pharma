@@ -132,13 +132,19 @@
                         </span>
                     </div>
 
-                    {{-- 2. MID: Date Range Inputs --}}
+                    {{-- 2. MID: Date Range Inputs & Return Mode Toggle --}}
                     <div class="d-flex align-items-center gap-2 me-auto flex-wrap">
                         <label for="filterFromDateDesk" class="sale-filter-label mb-0 ms-1 me-1">From:</label>
-                        <input type="date" name="from_date" id="filterFromDateDesk" class="form-control form-control-sm fw-bold" value="{{ date('Y-m-01') }}" style="height: 32px; width: 135px; font-size: .78rem; border-radius: 6px;">
+                        <input type="date" name="from_date" id="filterFromDateDesk" class="form-control form-control-sm fw-bold" value="{{ date('Y-m-01') }}" style="height: 32px; width: 130px; font-size: .78rem; border-radius: 6px;">
                         
-                        <label for="filterToDateDesk" class="sale-filter-label mb-0 ms-3 me-1">To:</label>
-                        <input type="date" name="to_date" id="filterToDateDesk" class="form-control form-control-sm fw-bold" value="{{ date('Y-m-d') }}" style="height: 32px; width: 135px; font-size: .78rem; border-radius: 6px;">
+                        <label for="filterToDateDesk" class="sale-filter-label mb-0 ms-2 me-1">To:</label>
+                        <input type="date" name="to_date" id="filterToDateDesk" class="form-control form-control-sm fw-bold" value="{{ date('Y-m-d') }}" style="height: 32px; width: 130px; font-size: .78rem; border-radius: 6px;">
+
+                        <label for="filterReturnModeDesk" class="sale-filter-label mb-0 ms-2 me-1 text-primary"><i class="fas fa-sync-alt me-1"></i>Returns:</label>
+                        <select name="return_mode" id="filterReturnModeDesk" class="form-select form-select-sm fw-bold returnModeSelect" style="height: 32px; width: 175px; font-size: .78rem; border-radius: 6px; border-color: #93c5fd; background-color: #eff6ff;">
+                            <option value="sale_date" selected>By Sale Date (Audit)</option>
+                            <option value="transaction_date">By Return Date (Accounts)</option>
+                        </select>
                     </div>
 
                     {{-- 3. LAST: Action Buttons with X-Axis Gap --}}
@@ -158,8 +164,18 @@
                     </div>
                 </div>
 
-                {{-- Bottom Section: Customer, Product, Category, Brand Dropdowns --}}
+                {{-- Bottom Section: Zone, Customer, Product, Category, Brand Dropdowns --}}
                 <div class="row g-2">
+                    <div class="col-md-2">
+                        <label for="filterZoneDesk" class="sale-filter-label mb-1">Zone (Multi):</label>
+                        <select name="zone_id[]" id="filterZoneDesk" class="form-select form-select-sm select2-multi filterZoneSelect" multiple data-placeholder="All Zones">
+                            @if(isset($zones))
+                                @foreach($zones as $z)
+                                    <option value="{{ $z->id }}">{{ $z->zone }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
                     <div class="col-md-3">
                         <label for="filterCustomerDesk" class="sale-filter-label mb-1">Customer (Multi):</label>
                         <select name="customer_id[]" id="filterCustomerDesk" class="form-select form-select-sm select2-multi filterCustomerSelect" multiple data-placeholder="All Customers">
@@ -176,7 +192,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="filterCategoryDesk" class="sale-filter-label mb-1">Category (Multi):</label>
                         <select name="category_id[]" id="filterCategoryDesk" class="form-select form-select-sm select2-multi filterCategorySelect" multiple data-placeholder="All Categories">
                             @foreach($categories as $cat)
@@ -184,7 +200,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label for="filterBrandDesk" class="sale-filter-label mb-1">Brand (Multi):</label>
                         <select name="brand_id[]" id="filterBrandDesk" class="form-select form-select-sm select2-multi filterBrandSelect" multiple data-placeholder="All Brands">
                             @foreach($brands as $b)
@@ -203,6 +219,18 @@
         <div class="card-body p-3">
             <form id="reportFilterFormMobile">
                 <div class="row g-2">
+                    {{-- 0. Zone --}}
+                    <div class="col-12 mb-1">
+                        <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Zone</label>
+                        <select name="zone_id[]" class="form-select form-select-sm select2-multi filterZoneSelect" multiple data-placeholder="-- All Zones --">
+                            @if(isset($zones))
+                                @foreach($zones as $z)
+                                    <option value="{{ $z->id }}">{{ $z->zone }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+
                     {{-- 1. Customer --}}
                     <div class="col-12 mb-1">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">Customer</label>
@@ -231,6 +259,15 @@
                     <div class="col-6 mb-1">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">To Date</label>
                         <input type="date" name="to_date" id="filterToDateMob" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" style="font-size: 11px;">
+                    </div>
+
+                    {{-- Return Mode Toggle --}}
+                    <div class="col-12 mb-1">
+                        <label class="form-label mb-1 fw-bold text-primary" style="font-size: 11px;"><i class="fas fa-sync-alt me-1"></i>Returns Filter Mode</label>
+                        <select name="return_mode" id="filterReturnModeMob" class="form-select form-select-sm fw-bold returnModeSelect" style="font-size: 11px; border-color: #93c5fd; background-color: #eff6ff;">
+                            <option value="sale_date" selected>By Sale Date (Audit Mode)</option>
+                            <option value="transaction_date">By Return Date (Accounts Mode)</option>
+                        </select>
                     </div>
 
                     {{-- 4. Category --}}
@@ -299,19 +336,24 @@
                     <div class="stat-val text-primary" id="pillSoldQty">0</div>
                 </div>
 
-                <div class="stat-pill" style="background: #fffbeb; border-color: #fde047;">
-                    <div class="stat-label" style="color: #b45309;">Ret Qty</div>
-                    <div class="stat-val text-warning" id="pillReturnQty">0</div>
-                </div>
-
-                <div class="stat-pill" style="background: #f0f9ff; border-color: #bae6fd;">
-                    <div class="stat-label text-info">Net Qty</div>
-                    <div class="stat-val text-info" id="pillNetQty">0</div>
+                <div class="stat-pill" style="background: #fdf4ff; border-color: #f0abfc;">
+                    <div class="stat-label" style="color: #a21caf;">Bonus Qty</div>
+                    <div class="stat-val" style="color: #86198f;" id="pillBonusQty">0</div>
                 </div>
 
                 <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
-                    <div class="stat-label text-secondary">Gross Sales</div>
+                    <div class="stat-label text-secondary">Gross (TP)</div>
                     <div class="stat-val text-dark" id="pillGrossSales">Rs 0.00</div>
+                </div>
+
+                <div class="stat-pill" style="background: #fff7ed; border-color: #fdba74;">
+                    <div class="stat-label" style="color: #c2410c;">Discounts</div>
+                    <div class="stat-val" style="color: #ea580c;" id="pillDiscounts">Rs 0.00</div>
+                </div>
+
+                <div class="stat-pill" style="background: #fffbeb; border-color: #fde047;">
+                    <div class="stat-label" style="color: #b45309;">Ret Qty</div>
+                    <div class="stat-val text-warning" id="pillReturnQty">0</div>
                 </div>
 
                 <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
@@ -350,20 +392,26 @@
         </div>
         <div class="col-6 mb-1">
             <div class="mob-metric-card">
+                <span class="mob-metric-label"><i class="fas fa-gift me-1" style="color: #a21caf;"></i>Bonus Qty</span>
+                <div class="mob-metric-val mt-1" style="color: #86198f;" id="mobMetricBonusQty">0.00</div>
+            </div>
+        </div>
+        <div class="col-6 mb-1">
+            <div class="mob-metric-card">
+                <span class="mob-metric-label"><i class="fas fa-wallet text-secondary me-1"></i>Gross (TP)</span>
+                <div class="mob-metric-val text-dark mt-1" id="mobMetricGrossSales">Rs 0.00</div>
+            </div>
+        </div>
+        <div class="col-6 mb-1">
+            <div class="mob-metric-card">
+                <span class="mob-metric-label"><i class="fas fa-tags text-warning me-1"></i>Discounts</span>
+                <div class="mob-metric-val mt-1" style="color: #ea580c;" id="mobMetricDiscounts">Rs 0.00</div>
+            </div>
+        </div>
+        <div class="col-6 mb-1">
+            <div class="mob-metric-card">
                 <span class="mob-metric-label"><i class="fas fa-undo text-warning me-1"></i>Return Qty</span>
                 <div class="mob-metric-val text-warning mt-1" id="mobMetricReturnQty">0.00</div>
-            </div>
-        </div>
-        <div class="col-6 mb-1">
-            <div class="mob-metric-card">
-                <span class="mob-metric-label"><i class="fas fa-chart-line text-info me-1"></i>Net Qty</span>
-                <div class="mob-metric-val text-info mt-1" id="mobMetricNetQty">0.00</div>
-            </div>
-        </div>
-        <div class="col-6 mb-1">
-            <div class="mob-metric-card">
-                <span class="mob-metric-label"><i class="fas fa-wallet text-secondary me-1"></i>Gross Sales</span>
-                <div class="mob-metric-val text-dark mt-1" id="mobMetricGrossSales">Rs 0.00</div>
             </div>
         </div>
         <div class="col-6 mb-1">
@@ -372,10 +420,10 @@
                 <div class="mob-metric-val text-danger mt-1" id="mobMetricReturnSales">Rs 0.00</div>
             </div>
         </div>
-        <div class="col-6 mb-1">
-            <div class="mob-metric-card">
-                <span class="mob-metric-label"><i class="fas fa-check-circle text-success me-1"></i>Net Sales</span>
-                <div class="mob-metric-val text-success mt-1" id="mobMetricNetSales">Rs 0.00</div>
+        <div class="col-12 mb-1">
+            <div class="mob-metric-card" style="background: #f0fdf4; border-color: #86efac;">
+                <span class="mob-metric-label text-success"><i class="fas fa-check-circle text-success me-1"></i>Net Sales (Final Revenue)</span>
+                <div class="mob-metric-val text-success mt-1 fs-5" id="mobMetricNetSales">Rs 0.00</div>
             </div>
         </div>
     </div>
@@ -405,11 +453,13 @@
                 });
             }
 
-            // Sync Mobile & Desktop Date Inputs
+            // Sync Mobile & Desktop Date and Filter Inputs
             $('#filterFromDateDesk').on('change', function() { $('#filterFromDateMob').val($(this).val()); });
             $('#filterFromDateMob').on('change', function() { $('#filterFromDateDesk').val($(this).val()); });
             $('#filterToDateDesk').on('change', function() { $('#filterToDateMob').val($(this).val()); });
             $('#filterToDateMob').on('change', function() { $('#filterToDateDesk').val($(this).val()); });
+            $('#filterReturnModeDesk').on('change', function() { $('#filterReturnModeMob').val($(this).val()); });
+            $('#filterReturnModeMob').on('change', function() { $('#filterReturnModeDesk').val($(this).val()); });
 
             function loadReportData() {
                 $('#reportDataContainer').html(`
@@ -434,9 +484,11 @@
                             let custVal = res.summary.total_customers || 0;
                             let invVal  = res.summary.total_invoices || 0;
                             let soldVal = res.summary.total_qty || '0.00';
+                            let bonusVal = res.summary.total_bonus_qty || '0.00';
                             let retQtyVal = res.summary.total_return_qty || '0.00';
                             let netQtyVal = res.summary.net_qty || '0.00';
                             let grossVal = res.summary.gross_amount || 'Rs 0.00';
+                            let discVal = res.summary.discount_amount || 'Rs 0.00';
                             let retSalesVal = res.summary.return_amount || 'Rs 0.00';
                             let netSalesVal = res.summary.net_sale_amount || 'Rs 0.00';
 
@@ -444,9 +496,10 @@
                             $('#pillCustomers').text(custVal);
                             $('#pillInvoices').text(invVal);
                             $('#pillSoldQty').text(soldVal);
-                            $('#pillReturnQty').text(retQtyVal);
-                            $('#pillNetQty').text(netQtyVal);
+                            $('#pillBonusQty').text(bonusVal);
                             $('#pillGrossSales').text(grossVal);
+                            $('#pillDiscounts').text(discVal);
+                            $('#pillReturnQty').text(retQtyVal);
                             $('#pillReturnSales').text(retSalesVal);
                             $('#pillNetSales').text(netSalesVal);
 
@@ -454,9 +507,10 @@
                             $('#mobMetricCustomers').text(custVal);
                             $('#mobMetricInvoices').text(invVal);
                             $('#mobMetricSoldQty').text(soldVal);
-                            $('#mobMetricReturnQty').text(retQtyVal);
-                            $('#mobMetricNetQty').text(netQtyVal);
+                            $('#mobMetricBonusQty').text(bonusVal);
                             $('#mobMetricGrossSales').text(grossVal);
+                            $('#mobMetricDiscounts').text(discVal);
+                            $('#mobMetricReturnQty').text(retQtyVal);
                             $('#mobMetricReturnSales').text(retSalesVal);
                             $('#mobMetricNetSales').text(netSalesVal);
                         }
@@ -487,16 +541,18 @@
                                                     <thead>
                                                         <tr>
                                                             <th class="text-center" style="width: 35px;">#</th>
-                                                            <th style="width: 90px;">CODE</th>
+                                                            <th style="width: 85px;">CODE</th>
                                                             <th>PRODUCT NAME</th>
-                                                            <th style="width: 140px;">BRAND / CATEGORY</th>
-                                                            <th class="text-center" style="width: 75px;">SOLD QTY</th>
-                                                            <th class="text-end" style="width: 95px;">AVG PRICE</th>
-                                                            <th class="text-end" style="width: 105px;">GROSS AMT</th>
-                                                            <th class="text-center" style="width: 70px;">RET QTY</th>
-                                                            <th class="text-end" style="width: 95px;">RET AMT</th>
-                                                            <th class="text-center" style="width: 70px;">NET QTY</th>
-                                                            <th class="text-end" style="width: 110px;">NET AMT</th>
+                                                            <th style="width: 125px;">BRAND / CAT</th>
+                                                            <th class="text-center" style="width: 65px;">SOLD</th>
+                                                            <th class="text-center" style="width: 65px;">BONUS</th>
+                                                            <th class="text-end" style="width: 85px;">AVG TP</th>
+                                                            <th class="text-end" style="width: 95px;">GROSS (TP)</th>
+                                                            <th class="text-end" style="width: 85px;">DISC</th>
+                                                            <th class="text-center" style="width: 65px;">RET QTY</th>
+                                                            <th class="text-end" style="width: 85px;">RET AMT</th>
+                                                            <th class="text-center" style="width: 65px;">NET QTY</th>
+                                                            <th class="text-end" style="width: 105px;">NET VALUE</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>`;
@@ -506,10 +562,12 @@
                                             <td class="text-center text-muted fw-bold">${idx + 1}</td>
                                             <td><span class="font-monospace text-dark">${p.product_code}</span></td>
                                             <td class="fw-semibold text-dark">${p.product_name}</td>
-                                            <td class="text-muted">${p.brand_name} / ${p.category_name}</td>
+                                            <td class="text-muted small">${p.brand_name} / ${p.category_name}</td>
                                             <td class="text-center fw-bold text-dark">${parseFloat(p.sold_qty).toLocaleString()}</td>
-                                            <td class="text-end">Rs ${parseFloat(p.avg_price).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                            <td class="text-center text-info fw-bold">${p.bonus_qty > 0 ? parseFloat(p.bonus_qty).toLocaleString() : '-'}</td>
+                                            <td class="text-end text-muted">Rs ${parseFloat(p.avg_price).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                                             <td class="text-end fw-semibold">Rs ${parseFloat(p.gross_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                            <td class="text-end text-danger">${p.discount_amount > 0 ? 'Rs ' + parseFloat(p.discount_amount).toLocaleString('en-US', {minimumFractionDigits: 2}) : '-'}</td>
                                             <td class="text-center text-secondary">${p.return_qty > 0 ? parseFloat(p.return_qty).toLocaleString() : '-'}</td>
                                             <td class="text-end text-danger">${p.return_amount > 0 ? 'Rs ' + parseFloat(p.return_amount).toLocaleString('en-US', {minimumFractionDigits: 2}) : '-'}</td>
                                             <td class="text-center fw-bold text-dark">${parseFloat(p.net_qty).toLocaleString()}</td>
@@ -522,8 +580,10 @@
                                                         <tr>
                                                             <td colspan="4" class="text-dark">SUBTOTAL (${cust.customer_name})</td>
                                                             <td class="text-center text-dark">${parseFloat(cust.sold_qty).toLocaleString()}</td>
+                                                            <td class="text-center text-info">${parseFloat(cust.bonus_qty || 0).toLocaleString()}</td>
                                                             <td></td>
                                                             <td class="text-end text-dark">Rs ${parseFloat(cust.gross_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                                            <td class="text-end text-danger">Rs ${parseFloat(cust.discount_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                                                             <td class="text-center text-secondary">${parseFloat(cust.return_qty).toLocaleString()}</td>
                                                             <td class="text-end text-danger">Rs ${parseFloat(cust.return_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                                                             <td class="text-center text-dark">${parseFloat(cust.net_qty).toLocaleString()}</td>
@@ -554,24 +614,28 @@
                                                             <strong class="text-dark">${parseFloat(p.sold_qty).toLocaleString()}</strong>
                                                         </div>
                                                         <div class="col-4 border-end">
-                                                            <span class="text-muted d-block" style="font-size: 10px;">Avg Price</span>
-                                                            <strong class="text-dark">Rs ${parseFloat(p.avg_price).toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>
+                                                            <span class="text-muted d-block" style="font-size: 10px;">Bonus Qty</span>
+                                                            <strong class="text-info">${p.bonus_qty > 0 ? parseFloat(p.bonus_qty).toLocaleString() : '0'}</strong>
                                                         </div>
                                                         <div class="col-4">
-                                                            <span class="text-muted d-block" style="font-size: 10px;">Gross</span>
+                                                            <span class="text-muted d-block" style="font-size: 10px;">Avg TP</span>
+                                                            <strong class="text-dark">Rs ${parseFloat(p.avg_price).toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>
+                                                        </div>
+                                                        <div class="col-4 border-end pt-1 border-top mt-1">
+                                                            <span class="text-muted d-block" style="font-size: 10px;">Gross (TP)</span>
                                                             <strong class="text-dark">Rs ${parseFloat(p.gross_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>
                                                         </div>
                                                         <div class="col-4 border-end pt-1 border-top mt-1">
-                                                            <span class="text-muted d-block" style="font-size: 10px;">Ret Qty</span>
-                                                            <strong class="text-warning">${p.return_qty > 0 ? parseFloat(p.return_qty).toLocaleString() : '-'}</strong>
-                                                        </div>
-                                                        <div class="col-4 border-end pt-1 border-top mt-1">
-                                                            <span class="text-muted d-block" style="font-size: 10px;">Ret Amount</span>
-                                                            <strong class="text-danger">${p.return_amount > 0 ? 'Rs ' + parseFloat(p.return_amount).toLocaleString('en-US', {minimumFractionDigits: 2}) : '-'}</strong>
+                                                            <span class="text-muted d-block" style="font-size: 10px;">Discount</span>
+                                                            <strong class="text-danger">${p.discount_amount > 0 ? 'Rs ' + parseFloat(p.discount_amount).toLocaleString('en-US', {minimumFractionDigits: 2}) : '-'}</strong>
                                                         </div>
                                                         <div class="col-4 pt-1 border-top mt-1">
-                                                            <span class="text-muted d-block" style="font-size: 10px;">Net Qty / Amt</span>
-                                                            <strong class="text-success">${parseFloat(p.net_qty).toLocaleString()} / Rs ${parseFloat(p.net_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</strong>
+                                                            <span class="text-muted d-block" style="font-size: 10px;">Ret Qty / Amt</span>
+                                                            <strong class="text-warning">${p.return_qty > 0 ? parseFloat(p.return_qty).toLocaleString() + ' / Rs ' + parseFloat(p.return_amount).toLocaleString('en-US', {minimumFractionDigits: 2}) : '-'}</strong>
+                                                        </div>
+                                                        <div class="col-12 pt-1 border-top mt-1 text-center">
+                                                            <span class="text-muted me-2" style="font-size: 10.5px;">Net Qty: <strong class="text-dark">${parseFloat(p.net_qty).toLocaleString()}</strong></span>
+                                                            <span class="text-muted" style="font-size: 10.5px;">Net Value: <strong class="text-success">Rs ${parseFloat(p.net_amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</strong></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -624,6 +688,7 @@
             $('.btnResetTrigger').on('click', function() {
                 $('#filterFromDateDesk, #filterFromDateMob').val('{{ date("Y-m-01") }}');
                 $('#filterToDateDesk, #filterToDateMob').val('{{ date("Y-m-d") }}');
+                $('#filterReturnModeDesk, #filterReturnModeMob').val('sale_date');
                 $('.select2-multi').val(null).trigger('change');
                 loadReportData();
             });
@@ -632,7 +697,7 @@
             $('.btnPrintReport').on('click', () => window.print());
             $('.btnExportExcel').on('click', function() {
                 let csv = [];
-                csv.push(['Customer Code','Customer Name','Product Code','Product Name','Brand / Category','Sold Qty','Avg Price','Gross Amount','Return Qty','Return Amount','Net Qty','Net Amount'].join(','));
+                csv.push(['Customer Code','Customer Name','Product Code','Product Name','Brand / Category','Sold Qty','Bonus Qty','Avg TP','Gross TP','Discount','Return Qty','Return Amount','Net Qty','Net Value'].join(','));
                 $('#reportDataContainer .card').each(function(){
                     let custCode = $(this).find('.badge').first().text().trim();
                     let custName = $(this).find('.card-header strong').first().text().trim();

@@ -543,34 +543,69 @@
                     </div>
                 </div>
 
-                {{-- Primary KPI Strip (Sequence: Gross Sales, Total COGS, Bonus Amount, Invoices, Product Qty / Bonus) --}}
+                {{-- Primary KPI Strip (Sequence: Gross Sales, Sales Return, Net Sales TP, Total Discount, Net Revenue, Total COGS, Bonus Amount, Gross Profit, Invoices, Product Qty / Bonus) --}}
                 <div class="summary-pill-bar mb-3">
 
-                    {{-- 1. Gross Sales --}}
+                    {{-- 1. Gross Sales (TP) --}}
+                    @php $rawGross = (float)($stats['raw_gross'] ?? 0); @endphp
                     <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
-                        <div class="stat-label text-secondary"><i class="fas fa-receipt me-1 text-primary"></i>Gross Sales</div>
-                        @php $gTot = (float)($stats['total_gross'] ?? 0); @endphp
-                        <div class="stat-val text-dark" id="statTotalGross">Rs {{ $gTot == floor($gTot) ? number_format($gTot, 0) : number_format($gTot, 2) }}</div>
-                        <div class="stat-sub text-muted" id="statGrossRevenueSub">After Disc. & Returns</div>
+                        <div class="stat-label text-secondary"><i class="fas fa-file-invoice-dollar me-1"></i>Gross Sales (TP)</div>
+                        <div class="stat-val text-dark" id="statRawGross">Rs {{ $rawGross == floor($rawGross) ? number_format($rawGross, 0) : number_format($rawGross, 2) }}</div>
+                        <div class="stat-sub text-muted">Billed Trade Price</div>
                     </div>
 
-                    {{-- 2. Total COGS --}}
+                    {{-- 2. Total Discount --}}
+                    @php $rawDisc = (float)($stats['raw_discount'] ?? ($stats['total_discount'] ?? 0)); @endphp
+                    <div class="stat-pill" style="background: #fff1f2; border-color: #fecdd3;">
+                        <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
+                        <div class="stat-val text-danger" id="statTopTotalDiscount">-Rs {{ $rawDisc == floor($rawDisc) ? number_format($rawDisc, 0) : number_format($rawDisc, 2) }}</div>
+                        <div class="stat-sub text-danger opacity-75">All Deductions</div>
+                    </div>
+
+                    {{-- 3. Software Net (Invoiced) --}}
+                    @php $invNet = (float)($stats['invoiced_net'] ?? ($rawGross - $rawDisc)); @endphp
+                    <div class="stat-pill" style="background: #eff6ff; border-color: #bfdbfe;">
+                        <div class="stat-label" style="color: #2563eb;"><i class="fas fa-file-invoice me-1"></i>Software Net (Inv)</div>
+                        <div class="stat-val" style="color: #2563eb;" id="statInvoicedNet">Rs {{ $invNet == floor($invNet) ? number_format($invNet, 0) : number_format($invNet, 2) }}</div>
+                        <div class="stat-sub" style="color: #2563eb; opacity: 0.85;">Gross - Disc (Table Net)</div>
+                    </div>
+
+                    {{-- 4. Sales Return --}}
+                    @php 
+                        $retGross = (float)($stats['return_gross'] ?? 0);
+                        $retNet = (float)($stats['total_returned'] ?? 0);
+                    @endphp
+                    <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
+                        <div class="stat-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sales Return</div>
+                        <div class="stat-val text-danger" id="statSalesReturn">-Rs {{ $retNet == floor($retNet) ? number_format($retNet, 0) : number_format($retNet, 2) }}</div>
+                        <div class="stat-sub text-danger opacity-75" id="statSalesReturnSub">@if($retGross > $retNet) TP: Rs {{ number_format($retGross, 0) }} @else Returns Deducted @endif</div>
+                    </div>
+
+                    {{-- 5. Net Revenue --}}
+                    @php $netTot = (float)($stats['total_net'] ?? ($invNet - $retNet)); @endphp
+                    <div class="stat-pill" style="background: #ecfdf5; border-color: #a7f3d0;">
+                        <div class="stat-label text-success"><i class="fas fa-receipt me-1"></i>Net Revenue</div>
+                        <div class="stat-val text-success" id="statTotalNet">Rs {{ $netTot == floor($netTot) ? number_format($netTot, 0) : number_format($netTot, 2) }}</div>
+                        <div class="stat-sub text-success opacity-75" id="statGrossRevenueSub">Realized (Net - Return)</div>
+                    </div>
+
+                    {{-- 6. Total COGS --}}
+                    @php $cogsTot = (float)($stats['total_cogs'] ?? 0); @endphp
                     <div class="stat-pill" style="background: #fffbeb; border-color: #fde68a;">
                         <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-boxes-stacked me-1"></i>Total COGS</div>
-                        @php $cogsTot = (float)($stats['total_cogs'] ?? 0); @endphp
                         <div class="stat-val" style="color: #b45309;" id="statTotalCOGS">Rs {{ $cogsTot == floor($cogsTot) ? number_format($cogsTot, 0) : number_format($cogsTot, 2) }}</div>
                         <div class="stat-sub" style="color: #d97706;">Product Cost</div>
                     </div>
 
-                    {{-- 3. Bonus Amount --}}
+                    {{-- 7. Bonus Amount --}}
+                    @php $bAmt = (float)($stats['total_bonus_amount'] ?? 0); @endphp
                     <div class="stat-pill" style="background: #fffbeb; border-color: #f59e0b;">
                         <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-gift me-1"></i>Bonus Amount</div>
-                        @php $bAmt = (float)($stats['total_bonus_amount'] ?? 0); @endphp
                         <div class="stat-val" style="color: #b45309;" id="statTotalBonusAmount">Rs {{ $bAmt == floor($bAmt) ? number_format($bAmt, 0) : number_format($bAmt, 2) }}</div>
-                        <div class="stat-sub" style="color: #d97706;">At Base Price</div>
+                        <div class="stat-sub" style="color: #d97706;" id="statBonusAmountSub">At Cost · {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
                     </div>
 
-                    {{-- 4. Gross Profit --}}
+                    {{-- 8. Gross Profit --}}
                     @php
                         $gpTot = (float)($stats['total_gross_profit'] ?? 0);
                         $gpColor = $gpTot >= 0 ? '#059669' : '#dc2626';
@@ -585,7 +620,7 @@
                         <div class="stat-sub" style="color: {{ $gpColor }};" id="statGrossProfitSub">Revenue - COGS - Bonus</div>
                     </div>
 
-                    {{-- 5. Invoices Count --}}
+                    {{-- 9. Invoices Count --}}
                     <div class="stat-pill" style="background: #ffffff; border-color: #cbd5e1;">
                         <div class="stat-label text-secondary"><i class="fas fa-file-invoice me-1 text-info"></i>Invoices</div>
                         <div class="stat-val text-dark" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</div>
@@ -596,11 +631,11 @@
                         </div>
                     </div>
 
-                    {{-- 5. Products Sold Qty / Bonus --}}
+                    {{-- 10. Products Sold Qty / Bonus --}}
                     <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;">
                         <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-cubes me-1"></i>Product Qty / Bonus</div>
-                        <div class="stat-val" style="color: #7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }}</div>
-                        <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;">Sold / Bonus Qty</div>
+                        <div class="stat-val" style="color: #7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
+                        <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;">Sold / Bonus Units</div>
                     </div>
 
                 </div>
@@ -650,26 +685,26 @@
 
                 {{-- Status Filter Pills --}}
                 <div class="mb-4 sales-status-pills">
-                    <a href="{{ route('sale.index', ['status' => 'all']) }}"
-                        class="btn btn-sm {{ request('status') == 'all' || !request('status') ? 'btn-secondary' : 'btn-outline-secondary' }} rounded-3 shadow-sm px-3 fw-bold">
-                        All <span class="badge bg-white text-dark ms-1">{{ $stats['total_count'] ?? 0 }}</span>
-                    </a>
-                    <a href="{{ route('sale.index', ['status' => 'posted']) }}"
-                        class="btn btn-sm {{ request('status') == 'posted' ? 'btn-success' : 'btn-outline-success' }} rounded-3 shadow-sm px-3 fw-bold">
-                        Posted <span class="badge bg-white text-success ms-1">{{ $stats['posted_count'] ?? 0 }}</span>
-                    </a>
-                    <a href="{{ route('sale.index', ['status' => 'draft']) }}"
-                        class="btn btn-sm {{ request('status') == 'draft' ? 'btn-warning text-dark' : 'btn-outline-warning' }} rounded-3 shadow-sm px-3 fw-bold">
-                        Draft <span class="badge bg-white text-dark ms-1">{{ $stats['draft_count'] ?? 0 }}</span>
-                    </a>
-                    <a href="{{ route('sale.index', ['status' => 'booked']) }}"
-                        class="btn btn-sm {{ request('status') == 'booked' ? 'btn-info text-white' : 'btn-outline-info' }} rounded-3 shadow-sm px-3 fw-bold">
-                        Booked <span class="badge bg-white text-info ms-1">{{ $stats['booked_count'] ?? 0 }}</span>
-                    </a>
-                    <a href="{{ route('sale.index', ['status' => 'returned']) }}"
-                        class="btn btn-sm {{ request('status') == 'returned' ? 'btn-danger' : 'btn-outline-danger' }} rounded-3 shadow-sm px-3 fw-bold">
-                        Returned <span class="badge bg-white text-danger ms-1">{{ $stats['returned_count'] ?? 0 }}</span>
-                    </a>
+                    <button type="button" data-status="all"
+                        class="btn btn-sm status-filter-btn {{ request('status') == 'all' || !request('status') ? 'btn-secondary' : 'btn-outline-secondary' }} rounded-3 shadow-sm px-3 fw-bold">
+                        All <span class="badge bg-white text-dark ms-1" id="statBadgeAll">{{ $stats['total_count'] ?? 0 }}</span>
+                    </button>
+                    <button type="button" data-status="posted"
+                        class="btn btn-sm status-filter-btn {{ request('status') == 'posted' ? 'btn-success' : 'btn-outline-success' }} rounded-3 shadow-sm px-3 fw-bold">
+                        Posted <span class="badge bg-white text-success ms-1" id="statBadgePosted">{{ $stats['posted_count'] ?? 0 }}</span>
+                    </button>
+                    <button type="button" data-status="draft"
+                        class="btn btn-sm status-filter-btn {{ request('status') == 'draft' ? 'btn-warning text-dark' : 'btn-outline-warning' }} rounded-3 shadow-sm px-3 fw-bold">
+                        Draft <span class="badge bg-white text-dark ms-1" id="statBadgeDraft">{{ $stats['draft_count'] ?? 0 }}</span>
+                    </button>
+                    <button type="button" data-status="booked"
+                        class="btn btn-sm status-filter-btn {{ request('status') == 'booked' ? 'btn-info text-white' : 'btn-outline-info' }} rounded-3 shadow-sm px-3 fw-bold">
+                        Booked <span class="badge bg-white text-info ms-1" id="statBadgeBooked">{{ $stats['booked_count'] ?? 0 }}</span>
+                    </button>
+                    <button type="button" data-status="returned"
+                        class="btn btn-sm status-filter-btn {{ request('status') == 'returned' ? 'btn-danger' : 'btn-outline-danger' }} rounded-3 shadow-sm px-3 fw-bold">
+                        Returned <span class="badge bg-white text-danger ms-1" id="statBadgeReturned">{{ $stats['returned_count'] ?? 0 }}</span>
+                    </button>
                 </div>
 
                 <div class="card premium-card">
@@ -870,16 +905,34 @@
                 $('#filterPanelContainer').slideToggle(200);
             });
 
+            let currentStatus = '{{ request("status") ?? "all" }}';
+
             // Core AJAX Filter Function
             function applySalesFilter() {
                 const $btn = $('#btnSearch');
                 const origHtml = $btn.html();
                 $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Searching...');
 
+                // Ensure Flatpickr values are synced to hidden inputs before serializing
+                let $fromElem = $('#filter_from_date');
+                if ($fromElem.length && !$fromElem.val()) {
+                    let $fromAlt = $fromElem.next('input.flatpickr-input');
+                    if ($fromAlt.length && $fromAlt.val()) {
+                        $fromElem.val($fromAlt.val());
+                    }
+                }
+                let $toElem = $('#filter_to_date');
+                if ($toElem.length && !$toElem.val()) {
+                    let $toAlt = $toElem.next('input.flatpickr-input');
+                    if ($toAlt.length && $toAlt.val()) {
+                        $toElem.val($toAlt.val());
+                    }
+                }
+
                 let formData = $('#filterForm').serialize();
-                let urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.has('status')) {
-                    formData += '&status=' + encodeURIComponent(urlParams.get('status'));
+                let statusVal = currentStatus;
+                if (statusVal && statusVal !== 'all') {
+                    formData += '&status=' + encodeURIComponent(statusVal);
                 }
 
                 $.ajax({
@@ -906,11 +959,29 @@
                                 return num.toLocaleString(undefined, {minimumFractionDigits: decimals, maximumFractionDigits: 2});
                             };
 
-                            let soldText = Number(response.stats.total_qty || 0).toLocaleString();
-                            let bonusText = Number(response.stats.total_bonus_qty || 0).toLocaleString();
-                            $('#statTotalGross').text('Rs ' + fmt(response.stats.total_gross));
-                            $('#statTotalCOGS').text('Rs ' + fmt(response.stats.total_cogs));
-                            $('#statTotalBonusAmount').text('Rs ' + fmt(response.stats.total_bonus_amount));
+                            let rawGross = parseFloat(response.stats.raw_gross || 0);
+                            let rawDisc = parseFloat(response.stats.raw_discount !== undefined ? response.stats.raw_discount : (response.stats.total_discount || 0));
+                            let invoicedNet = parseFloat(response.stats.invoiced_net !== undefined ? response.stats.invoiced_net : (rawGross - rawDisc));
+                            let retGross = parseFloat(response.stats.return_gross || 0);
+                            let retNet = parseFloat(response.stats.total_returned || 0);
+                            let effGross = parseFloat(response.stats.effective_gross || 0);
+                            let netVal = parseFloat(response.stats.total_net || 0);
+                            let cogsVal = parseFloat(response.stats.total_cogs || 0);
+                            let bonusAmtVal = parseFloat(response.stats.total_bonus_amount || 0);
+                            let bonusQtyVal = parseFloat(response.stats.total_bonus_qty || 0);
+                            let soldQtyVal = parseFloat(response.stats.total_qty || 0);
+
+                            $('#statRawGross').text('Rs ' + fmt(rawGross));
+                            $('#statTopTotalDiscount').text((rawDisc > 0 ? '-Rs ' : 'Rs ') + fmt(rawDisc));
+                            $('#statInvoicedNet').text('Rs ' + fmt(invoicedNet));
+                            $('#statSalesReturn').text((retNet > 0 ? '-Rs ' : 'Rs ') + fmt(retNet));
+                            $('#statSalesReturnSub').text(retGross > retNet ? ('TP: Rs ' + fmt(retGross)) : 'Returns Deducted');
+                            $('#statEffectiveGross').text('Rs ' + fmt(effGross));
+                            $('#statTotalNet').text('Rs ' + fmt(netVal));
+                            $('#statGrossRevenueSub').text('Realized (Net - Return)');
+                            $('#statTotalCOGS').text('Rs ' + fmt(cogsVal));
+                            $('#statTotalBonusAmount').text('Rs ' + fmt(bonusAmtVal));
+                            $('#statBonusAmountSub').text('At Cost · ' + fmt(bonusQtyVal) + ' Pcs');
 
                             // Gross Profit
                             let gpVal = parseFloat(response.stats.total_gross_profit || 0);
@@ -923,9 +994,9 @@
                             $('#statGrossProfitBox').css({'background': gpBg, 'border-color': gpBorder});
 
                             $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
-                            $('#statTotalQty').text(soldText + ' / ' + bonusText);
+                            $('#statTotalQty').text(fmt(soldQtyVal) + ' / ' + fmt(bonusQtyVal) + ' Pcs');
 
-                            // Discount Cards (Matching image)
+                            // Row 2 Discount Cards
                             let totDisc   = parseFloat(response.stats.total_discount || 0);
                             let medDisc   = parseFloat(response.stats.discount_medical || 0);
                             let distDisc  = parseFloat(response.stats.discount_distribution || 0);
@@ -938,6 +1009,13 @@
                             $('#statDiscountDist').text('Rs ' + fmt(distDisc));
                             $('#statDiscountDoc').text('Rs ' + fmt(docDisc));
                             $('#statDiscountOther').text('Rs ' + fmt(otherDisc));
+
+                            // Status Filter Badges
+                            $('#statBadgeAll').text(Number(response.stats.total_count || 0).toLocaleString());
+                            $('#statBadgePosted').text(Number(response.stats.posted_count || 0).toLocaleString());
+                            $('#statBadgeDraft').text(Number(response.stats.draft_count || 0).toLocaleString());
+                            $('#statBadgeBooked').text(Number(response.stats.booked_count || 0).toLocaleString());
+                            $('#statBadgeReturned').text(Number(response.stats.returned_count || 0).toLocaleString());
 
                             let statusHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 9.5px;"><i class="fas fa-check-circle me-0.5"></i> Posted: ' + (response.stats.posted_count || 0) + '</span>';
                             if (Number(response.stats.booked_count || 0) > 0) {
@@ -1009,8 +1087,69 @@
                 applySalesFilter();
             });
 
+            // Auto-filter on changing Zone, Customer Type, or Customer dropdowns
+            $(document).on('change', '#filter_zone_id, #filter_customer_type, #filter_customer_id', function() {
+                applySalesFilter();
+            });
+
+            // Auto-filter on Date inputs change
+            $(document).on('change', '#filter_from_date, #filter_to_date', function() {
+                applySalesFilter();
+            });
+
+            // Attach Flatpickr onChange listener when initialized
+            setTimeout(function() {
+                let fromPicker = document.getElementById('filter_from_date') ? document.getElementById('filter_from_date')._flatpickr : null;
+                let toPicker = document.getElementById('filter_to_date') ? document.getElementById('filter_to_date')._flatpickr : null;
+                if (fromPicker && fromPicker.config && Array.isArray(fromPicker.config.onChange)) {
+                    fromPicker.config.onChange.push(function() {
+                        applySalesFilter();
+                    });
+                }
+                if (toPicker && toPicker.config && Array.isArray(toPicker.config.onChange)) {
+                    toPicker.config.onChange.push(function() {
+                        applySalesFilter();
+                    });
+                }
+            }, 300);
+
+            // Debounced search on Bill# / Reference typing
+            let filterDebounce = null;
+            $(document).on('input', '#filter_bill_no, #filter_reference', function() {
+                clearTimeout(filterDebounce);
+                filterDebounce = setTimeout(function() {
+                    applySalesFilter();
+                }, 500);
+            });
+
+            // Status filter button click (AJAX - no page reload)
+            $(document).on('click', '.status-filter-btn', function(e) {
+                e.preventDefault();
+                let status = $(this).data('status');
+                currentStatus = status;
+
+                $('.status-filter-btn').each(function() {
+                    let s = $(this).data('status');
+                    if (s === status) {
+                        if (s === 'all') $(this).removeClass('btn-outline-secondary').addClass('btn-secondary');
+                        else if (s === 'posted') $(this).removeClass('btn-outline-success').addClass('btn-success');
+                        else if (s === 'draft') $(this).removeClass('btn-outline-warning').addClass('btn-warning text-dark');
+                        else if (s === 'booked') $(this).removeClass('btn-outline-info').addClass('btn-info text-white');
+                        else if (s === 'returned') $(this).removeClass('btn-outline-danger').addClass('btn-danger');
+                    } else {
+                        if (s === 'all') $(this).removeClass('btn-secondary').addClass('btn-outline-secondary');
+                        else if (s === 'posted') $(this).removeClass('btn-success').addClass('btn-outline-success');
+                        else if (s === 'draft') $(this).removeClass('btn-warning text-dark').addClass('btn-outline-warning');
+                        else if (s === 'booked') $(this).removeClass('btn-info text-white').addClass('btn-outline-info');
+                        else if (s === 'returned') $(this).removeClass('btn-danger').addClass('btn-outline-danger');
+                    }
+                });
+
+                applySalesFilter();
+            });
+
             // Trigger search on button click & enter key
-            $('#btnSearch').on('click', function(e) {
+            $(document).on('click', '#btnSearch', function(e) {
                 e.preventDefault();
                 applySalesFilter();
             });

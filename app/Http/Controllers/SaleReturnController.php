@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\WarehouseStock;
 use App\Models\StockMovement;
 use App\Models\Account;
+use App\Models\CustomerLedger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -279,6 +280,7 @@ class SaleReturnController extends Controller
             $sale = $validated['sale_id'] ? Sale::find($validated['sale_id']) : null;
             $now = Carbon::now();
             $movements = [];
+            $grossSubtotal = 0;
             $subtotal = 0;
             $totalItemDiscount = 0;
 
@@ -449,7 +451,8 @@ class SaleReturnController extends Controller
                     'updated_at' => $now,
                 ];
 
-                $subtotal += $lineGross;
+                $grossSubtotal += $lineGross;
+                $subtotal += $lineTotal;
                 $totalItemDiscount += $itemDisc;
             }
 
@@ -458,7 +461,8 @@ class SaleReturnController extends Controller
                 DB::table('stock_movements')->insert($movements);
             }
 
-            $netAmount = ($subtotal - $totalItemDiscount) - ($request->extra_discount ?? 0);
+            $extraDiscount = (float) ($request->extra_discount ?? 0);
+            $netAmount = max(0, round($grossSubtotal - $totalItemDiscount - $extraDiscount, 2));
 
             // Handle Refund Payment (Payment Voucher)
             $totalPaid = 0;
@@ -513,8 +517,9 @@ class SaleReturnController extends Controller
 
             // Update Return Totals
             $return->update([
-                'bill_amount' => $subtotal,
+                'bill_amount' => $grossSubtotal,
                 'item_discount' => $totalItemDiscount,
+                'extra_discount' => $extraDiscount,
                 'net_amount' => $netAmount,
                 'paid' => $totalPaid,
                 'balance' => $netAmount - $totalPaid,
@@ -545,9 +550,35 @@ class SaleReturnController extends Controller
                 $transactionService->createSaleReturnVoucher($return);
             }
 
-            // Update Customer Ledger (if exists)
-            // Sale Return increases customer balance (they owe less or we owe them)
-            $balanceChange = $netAmount - $totalPaid;
+            // Update Customer Ledger (if registered customer)
+            // Unrefunded return amount reduces customer balance/debt
+            if ($customerId) {
+                $unrefundedReturn = $netAmount - $totalPaid;
+                if (abs($unrefundedReturn) > 0.001) {
+                    $lastEntry = CustomerLedger::where('customer_id', $customerId)
+                        ->lockForUpdate()
+                        ->orderBy('id', 'desc')
+                        ->first();
+
+                    $prevBal = $lastEntry ? (float) $lastEntry->closing_balance : (float) (Customer::where('id', $customerId)->value('previous_balance') ?? 0);
+                    $newBal = $prevBal - $unrefundedReturn;
+
+                    CustomerLedger::create([
+                        'customer_id' => $customerId,
+                        'admin_or_user_id' => auth()->id() ?? 1,
+                        'description' => "Sale Return #{$return->return_invoice}" . ($sale ? " for Inv #{$sale->invoice_no}" : ""),
+                        'previous_balance' => $prevBal,
+                        'closing_balance' => $newBal,
+                        'opening_balance' => 0,
+                    ]);
+
+                    $cust = Customer::find($customerId);
+                    if ($cust) {
+                        $cust->previous_balance = $newBal;
+                        $cust->save();
+                    }
+                }
+            }
 
             DB::commit();
 

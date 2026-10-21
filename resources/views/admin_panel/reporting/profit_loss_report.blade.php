@@ -526,49 +526,77 @@
             </div>
 
             <div class="summary-pill-bar">
-                {{-- Gross Revenue --}}
+                {{-- 1. Gross Sales (TP) --}}
                 <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
-                    <div class="stat-label text-secondary"><i class="fas fa-receipt me-1"></i>Gross Sales</div>
-                    <div class="stat-val text-dark" id="cardGrossRevenue">Rs 0</div>
-                    <div class="stat-sub text-muted" id="cardGrossRevenueSub">After Disc. & Returns</div>
+                    <div class="stat-label text-secondary"><i class="fas fa-file-invoice-dollar me-1"></i>Gross Sales (TP)</div>
+                    <div class="stat-val text-dark" id="cardRawGross">Rs 0</div>
+                    <div class="stat-sub text-muted" id="cardRawGrossSub">Billed Trade Price</div>
                 </div>
 
-                {{-- Total COGS --}}
+                {{-- 2. Total Discount --}}
+                <div class="stat-pill" style="background: #fff1f2; border-color: #fecdd3;">
+                    <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
+                    <div class="stat-val text-danger" id="cardTotalDiscountTop">-Rs 0</div>
+                    <div class="stat-sub text-danger opacity-75" id="cardTotalDiscountTopSub">All Deductions</div>
+                </div>
+
+                {{-- 3. Software Net (Invoiced) --}}
+                <div class="stat-pill" style="background: #eff6ff; border-color: #bfdbfe;">
+                    <div class="stat-label" style="color: #2563eb;"><i class="fas fa-file-invoice me-1"></i>Software Net (Inv)</div>
+                    <div class="stat-val" style="color: #2563eb;" id="cardInvoicedNet">Rs 0</div>
+                    <div class="stat-sub" style="color: #2563eb; opacity: 0.85;" id="cardInvoicedNetSub">Gross - Disc (Table Net)</div>
+                </div>
+
+                {{-- 4. Sales Return --}}
+                <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
+                    <div class="stat-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sales Return</div>
+                    <div class="stat-val text-danger" id="cardSalesReturn">-Rs 0</div>
+                    <div class="stat-sub text-danger opacity-75" id="cardSalesReturnSub">Returns Deducted</div>
+                </div>
+
+                {{-- 5. Net Revenue (Realized) --}}
+                <div class="stat-pill" style="background: #ecfdf5; border-color: #a7f3d0;">
+                    <div class="stat-label text-success"><i class="fas fa-receipt me-1"></i>Net Revenue</div>
+                    <div class="stat-val text-success" id="cardNetRevenue">Rs 0</div>
+                    <div class="stat-sub text-success opacity-75" id="cardNetRevenueSub">Realized (Net - Return)</div>
+                </div>
+
+                {{-- 6. Total COGS --}}
                 <div class="stat-pill" style="background: #fffbeb; border-color: #fde68a;">
                     <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-boxes-stacked me-1"></i>Total COGS</div>
                     <div class="stat-val" style="color: #b45309;" id="cardCOGS">Rs 0</div>
                     <div class="stat-sub" style="color: #d97706;">Product Cost</div>
                 </div>
 
-                {{-- Bonus Amount --}}
+                {{-- 7. Bonus Amount --}}
                 <div class="stat-pill" style="background: #fffbeb; border-color: #f59e0b;">
                     <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-gift me-1"></i>Bonus Amount</div>
                     <div class="stat-val" style="color: #b45309;" id="cardBonusAmount">Rs 0</div>
-                    <div class="stat-sub" style="color: #d97706;">At Base Price</div>
+                    <div class="stat-sub" style="color: #d97706;" id="cardBonusAmountSub">At Base Price</div>
                 </div>
 
-                {{-- Gross Profit --}}
+                {{-- 8. Gross Profit --}}
                 <div class="stat-pill" style="background: #f0fdf4; border-color: #86efac;" id="cardGrossProfitBox">
                     <div class="stat-label text-success" id="cardGrossProfitLabel"><i class="fas fa-arrow-trend-up me-1"></i>Gross Profit</div>
                     <div class="stat-val text-success" id="cardGrossProfit">Rs 0</div>
                     <div class="stat-sub text-success" id="cardGrossProfitSub">Revenue - COGS - Bonus</div>
                 </div>
 
-                {{-- Total Expenses --}}
+                {{-- 9. Total Expenses --}}
                 <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;" id="cardExpensesBox">
                     <div class="stat-label text-danger" id="cardExpensesLabel"><i class="fas fa-arrow-trend-down me-1"></i>Expenses</div>
                     <div class="stat-val text-danger" id="cardExpenses">Rs 0</div>
                     <div class="stat-sub text-danger" id="cardExpensesSub">Operating Costs</div>
                 </div>
 
-                {{-- Net Profit / Loss --}}
+                {{-- 10. Net Profit / Loss --}}
                 <div class="stat-pill" style="background: #f0f9ff; border-color: #bae6fd;" id="cardNetProfitBox">
-                    <div class="stat-label text-primary" id="cardNetProfitLabel"><i class="fas fa-scale-balanced me-1"></i>Net Profit / Loss</div>
+                    <div class="stat-label text-primary" id="cardNetProfitLabel"><i class="fas fa-chart-line me-1"></i>Net Profit / Loss</div>
                     <div class="stat-val text-primary" id="cardNetProfit">Rs 0</div>
                     <div class="stat-sub text-primary" id="cardNetProfitSub">Bottom Line</div>
                 </div>
 
-                {{-- Partner 1 --}}
+                {{-- 11. Partner 1 --}}
                 <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;" id="cardPartner1Box">
                     <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #7c3aed;">
                         <i class="fas fa-user-tie"></i>
@@ -582,7 +610,7 @@
                     <div class="stat-sub" style="color: #7c3aed;" id="cardPartner1ProfitSub">Equity Share</div>
                 </div>
 
-                {{-- Partner 2 --}}
+                {{-- 12. Partner 2 --}}
                 <div class="stat-pill" style="background: #fff7ed; border-color: #fed7aa;" id="cardPartner2Box">
                     <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #ea580c;">
                         <i class="fas fa-user-tie"></i>
@@ -626,7 +654,7 @@
                             <span class="ov-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</span>
                         </div>
                         <div class="ov-val text-danger" id="cardTotalDiscount">Rs 0</div>
-                        <div class="ov-sub text-danger opacity-75">All Deductions</div>
+                        <div class="ov-sub text-danger opacity-75" id="cardTotalDiscountSub">All Deductions</div>
                     </div>
                 </div>
 
@@ -736,7 +764,7 @@
                         <div class="ov-header">
                             <span class="ov-label text-primary"><i class="fas fa-wallet me-1"></i>Net Revenue</span>
                         </div>
-                        <div class="ov-val text-primary" id="cardNetRevenue">Rs 0</div>
+                        <div class="ov-val text-primary" id="cardSec3NetRevenue">Rs 0</div>
                         <div class="ov-sub text-primary opacity-75">Net Realized Revenue</div>
                     </div>
                 </div>
@@ -1037,15 +1065,19 @@ $(document).ready(function() {
     function renderFinancialCards(data) {
         if (!data) return;
         let s = data.summary || {};
-        let grossRevVal = parseFloat(s.gross_revenue || 0);
-        let cogsVal     = parseFloat(s.cogs || 0);
-        let netRevVal   = parseFloat(s.net_revenue || 0);
-        let grossProf   = parseFloat(data.total_gross_profit || s.gross_profit || 0);
-        let rawExpenses = parseFloat(data.total_expenses || s.expenses || 0);
-        let bonusAmtVal = parseFloat(s.bonus_amount || 0);
-        let rawGrossVal = parseFloat(s.raw_gross_revenue || 0);
-        let discVal     = parseFloat(s.total_discount || 0);
-        let retVal      = parseFloat(s.return_amount || 0);
+        let rawGrossVal   = parseFloat(s.raw_gross_revenue || 0);
+        let rawDiscVal    = parseFloat(s.raw_total_discount !== undefined ? s.raw_total_discount : (s.total_discount || 0));
+        let invoicedNet   = parseFloat(s.invoiced_net !== undefined ? s.invoiced_net : (rawGrossVal - rawDiscVal));
+        let effGrossVal   = parseFloat(s.effective_gross || s.gross_revenue || 0);
+        let returnGrossVal= parseFloat(s.return_gross || (rawGrossVal - effGrossVal) || 0);
+        let retNetVal     = parseFloat(s.return_amount || 0);
+        let discVal       = parseFloat(s.total_discount || 0);
+        let netRevVal     = parseFloat(s.net_revenue || 0);
+        let cogsVal       = parseFloat(s.cogs || 0);
+        let bonusAmtVal   = parseFloat(s.bonus_amount || 0);
+        let bonusQtyVal   = parseFloat(s.bonus_qty || 0);
+        let grossProf     = parseFloat(data.total_gross_profit || s.gross_profit || 0);
+        let rawExpenses   = parseFloat(data.total_expenses || s.expenses || 0);
 
         let isWithout = (currentExpenseMode === 'without');
         let netProf = isWithout ? grossProf : (grossProf - rawExpenses);
@@ -1053,20 +1085,34 @@ $(document).ready(function() {
 
         let marginVal = netRevVal > 0 ? ((netProf / netRevVal) * 100).toFixed(1) : 0;
 
-        $('#cardGrossRevenue').text('Rs ' + fmt(grossRevVal));
-        $('#cardGrossRevenueSub')
-            .text('After Disc. & Returns')
-            .attr('title', 'Gross: Rs ' + fmt(rawGrossVal) + ' | Disc: -Rs ' + fmt(discVal) + ' | Ret: -Rs ' + fmt(retVal));
+        $('#cardRawGross').text('Rs ' + fmt(rawGrossVal));
+        $('#cardRawGrossSub').text('Billed Trade Price');
+
+        $('#cardTotalDiscountTop').text((rawDiscVal > 0 ? '-Rs ' : 'Rs ') + fmt(rawDiscVal));
+        $('#cardTotalDiscountTopSub').text('All Deductions');
+
+        $('#cardInvoicedNet').text('Rs ' + fmt(invoicedNet));
+        $('#cardInvoicedNetSub').text('Gross - Disc (Table Net)');
+
+        $('#cardSalesReturn').text((retNetVal > 0 ? '-Rs ' : 'Rs ') + fmt(retNetVal));
+        $('#cardSalesReturnSub').text(returnGrossVal > retNetVal ? ('TP: Rs ' + fmt(returnGrossVal)) : 'Returns Deducted');
+
+        $('#cardEffectiveGross').text('Rs ' + fmt(effGrossVal));
+        $('#cardEffectiveGrossSub').text('Pre-Discount TP');
+
+        $('#cardNetRevenue, #cardSec3NetRevenue').text('Rs ' + fmt(netRevVal));
+        $('#cardNetRevenueSub').text('Realized (Net - Return)');
+
         $('#cardCOGS').text('Rs ' + fmt(cogsVal));
         $('#cardBonusAmount').text('Rs ' + fmt(bonusAmtVal));
-        $('#cardNetRevenue').text('Rs ' + fmt(netRevVal));
+        $('#cardBonusAmountSub').text('At Cost · ' + fmt(bonusQtyVal) + ' Pcs');
 
         let grossProfColor = grossProf >= 0 ? '#059669' : '#dc2626';
         let grossSign = grossProf < 0 ? '-' : '';
         $('#cardGrossProfit, #mobCardGrossProfit').text(grossSign + 'Rs ' + fmt(Math.abs(grossProf))).css('color', grossProfColor);
         $('#cardGrossProfitSub')
             .text('Revenue - COGS - Bonus')
-            .attr('title', 'Sales: Rs ' + fmt(grossRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal));
+            .attr('title', 'Net Revenue: Rs ' + fmt(netRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal));
 
         // Expenses Stat Pill
         if (isWithout) {
@@ -1082,7 +1128,7 @@ $(document).ready(function() {
         }
 
         // Net Profit / Loss Stat Pill
-        let netProfColor = netProf >= 0 ? '#2563eb' : '#dc2626';
+        let netProfColor = netProf >= 0 ? '#0284c7' : '#dc2626';
         let netSign = netProf < 0 ? '-' : '';
         $('#cardNetProfit, #mobCardNetProfit').text(netSign + 'Rs ' + fmt(Math.abs(netProf))).css('color', netProfColor);
 
@@ -1201,12 +1247,18 @@ $(document).ready(function() {
 
         // 2. Customer Tier Discounts Breakdown Cards
         let totalDiscVal = parseFloat(s.total_discount || 0);
+        let rawDiscVal   = parseFloat(s.raw_total_discount || totalDiscVal);
         let medDiscVal   = parseFloat(s.medical_discount || 0);
         let distDiscVal  = parseFloat(s.distribution_discount || 0);
         let docDiscVal   = parseFloat(s.doctor_discount || 0);
         let otherDiscVal = parseFloat(s.other_discount || 0);
 
         $('#cardTotalDiscount, #cardTotalDiscountHeader').text('Rs ' + fmt(totalDiscVal));
+        if (rawDiscVal > totalDiscVal) {
+            $('#cardTotalDiscountSub').html('Net of Returns <span title="Gross before returns" class="d-block" style="font-size: 8.5px; opacity: 0.85;">(Gross: Rs ' + fmt(rawDiscVal) + ')</span>');
+        } else {
+            $('#cardTotalDiscountSub').text('All Deductions');
+        }
         $('#cardMedicalDiscount').text('Rs ' + fmt(medDiscVal));
         $('#cardDistDiscount').text('Rs ' + fmt(distDiscVal));
         $('#cardDoctorDiscount').text('Rs ' + fmt(docDiscVal));

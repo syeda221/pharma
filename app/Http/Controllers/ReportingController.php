@@ -851,6 +851,30 @@ class ReportingController extends Controller
                 } catch (\Exception $e) {}
             }
 
+            // Discover any historical variants that exist in sale_items or sale_return_items for this product
+            $existingBarcodes = collect($parsedVariants)->pluck('barcode')->filter()->toArray();
+            $existingNames = collect($parsedVariants)->pluck('name')->filter()->map(fn($n) => strtolower(trim($n)))->toArray();
+            $histColors = DB::table('sale_items')->where('product_id', $product->id)->whereNotNull('color')->pluck('color');
+            foreach ($histColors as $hColor) {
+                $b64 = base64_decode($hColor, true);
+                $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($hColor, true);
+                if (is_array($vData) && !empty($vData['name'])) {
+                    $bCode = trim($vData['barcode'] ?? '');
+                    $vName = strtolower(trim($vData['name'] ?? ''));
+                    $isNew = false;
+                    if (!empty($bCode)) {
+                        $isNew = !in_array($bCode, $existingBarcodes);
+                    } else {
+                        $isNew = !in_array($vName, $existingNames);
+                    }
+                    if ($isNew) {
+                        if (!empty($bCode)) $existingBarcodes[] = $bCode;
+                        $existingNames[] = $vName;
+                        $parsedVariants[] = $vData;
+                    }
+                }
+            }
+
             if (count($parsedVariants) > 0) {
                 // Fetch all sales and returns for this product to distribute
                 $saleQuery = DB::table('sale_items')
@@ -1039,8 +1063,8 @@ class ReportingController extends Controller
                     if ($soldQtyPieces > 0 || $returnedQtyPieces > 0) {
                         $totalCogs += $costOfGoodsSold;
                         // Format Sold Qty Display
-                        if ($product->size_mode === 'by_cartons') {
-                            $cartonPpb = $vConv > 1 ? $vConv : $ppb;
+                        $cartonPpb = $vConv > 1 ? $vConv : $ppb;
+                        if ($product->size_mode === 'by_cartons' && $cartonPpb > 1) {
                             $soldBoxes = (int) floor($soldQtyPieces / $cartonPpb);
                             $soldLoose = (int) round($soldQtyPieces - ($soldBoxes * $cartonPpb));
                             if ($soldBoxes > 0 && $soldLoose > 0) {
@@ -1216,7 +1240,7 @@ class ReportingController extends Controller
                     }
 
                     // Format Sold / Returned Qty
-                    if ($product->size_mode === 'by_cartons') {
+                    if ($product->size_mode === 'by_cartons' && $ppb > 1) {
                         $soldBoxes = (int) floor($soldQtyPieces / $ppb);
                         $soldLoose = (int) round($soldQtyPieces - ($soldBoxes * $ppb));
                         if ($soldBoxes > 0 && $soldLoose > 0) {
@@ -1621,7 +1645,7 @@ class ReportingController extends Controller
         unset($zs);
 
         // 5. Global Sales, Quantity & Discount Overview (Reacting to all active filters)
-        $overviewSaleQuery = \App\Models\Sale::with(['customer_relation.customerTypeModel', 'items.product']);
+        $overviewSaleQuery = \App\Models\Sale::with(['customer_relation.customerTypeModel', 'items.product', 'returns']);
         if ($start && $end) {
             $overviewSaleQuery->whereBetween('created_at', [$start, $end]);
         }
@@ -1634,7 +1658,10 @@ class ReportingController extends Controller
         $overviewSales = $overviewSaleQuery->get();
 
         $totalGrossRevenue = 0;
+        $totalEffectiveGross = 0;
         $totalNetRevenue = 0;
+        $totalSaleEffectiveNet = 0;
+        $rawTotalDiscounts = 0;
         $totalItemDiscounts = 0;
         $totalExtraDiscounts = 0;
         $medicalDiscount = 0;
@@ -1651,10 +1678,64 @@ class ReportingController extends Controller
         foreach ($overviewSales as $sale) {
             $cust = $sale->customer_relation;
             $tiers = $cust ? $cust->discount_tiers : ['medical' => 0, 'doctor' => 0, 'distribution' => 0];
-            $saleTier = strtolower((string)$sale->discount_tier);
             $extra = (float)($sale->total_extradiscount ?? 0);
             $hasMatchingItem = false;
             $isSaleReturned = ($sale->sale_status === 'returned' || $sale->sale_status == 1);
+
+            $returnedAmount = $sale->returns ? (float) $sale->returns->sum('net_amount') : 0;
+            $isFullyReturned = $isSaleReturned && ($returnedAmount <= 0 || (float)$sale->total_net <= $returnedAmount);
+
+            $saleInlineVal = $sale->items ? (float) $sale->items->sum('discount_amount') : 0;
+            $saleBillAmount = $sale->total_bill_amount > 0 ? (float) $sale->total_bill_amount : (float) $sale->per_total;
+            $saleGrossSubtotal = $saleBillAmount + $saleInlineVal;
+
+            $remRatio = 1.0;
+            $effGross = 0;
+            if ($isFullyReturned) {
+                $remRatio = 0.0;
+                $effGross = 0;
+            } elseif ($returnedAmount > 0 && $saleGrossSubtotal > 0 && (float)$sale->total_net > 0) {
+                $ratio = $saleGrossSubtotal / (float)$sale->total_net;
+                $returnedGross = $returnedAmount * $ratio;
+                $effGross = max(0, $saleGrossSubtotal - $returnedGross);
+                $remRatio = $effGross / $saleGrossSubtotal;
+            } else {
+                $effGross = $saleGrossSubtotal;
+            }
+            $totalEffectiveGross += $effGross;
+
+            $saleEffectiveNet = 0;
+            if ($isSaleReturned) {
+                $saleEffectiveNet = ($returnedAmount > 0) ? max(0, (float)$sale->total_net - $returnedAmount) : 0;
+            } else {
+                $saleEffectiveNet = max(0, (float)$sale->total_net - $returnedAmount);
+            }
+            $totalSaleEffectiveNet += $saleEffectiveNet;
+
+            $activeTiersArray = !empty($sale->discount_tier) ? array_map('trim', explode(',', $sale->discount_tier)) : [];
+            if (empty($activeTiersArray) && !empty($tiers)) {
+                $mVal = (float)($tiers['medical'] ?? 0);
+                $dVal = (float)($tiers['doctor'] ?? 0);
+                $distVal = (float)($tiers['distribution'] ?? 0);
+                $inlinePct = $saleGrossSubtotal > 0 ? ($saleInlineVal / $saleGrossSubtotal) * 100 : 0;
+                $targetDisc = round($inlinePct, 2);
+
+                if (round($mVal + $dVal + $distVal, 2) === $targetDisc && $mVal > 0 && $dVal > 0 && $distVal > 0) {
+                    $activeTiersArray = ['medical', 'doctor', 'distribution'];
+                } elseif (round($mVal + $distVal, 2) === $targetDisc && $mVal > 0 && $distVal > 0) {
+                    $activeTiersArray = ['medical', 'distribution'];
+                } elseif (round($mVal + $dVal, 2) === $targetDisc && $mVal > 0 && $dVal > 0) {
+                    $activeTiersArray = ['medical', 'doctor'];
+                } elseif (round($dVal + $distVal, 2) === $targetDisc && $dVal > 0 && $distVal > 0) {
+                    $activeTiersArray = ['doctor', 'distribution'];
+                } elseif (round($dVal, 2) === $targetDisc && $dVal > 0) {
+                    $activeTiersArray = ['doctor'];
+                } elseif (round($mVal, 2) === $targetDisc && $mVal > 0) {
+                    $activeTiersArray = ['medical'];
+                } elseif (round($distVal, 2) === $targetDisc && $distVal > 0) {
+                    $activeTiersArray = ['distribution'];
+                }
+            }
 
             foreach ($sale->items as $it) {
                 if ($productId && $productId !== 'all' && $it->product_id != $productId) {
@@ -1669,14 +1750,17 @@ class ReportingController extends Controller
                 $totalGrossRevenue += $gross;
 
                 $discAmt = (float)$it->discount_amount;
-                $totalItemDiscounts += $discAmt;
+                $rawTotalDiscounts += $discAmt;
+                $effDiscAmt = $discAmt * $remRatio;
+                $totalItemDiscounts += $effDiscAmt;
 
                 $itNet = (float)$it->total;
                 if ($sale->total_bill_amount > 0 && $extra > 0) {
                     $prop = $itNet / (float)$sale->total_bill_amount;
                     $itemExtraDisc = $extra * $prop;
+                    $rawTotalDiscounts += $itemExtraDisc;
                     $itNet -= $itemExtraDisc;
-                    $totalExtraDiscounts += $itemExtraDisc;
+                    $totalExtraDiscounts += ($itemExtraDisc * $remRatio);
                 }
                 $totalNetRevenue += $itNet;
 
@@ -1693,7 +1777,7 @@ class ReportingController extends Controller
                         $bQty = (float)$vData['bonus'];
                     }
 
-                    if ($bQty > 0) {
+                    if ($bQty != 0) {
                         $basePrice = 0;
                         if (!empty($it->purchase_price) && (float)$it->purchase_price > 0) {
                             $basePrice = (float)$it->purchase_price;
@@ -1752,62 +1836,32 @@ class ReportingController extends Controller
                 // Cartons & loose pieces accumulation
                 $ppb = (float)($it->product->pieces_per_box ?? 1);
                 if ($ppb <= 0) $ppb = 1;
-                $boxes = (int) floor($pieces / $ppb);
-                $loose = (int) round($pieces - ($boxes * $ppb));
-                $totalSoldBoxes += $boxes;
-                $totalSoldLoose += $loose;
-
-                // Multi-tier and specific tier breakdown
-                if (str_contains($saleTier, 'medical') && str_contains($saleTier, 'distribution')) {
-                    $mPct = (float)($tiers['medical'] ?? 0);
-                    $dPct = (float)($tiers['distribution'] ?? 0);
-                    $sum = $mPct + $dPct;
-                    if ($sum > 0) {
-                        $medicalDiscount += ($discAmt * ($mPct / $sum));
-                        $distributionDiscount += ($discAmt * ($dPct / $sum));
-                    } else {
-                        $medicalDiscount += ($discAmt / 2);
-                        $distributionDiscount += ($discAmt / 2);
-                    }
-                } elseif (str_contains($saleTier, 'doctor') && str_contains($saleTier, 'distribution')) {
-                    $docPct = (float)($tiers['doctor'] ?? 0);
-                    $dPct = (float)($tiers['distribution'] ?? 0);
-                    $sum = $docPct + $dPct;
-                    if ($sum > 0) {
-                        $doctorDiscount += ($discAmt * ($docPct / $sum));
-                        $distributionDiscount += ($discAmt * ($dPct / $sum));
-                    } else {
-                        $doctorDiscount += ($discAmt / 2);
-                        $distributionDiscount += ($discAmt / 2);
-                    }
-                } elseif (str_contains($saleTier, 'medical') && str_contains($saleTier, 'doctor')) {
-                    $mPct = (float)($tiers['medical'] ?? 0);
-                    $docPct = (float)($tiers['doctor'] ?? 0);
-                    $sum = $mPct + $docPct;
-                    if ($sum > 0) {
-                        $medicalDiscount += ($discAmt * ($mPct / $sum));
-                        $doctorDiscount += ($discAmt * ($docPct / $sum));
-                    } else {
-                        $medicalDiscount += ($discAmt / 2);
-                        $doctorDiscount += ($discAmt / 2);
-                    }
-                } elseif (str_contains($saleTier, 'medical')) {
-                    $medicalDiscount += $discAmt;
-                } elseif (str_contains($saleTier, 'distribution') || str_contains($saleTier, 'dist')) {
-                    $distributionDiscount += $discAmt;
-                } elseif (str_contains($saleTier, 'doctor') || str_contains($saleTier, 'doc')) {
-                    $doctorDiscount += $discAmt;
+                if ($ppb > 1 || ($it->product && $it->product->size_mode === 'by_cartons')) {
+                    $boxes = (int) floor($pieces / $ppb);
+                    $loose = (int) round($pieces - ($boxes * $ppb));
+                    $totalSoldBoxes += $boxes;
+                    $totalSoldLoose += $loose;
                 } else {
-                    $cType = strtolower((string)($cust->customer_type ?? ''));
-                    if (str_contains($cType, 'medical')) {
-                        $medicalDiscount += $discAmt;
-                    } elseif (str_contains($cType, 'distribut')) {
-                        $distributionDiscount += $discAmt;
-                    } elseif (str_contains($cType, 'doctor')) {
-                        $doctorDiscount += $discAmt;
-                    } else {
-                        $otherDiscount += $discAmt;
+                    $totalSoldLoose += $pieces;
+                }
+
+                // Tier specific allocation
+                if (!empty($activeTiersArray)) {
+                    $activeSum = 0;
+                    foreach ($activeTiersArray as $t) {
+                        $activeSum += (float)($tiers[$t] ?? 0);
                     }
+                    foreach ($activeTiersArray as $t) {
+                        $pct = (float)($tiers[$t] ?? 0);
+                        if ($pct > 0 && $activeSum > 0) {
+                            $amt = $effDiscAmt * ($pct / $activeSum);
+                            if ($t === 'medical') $medicalDiscount += $amt;
+                            elseif ($t === 'doctor') $doctorDiscount += $amt;
+                            elseif ($t === 'distribution') $distributionDiscount += $amt;
+                        }
+                    }
+                } else {
+                    $doctorDiscount += $effDiscAmt;
                 }
             }
 
@@ -1839,7 +1893,14 @@ class ReportingController extends Controller
         $totalReturnAmount = (float) $overviewReturns->sum('line_total');
 
         $grandTotalDiscount = $totalItemDiscounts + $totalExtraDiscounts;
-        $finalNetRevenue = max(0, $totalNetRevenue - $totalReturnAmount);
+        $otherDiscount = max(0, $grandTotalDiscount - ($medicalDiscount + $distributionDiscount + $doctorDiscount));
+
+        // When not filtering by product/category, use the clamped per-sale effective net to avoid return overflow distortion
+        if ((!$productId || $productId === 'all') && (!$categoryId || $categoryId === 'all')) {
+            $finalNetRevenue = $totalSaleEffectiveNet;
+        } else {
+            $finalNetRevenue = max(0, $totalNetRevenue - $totalReturnAmount);
+        }
         $finalNetPieces = max(0, $totalSoldPieces - $totalReturnPieces);
 
         // Format Quantity Strings (Sold, Returned, Net Delivered)
@@ -1847,7 +1908,7 @@ class ReportingController extends Controller
             ? ($totalSoldLoose > 0 ? "{$totalSoldBoxes} Ctn . {$totalSoldLoose} Pcs" : "{$totalSoldBoxes} Cartons")
             : "{$totalSoldPieces} Pcs";
 
-        $returnQtyDisplay = $totalReturnBoxes > 0
+        $returnQtyDisplay = ($totalSoldBoxes > 0 && $totalReturnBoxes > 0)
             ? ($totalReturnLoose > 0 ? "{$totalReturnBoxes} Ctn . {$totalReturnLoose} Pcs" : "{$totalReturnBoxes} Cartons")
             : "{$totalReturnPieces} Pcs";
 
@@ -1867,7 +1928,7 @@ class ReportingController extends Controller
             || $request->input('without_expenses') === '1'
             || $request->input('without_expenses') === 1;
 
-        $adjustedGrossProfit = $totalGrossProfit - $totalBonusAmount;
+        $adjustedGrossProfit = $finalNetRevenue - $totalCogs - $totalBonusAmount;
         $netProfitWithExpenses = $adjustedGrossProfit - $totalExpenses;
         $netProfitWithoutExpenses = $adjustedGrossProfit;
 
@@ -1888,12 +1949,16 @@ class ReportingController extends Controller
             'zone_stats' => $zoneList,
             'summary' => [
                 'raw_gross_revenue' => round($totalGrossRevenue, 2),
-                'gross_revenue' => round(max(0, $totalGrossRevenue - $grandTotalDiscount - $totalReturnAmount), 2),
+                'return_gross' => round(max(0, $totalGrossRevenue - $totalEffectiveGross), 2),
+                'effective_gross' => round($totalEffectiveGross, 2),
+                'gross_revenue' => round($totalEffectiveGross, 2),
                 'total_discount' => round($grandTotalDiscount, 2),
+                'raw_total_discount' => round($rawTotalDiscounts, 2),
+                'invoiced_net' => round(max(0, $totalGrossRevenue - $rawTotalDiscounts), 2),
                 'medical_discount' => round($medicalDiscount, 2),
                 'distribution_discount' => round($distributionDiscount, 2),
                 'doctor_discount' => round($doctorDiscount, 2),
-                'other_discount' => round($otherDiscount + $totalExtraDiscounts, 2),
+                'other_discount' => round($otherDiscount, 2),
                 'return_amount' => round($totalReturnAmount, 2),
                 'net_revenue' => round($finalNetRevenue, 2),
                 'cogs' => round($totalCogs, 2),
@@ -2193,7 +2258,9 @@ class ReportingController extends Controller
                     'brand' => '-',                  // Could extract from items if needed
                     'unit' => '-',                   // Could extract
                     'per_price' => $prices,
-                    'per_discount' => 0,             
+                    'per_discount' => $sale->items->map(fn($it) => number_format((float)($it->discount_amount ?? 0), 2, '.', ''))->implode(','),             
+                    'gross_amount' => (float) $sale->items->sum(fn($it) => (float)$it->total + (float)($it->discount_amount ?? 0)),
+                    'discount_amount' => (float) $sale->items->sum(fn($it) => (float)($it->discount_amount ?? 0)),
                     'qty' => $qtys,
                     'qty_decimal' => $qty_decimals,
                     'total_pieces' => $total_pieces_arr,
@@ -2284,11 +2351,22 @@ class ReportingController extends Controller
                 }
             }
 
+            $totalGrossSales = 0;
+            $totalDiscountSales = 0;
+            foreach ($sales as $sale) {
+                foreach ($sale->items as $item) {
+                    $totalGrossSales += ((float)$item->total) + ((float)($item->discount_amount ?? 0));
+                    $totalDiscountSales += ((float)($item->discount_amount ?? 0));
+                }
+            }
+
             return response()->json([
                 'sales' => $transformed,
                 'summary' => [
-                    'expenses' => $totalExpenses,
-                    'cogs'     => $totalCogs,
+                    'expenses'       => $totalExpenses,
+                    'cogs'           => $totalCogs,
+                    'total_gross'    => $totalGrossSales,
+                    'total_discount' => $totalDiscountSales,
                 ]
             ]);
         }
@@ -3533,8 +3611,9 @@ class ReportingController extends Controller
         $products   = \App\Models\Product::orderBy('item_name')->get();
         $categories = \App\Models\Category::orderBy('name')->get();
         $brands     = \App\Models\Brand::orderBy('name')->get();
+        $zones      = \App\Models\Zone::orderBy('zone')->get();
 
-        return view('admin_panel.reporting.product_sale_customer_wise_report', compact('customers', 'products', 'categories', 'brands'));
+        return view('admin_panel.reporting.product_sale_customer_wise_report', compact('customers', 'products', 'categories', 'brands', 'zones'));
     }
 
     /**
@@ -3544,18 +3623,21 @@ class ReportingController extends Controller
     {
         $fromDate = $request->from_date;
         $toDate   = $request->to_date;
+        $returnMode = $request->input('return_mode', 'sale_date'); // 'sale_date' (Audit Mode) or 'transaction_date' (Accounts Mode)
 
         // Normalize filters into arrays for Multi-Select support
         $customerIds = is_array($request->customer_id) ? $request->customer_id : ($request->customer_id && $request->customer_id !== 'all' ? [$request->customer_id] : []);
         $productIds  = is_array($request->product_id) ? $request->product_id : ($request->product_id && $request->product_id !== 'all' ? [$request->product_id] : []);
         $categoryIds = is_array($request->category_id) ? $request->category_id : ($request->category_id && $request->category_id !== 'all' ? [$request->category_id] : []);
         $brandIds    = is_array($request->brand_id) ? $request->brand_id : ($request->brand_id && $request->brand_id !== 'all' ? [$request->brand_id] : []);
+        $zoneIds     = is_array($request->zone_id) ? $request->zone_id : ($request->zone_id && $request->zone_id !== 'all' ? [$request->zone_id] : []);
 
         // Filter out 'all' values
         $customerIds = array_filter($customerIds, fn($v) => $v !== 'all' && !empty($v));
         $productIds  = array_filter($productIds, fn($v) => $v !== 'all' && !empty($v));
         $categoryIds = array_filter($categoryIds, fn($v) => $v !== 'all' && !empty($v));
         $brandIds    = array_filter($brandIds, fn($v) => $v !== 'all' && !empty($v));
+        $zoneIds     = array_filter($zoneIds, fn($v) => $v !== 'all' && !empty($v));
 
         // 1. Query Sales Items
         $salesQuery = DB::table('sale_items')
@@ -3576,7 +3658,10 @@ class ReportingController extends Controller
                 DB::raw("COALESCE(brands.name, '-') as brand_name"),
                 DB::raw("COALESCE(categories.name, '-') as category_name"),
                 DB::raw("SUM(sale_items.total_pieces) as sold_qty"),
-                DB::raw("SUM(sale_items.total) as gross_amount"),
+                DB::raw("SUM(COALESCE(sale_items.bonus_qty, 0)) as bonus_qty"),
+                DB::raw("SUM(sale_items.total + COALESCE(sale_items.discount_amount, 0)) as gross_amount"),
+                DB::raw("SUM(COALESCE(sale_items.discount_amount, 0)) as discount_amount"),
+                DB::raw("SUM(sale_items.total) as net_amount"),
                 DB::raw("COUNT(DISTINCT sales.id) as invoice_count")
             )
             ->whereIn('sales.sale_status', ['posted', 'completed', 'booked', 'draft']);
@@ -3586,6 +3671,9 @@ class ReportingController extends Controller
         }
         if ($toDate) {
             $salesQuery->whereDate('sales.created_at', '<=', $toDate);
+        }
+        if (!empty($zoneIds)) {
+            $salesQuery->whereIn('customers.zone', $zoneIds);
         }
         if (!empty($customerIds)) {
             $salesQuery->whereIn('sales.customer_id', $customerIds);
@@ -3617,19 +3705,65 @@ class ReportingController extends Controller
         // 2. Query Returns Data
         $returnQuery = DB::table('sale_return_items')
             ->join('sale_returns', 'sale_return_items.sale_return_id', '=', 'sale_returns.id')
+            ->leftJoin('sales', 'sale_returns.sale_id', '=', 'sales.id')
+            ->leftJoin('customers', 'sale_returns.customer_id', '=', 'customers.id')
+            ->leftJoin('products', 'sale_return_items.product_id', '=', 'products.id')
+            ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
             ->select(
                 'sale_returns.customer_id',
+                DB::raw("COALESCE(customers.customer_name, 'Walking Customer') as customer_name"),
+                DB::raw("COALESCE(customers.customer_id, 'N/A') as customer_code"),
+                'customers.mobile as customer_mobile',
+                'customers.address as customer_city',
                 'sale_return_items.product_id',
+                DB::raw("COALESCE(products.item_code, 'MANUAL') as product_code"),
+                DB::raw("COALESCE(products.item_name, 'Product') as product_name"),
+                DB::raw("COALESCE(brands.name, '-') as brand_name"),
+                DB::raw("COALESCE(categories.name, '-') as category_name"),
                 DB::raw("SUM(sale_return_items.qty) as return_qty"),
+                DB::raw("SUM(sale_return_items.qty * COALESCE(sale_return_items.price, 0)) as return_gross"),
+                DB::raw("SUM(COALESCE(sale_return_items.item_discount, 0)) as return_discount"),
                 DB::raw("SUM(sale_return_items.line_total) as return_amount")
             )
             ->whereIn('sale_returns.status', ['approved', 'posted', 'completed']);
 
-        if ($fromDate) {
-            $returnQuery->whereDate('sale_returns.created_at', '>=', $fromDate);
+        if ($returnMode === 'sale_date') {
+            // Audit Mode: match returns linked to sales that occurred in this date range
+            if ($fromDate) {
+                $returnQuery->where(function($q) use ($fromDate) {
+                    $q->where(function($sq) use ($fromDate) {
+                        $sq->whereNotNull('sale_returns.sale_id')
+                           ->whereDate('sales.created_at', '>=', $fromDate);
+                    })->orWhere(function($sq) use ($fromDate) {
+                        $sq->whereNull('sale_returns.sale_id')
+                           ->whereDate('sale_returns.created_at', '>=', $fromDate);
+                    });
+                });
+            }
+            if ($toDate) {
+                $returnQuery->where(function($q) use ($toDate) {
+                    $q->where(function($sq) use ($toDate) {
+                        $sq->whereNotNull('sale_returns.sale_id')
+                           ->whereDate('sales.created_at', '<=', $toDate);
+                    })->orWhere(function($sq) use ($toDate) {
+                        $sq->whereNull('sale_returns.sale_id')
+                           ->whereDate('sale_returns.created_at', '<=', $toDate);
+                    });
+                });
+            }
+        } else {
+            // Accounts Mode: match returns by posting/transaction date
+            if ($fromDate) {
+                $returnQuery->whereDate('sale_returns.created_at', '>=', $fromDate);
+            }
+            if ($toDate) {
+                $returnQuery->whereDate('sale_returns.created_at', '<=', $toDate);
+            }
         }
-        if ($toDate) {
-            $returnQuery->whereDate('sale_returns.created_at', '<=', $toDate);
+
+        if (!empty($zoneIds)) {
+            $returnQuery->whereIn('customers.zone', $zoneIds);
         }
         if (!empty($customerIds)) {
             $returnQuery->whereIn('sale_returns.customer_id', $customerIds);
@@ -3637,28 +3771,51 @@ class ReportingController extends Controller
         if (!empty($productIds)) {
             $returnQuery->whereIn('sale_return_items.product_id', $productIds);
         }
+        if (!empty($categoryIds)) {
+            $returnQuery->whereIn('products.category_id', $categoryIds);
+        }
+        if (!empty($brandIds)) {
+            $returnQuery->whereIn('products.brand_id', $brandIds);
+        }
 
-        $returnsData = $returnQuery->groupBy('sale_returns.customer_id', 'sale_return_items.product_id')->get();
+        $returnsData = $returnQuery->groupBy(
+            'sale_returns.customer_id',
+            'customers.customer_name',
+            'customers.customer_id',
+            'customers.mobile',
+            'customers.address',
+            'sale_return_items.product_id',
+            'products.item_code',
+            'products.item_name',
+            'brands.name',
+            'categories.name'
+        )->get();
 
         // Build Lookup key for returns: "cust_id_prod_id"
         $returnsLookup = [];
         foreach ($returnsData as $r) {
             $key = ($r->customer_id ?? 0) . '_' . ($r->product_id ?? 0);
             $returnsLookup[$key] = [
-                'return_qty' => (float) $r->return_qty,
-                'return_amount' => (float) $r->return_amount,
+                'return_qty'      => (float) $r->return_qty,
+                'return_gross'    => (float) $r->return_gross,
+                'return_discount' => (float) $r->return_discount,
+                'return_amount'   => (float) $r->return_amount,
+                'row'             => $r,
             ];
         }
 
         // 3. Group by Customer
         $grouped = [];
-        $totalInvoicesCount = 0;
-        $totalSoldQty = 0;
-        $totalReturnQty = 0;
-        $totalNetQty = 0;
-        $totalGrossAmount = 0;
-        $totalReturnAmount = 0;
-        $totalNetSaleAmount = 0;
+        $totalInvoicesCount  = 0;
+        $totalSoldQty        = 0;
+        $totalBonusQty       = 0;
+        $totalReturnQty      = 0;
+        $totalNetQty         = 0;
+        $totalGrossAmount    = 0;
+        $totalDiscountAmount = 0;
+        $totalReturnAmount   = 0;
+        $totalNetSaleAmount  = 0;
+        $processedReturnKeys = [];
 
         foreach ($salesData as $row) {
             $custId = $row->customer_id ?? 0;
@@ -3666,78 +3823,153 @@ class ReportingController extends Controller
 
             if (!isset($grouped[$custId])) {
                 $grouped[$custId] = [
-                    'customer_id' => $custId,
-                    'customer_name' => $custName,
-                    'customer_code' => $row->customer_code,
+                    'customer_id'     => $custId,
+                    'customer_name'   => $custName,
+                    'customer_code'   => $row->customer_code,
                     'customer_mobile' => $row->customer_mobile ?: '-',
-                    'customer_city' => $row->customer_city ?: '-',
-                    'gross_amount' => 0,
-                    'return_amount' => 0,
-                    'net_amount' => 0,
-                    'sold_qty' => 0,
-                    'return_qty' => 0,
-                    'net_qty' => 0,
-                    'products' => [],
+                    'customer_city'   => $row->customer_city ?: '-',
+                    'gross_amount'    => 0,
+                    'discount_amount' => 0,
+                    'return_amount'   => 0,
+                    'net_amount'      => 0,
+                    'sold_qty'        => 0,
+                    'bonus_qty'       => 0,
+                    'return_qty'      => 0,
+                    'net_qty'         => 0,
+                    'products'        => [],
                 ];
             }
 
             $prodId = $row->product_id ?? 0;
             $lookupKey = $custId . '_' . $prodId;
-            $retQty = isset($returnsLookup[$lookupKey]) ? $returnsLookup[$lookupKey]['return_qty'] : 0;
-            $retAmt = isset($returnsLookup[$lookupKey]) ? $returnsLookup[$lookupKey]['return_amount'] : 0;
+            $retQty   = isset($returnsLookup[$lookupKey]) ? $returnsLookup[$lookupKey]['return_qty'] : 0;
+            $retAmt   = isset($returnsLookup[$lookupKey]) ? $returnsLookup[$lookupKey]['return_amount'] : 0;
+            $retGross = isset($returnsLookup[$lookupKey]) ? $returnsLookup[$lookupKey]['return_gross'] : 0;
+            $processedReturnKeys[$lookupKey] = true;
 
-            $soldQty = (float) $row->sold_qty;
+            $soldQty  = (float) $row->sold_qty;
+            $bonusQty = (float) $row->bonus_qty;
             $grossAmt = (float) $row->gross_amount;
-            $netQty = $soldQty - $retQty;
-            $netAmt = $grossAmt - $retAmt;
+            $discAmt  = (float) $row->discount_amount;
+            $netQty   = $soldQty - $retQty;
+            $netAmt   = $grossAmt - $discAmt - $retAmt;
             $avgPrice = $soldQty > 0 ? ($grossAmt / $soldQty) : 0;
 
             $grouped[$custId]['products'][] = [
-                'product_id' => $prodId,
-                'product_code' => $row->product_code,
-                'product_name' => $row->product_name,
-                'brand_name' => $row->brand_name,
-                'category_name' => $row->category_name,
-                'sold_qty' => $soldQty,
-                'avg_price' => $avgPrice,
-                'gross_amount' => $grossAmt,
-                'return_qty' => $retQty,
-                'return_amount' => $retAmt,
-                'net_qty' => $netQty,
-                'net_amount' => $netAmt,
+                'product_id'      => $prodId,
+                'product_code'    => $row->product_code,
+                'product_name'    => $row->product_name,
+                'brand_name'      => $row->brand_name,
+                'category_name'   => $row->category_name,
+                'sold_qty'        => $soldQty,
+                'bonus_qty'       => $bonusQty,
+                'avg_price'       => $avgPrice,
+                'gross_amount'    => $grossAmt,
+                'discount_amount' => $discAmt,
+                'return_qty'      => $retQty,
+                'return_amount'   => $retAmt,
+                'net_qty'         => $netQty,
+                'net_amount'      => $netAmt,
             ];
 
-            $grouped[$custId]['gross_amount'] += $grossAmt;
-            $grouped[$custId]['return_amount'] += $retAmt;
-            $grouped[$custId]['net_amount'] += $netAmt;
-            $grouped[$custId]['sold_qty'] += $soldQty;
-            $grouped[$custId]['return_qty'] += $retQty;
-            $grouped[$custId]['net_qty'] += $netQty;
+            $grouped[$custId]['gross_amount']    += $grossAmt;
+            $grouped[$custId]['discount_amount'] += $discAmt;
+            $grouped[$custId]['return_amount']   += $retAmt;
+            $grouped[$custId]['net_amount']      += $netAmt;
+            $grouped[$custId]['sold_qty']        += $soldQty;
+            $grouped[$custId]['bonus_qty']       += $bonusQty;
+            $grouped[$custId]['return_qty']      += $retQty;
+            $grouped[$custId]['net_qty']         += $netQty;
 
-            $totalSoldQty += $soldQty;
-            $totalReturnQty += $retQty;
-            $totalNetQty += $netQty;
-            $totalGrossAmount += $grossAmt;
+            $totalSoldQty        += $soldQty;
+            $totalBonusQty       += $bonusQty;
+            $totalReturnQty      += $retQty;
+            $totalNetQty         += $netQty;
+            $totalGrossAmount    += $grossAmt;
+            $totalDiscountAmount += $discAmt;
+            $totalReturnAmount   += $retAmt;
+            $totalNetSaleAmount  += $netAmt;
+            $totalInvoicesCount  += (int) $row->invoice_count;
+        }
+
+        // Include any returns that occurred without sales in this period
+        foreach ($returnsLookup as $key => $rData) {
+            if (isset($processedReturnKeys[$key])) continue;
+            $r = $rData['row'];
+            $custId = $r->customer_id ?? 0;
+            $custName = $r->customer_name ?: 'Walking Customer';
+
+            if (!isset($grouped[$custId])) {
+                $grouped[$custId] = [
+                    'customer_id'     => $custId,
+                    'customer_name'   => $custName,
+                    'customer_code'   => $r->customer_code,
+                    'customer_mobile' => $r->customer_mobile ?: '-',
+                    'customer_city'   => $r->customer_city ?: '-',
+                    'gross_amount'    => 0,
+                    'discount_amount' => 0,
+                    'return_amount'   => 0,
+                    'net_amount'      => 0,
+                    'sold_qty'        => 0,
+                    'bonus_qty'       => 0,
+                    'return_qty'      => 0,
+                    'net_qty'         => 0,
+                    'products'        => [],
+                ];
+            }
+
+            $retQty   = $rData['return_qty'];
+            $retAmt   = $rData['return_amount'];
+            $retGross = $rData['return_gross'];
+            $avgPrice = $retQty > 0 ? ($retGross / $retQty) : 0;
+            $netQty   = -$retQty;
+            $netAmt   = -$retAmt;
+
+            $grouped[$custId]['products'][] = [
+                'product_id'      => $r->product_id,
+                'product_code'    => $r->product_code,
+                'product_name'    => $r->product_name,
+                'brand_name'      => $r->brand_name,
+                'category_name'   => $r->category_name,
+                'sold_qty'        => 0,
+                'bonus_qty'       => 0,
+                'avg_price'       => $avgPrice,
+                'gross_amount'    => 0,
+                'discount_amount' => 0,
+                'return_qty'      => $retQty,
+                'return_amount'   => $retAmt,
+                'net_qty'         => $netQty,
+                'net_amount'      => $netAmt,
+            ];
+
+            $grouped[$custId]['return_amount'] += $retAmt;
+            $grouped[$custId]['net_amount']    += $netAmt;
+            $grouped[$custId]['return_qty']    += $retQty;
+            $grouped[$custId]['net_qty']       += $netQty;
+
+            $totalReturnQty    += $retQty;
+            $totalNetQty       += $netQty;
             $totalReturnAmount += $retAmt;
-            $totalNetSaleAmount += $netAmt;
-            $totalInvoicesCount += (int) $row->invoice_count;
+            $totalNetSaleAmount+= $netAmt;
         }
 
         $totalCustomersCount = count($grouped);
 
         $summary = [
-            'total_customers' => $totalCustomersCount,
-            'total_invoices' => $totalInvoicesCount,
-            'total_qty' => number_format($totalSoldQty, 2),
-            'total_return_qty' => number_format($totalReturnQty, 2),
-            'net_qty' => number_format($totalNetQty, 2),
-            'gross_amount' => 'Rs ' . number_format($totalGrossAmount, 2),
-            'return_amount' => 'Rs ' . number_format($totalReturnAmount, 2),
-            'net_sale_amount' => 'Rs ' . number_format($totalNetSaleAmount, 2),
+            'total_customers'       => $totalCustomersCount,
+            'total_invoices'        => $totalInvoicesCount,
+            'total_qty'             => number_format($totalSoldQty, 2),
+            'total_bonus_qty'       => number_format($totalBonusQty, 2),
+            'total_return_qty'      => number_format($totalReturnQty, 2),
+            'net_qty'               => number_format($totalNetQty, 2),
+            'gross_amount'          => 'Rs ' . number_format($totalGrossAmount, 2),
+            'discount_amount'       => 'Rs ' . number_format($totalDiscountAmount, 2),
+            'return_amount'         => 'Rs ' . number_format($totalReturnAmount, 2),
+            'net_sale_amount'       => 'Rs ' . number_format($totalNetSaleAmount, 2),
         ];
 
         return response()->json([
-            'summary' => $summary,
+            'summary'   => $summary,
             'customers' => array_values($grouped)
         ]);
     }
