@@ -539,25 +539,25 @@
                     <div class="stat-sub text-muted" id="cardRawGrossSub">Billed Trade Price</div>
                 </div>
 
-                {{-- 2. Total Discount --}}
-                <div class="stat-pill" style="background: #fff1f2; border-color: #fecdd3;">
-                    <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
-                    <div class="stat-val text-danger" id="cardTotalDiscountTop">-Rs 0</div>
-                    <div class="stat-sub text-danger opacity-75" id="cardTotalDiscountTopSub">All Deductions</div>
-                </div>
-
-                {{-- 3. Software Net (Invoiced) --}}
-                <div class="stat-pill" style="background: #eff6ff; border-color: #bfdbfe;">
-                    <div class="stat-label" style="color: #2563eb;"><i class="fas fa-file-invoice me-1"></i>Software Net (Inv)</div>
-                    <div class="stat-val" style="color: #2563eb;" id="cardInvoicedNet">Rs 0</div>
-                    <div class="stat-sub" style="color: #2563eb; opacity: 0.85;" id="cardInvoicedNetSub">Gross - Disc (Table Net)</div>
-                </div>
-
-                {{-- 4. Sales Return --}}
+                {{-- 2. Sales Return --}}
                 <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
                     <div class="stat-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sales Return</div>
                     <div class="stat-val text-danger" id="cardSalesReturn">-Rs 0</div>
                     <div class="stat-sub text-danger opacity-75" id="cardSalesReturnSub">Returns Deducted</div>
+                </div>
+
+                {{-- 3. Sale After Return (Audit Net) --}}
+                <div class="stat-pill" style="background: #eff6ff; border-color: #93c5fd;">
+                    <div class="stat-label text-primary"><i class="fas fa-balance-scale me-1"></i>Sale After Return</div>
+                    <div class="stat-val text-primary" id="cardAuditNet">Rs 0</div>
+                    <div class="stat-sub text-primary opacity-75" id="cardAuditNetSub">Audit Net · Gross - Return</div>
+                </div>
+
+                {{-- 4. Total Discount --}}
+                <div class="stat-pill" style="background: #fff1f2; border-color: #fecdd3;">
+                    <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
+                    <div class="stat-val text-danger" id="cardTotalDiscountTop">-Rs 0</div>
+                    <div class="stat-sub text-danger opacity-75" id="cardTotalDiscountTopSub">All Deductions</div>
                 </div>
 
                 {{-- 5. Net Revenue (Realized) --}}
@@ -1088,6 +1088,7 @@ $(document).ready(function() {
         let effGrossVal   = parseFloat(s.effective_gross || s.gross_revenue || 0);
         let returnGrossVal= parseFloat(s.return_gross || (rawGrossVal - effGrossVal) || 0);
         let retNetVal     = parseFloat(s.return_amount || 0);
+        let auditNetVal   = parseFloat(s.audit_net !== undefined ? s.audit_net : (effGrossVal > 0 ? effGrossVal : Math.max(0, rawGrossVal - (returnGrossVal > 0 ? returnGrossVal : retNetVal))));
         let discVal       = parseFloat(s.total_discount || 0);
         let netRevVal     = parseFloat(s.net_revenue || 0);
         let cogsVal       = parseFloat(s.cogs || 0);
@@ -1105,15 +1106,20 @@ $(document).ready(function() {
         $('#cardRawGross').text('Rs ' + fmt(rawGrossVal));
         $('#cardRawGrossSub').text('Billed Trade Price');
 
-        $('#cardTotalDiscountTop').text((rawDiscVal > 0 ? '-Rs ' : 'Rs ') + fmt(rawDiscVal));
-        $('#cardTotalDiscountTopSub').text('All Deductions');
-
-        $('#cardInvoicedNet').text('Rs ' + fmt(invoicedNet));
-        $('#cardInvoicedNetSub').text('Gross - Disc (Table Net)');
-
         let displayReturnVal = returnGrossVal > 0 ? returnGrossVal : retNetVal;
         $('#cardSalesReturn').text((displayReturnVal > 0 ? '-Rs ' : 'Rs ') + fmt(displayReturnVal));
         $('#cardSalesReturnSub').text((returnGrossVal > 0 && retNetVal > 0 && returnGrossVal !== retNetVal) ? ('Net Refund: Rs ' + fmt(retNetVal)) : 'Returns Deducted');
+
+        $('#cardAuditNet').text('Rs ' + fmt(auditNetVal));
+        $('#cardAuditNetSub').text('Audit Net · Gross - Return');
+
+        $('#cardTotalDiscountTop').text((rawDiscVal > 0 ? '-Rs ' : 'Rs ') + fmt(rawDiscVal));
+        $('#cardTotalDiscountTopSub').text('All Deductions');
+
+        if ($('#cardInvoicedNet').length) {
+            $('#cardInvoicedNet').text('Rs ' + fmt(invoicedNet));
+            $('#cardInvoicedNetSub').text('Gross - Disc (Table Net)');
+        }
 
         $('#cardEffectiveGross').text('Rs ' + fmt(effGrossVal));
         $('#cardEffectiveGrossSub').text('Pre-Discount TP');
@@ -1180,7 +1186,7 @@ $(document).ready(function() {
             url: "{{ route('report.profit_loss.fetch') }}",
             type: "POST",
             data: {
-                _token: "{{ csrf_token() }}",
+                _token: $('meta[name="csrf-token"]').attr('content') || "{{ csrf_token() }}",
                 start_date: startDate,
                 end_date: endDate,
                 zone_id: zoneId,
@@ -1194,9 +1200,20 @@ $(document).ready(function() {
                 lastReportResponse = response;
                 renderReport(response);
             },
-            error: function() {
+            error: function(xhr) {
                 $('#loader').hide();
-                alert('Could not fetch report data');
+                if (xhr.status === 419) {
+                    alert('Session expire ho gaya hai (CSRF Expired). Page refresh kiya ja raha hai...');
+                    window.location.reload();
+                    return;
+                }
+                if (xhr.status === 401 || xhr.status === 403) {
+                    alert('Aapka session khatam ho chuka hai ya permission issue hai. Page refresh karein.');
+                    window.location.reload();
+                    return;
+                }
+                let msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Could not fetch report data';
+                alert(msg);
             }
         });
     }

@@ -1950,6 +1950,7 @@ class ReportingController extends Controller
                 'raw_gross_revenue' => round($totalGrossRevenue, 2),
                 'return_gross' => round($totalReturnTP > 0 ? $totalReturnTP : max(0, $totalGrossRevenue - $totalEffectiveGross), 2),
                 'effective_gross' => round($totalEffectiveGross, 2),
+                'audit_net' => round($totalEffectiveGross, 2),
                 'gross_revenue' => round($totalEffectiveGross, 2),
                 'total_discount' => round($grandTotalDiscount, 2),
                 'raw_total_discount' => round($rawTotalDiscounts, 2),
