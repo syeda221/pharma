@@ -361,6 +361,8 @@ Route::middleware('auth')->group(function () {
     Route::get('sale/return/{id}/view', [App\Http\Controllers\SaleReturnController::class, 'viewReturn'])->middleware('permission:sales.view')->name('sale.return.view');
     Route::get('sale/return/{id}', [App\Http\Controllers\SaleReturnController::class, 'showReturnForm'])->middleware('permission:sales.create')->name('sale.return.show');
     Route::post('sale/return/store', [App\Http\Controllers\SaleReturnController::class, 'processSaleReturn'])->middleware('permission:sales.create')->name('sale.return.store');
+    Route::delete('sale/return/{id}', [App\Http\Controllers\SaleReturnController::class, 'destroy'])->middleware('permission:sales.delete')->name('sale.return.destroy');
+    Route::get('sale/return/{id}/delete', [App\Http\Controllers\SaleReturnController::class, 'destroy'])->middleware('permission:sales.delete')->name('sale.return.delete');
 
     // Bulk Discount Batch Review & Apply Routes
     Route::get('/sales/bulk-discount', [SaleController::class, 'bulkDiscountIndex'])->middleware('permission:sales.edit')->name('sale.bulk_discount');

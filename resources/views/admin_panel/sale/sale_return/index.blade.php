@@ -9,8 +9,21 @@
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h3>Sale Returns</h3>
-                            <a class="btn btn-primary" href="{{ route('sale.index') }}">Back to Purchases</a>
+                            <a class="btn btn-primary" href="{{ route('sale.index') }}">Back to Sales</a>
                         </div>
+
+                        @if (session('success'))
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <strong>Success!</strong> {{ session('success') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        @endif
+                        @if (session('error'))
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <strong>Error!</strong> {{ session('error') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        @endif
 
                         <div class="border mt-1 shadow rounded bg-white">
                             <div class="table-responsive mt-4 mb-5 p-3">
@@ -107,8 +120,16 @@
                                                 </td>
 
                                                 <td>
-                                                    <a href="{{ route('sale.return.view', $return->id) }}"
-                                                        class="btn btn-sm btn-primary">View</a>
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        <a href="{{ route('sale.return.view', $return->id) }}"
+                                                            class="btn btn-sm btn-primary">
+                                                            <i class="fa fa-eye"></i> View
+                                                        </a>
+                                                        <button type="button" class="btn btn-sm btn-danger"
+                                                            onclick="confirmDeleteReturn('{{ $return->id }}', '{{ $return->return_invoice }}')">
+                                                            <i class="fa fa-trash"></i> Delete
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -116,6 +137,12 @@
                                 </table>
                             </div>
                         </div>
+
+                        {{-- Hidden form for DELETE Return (method spoofing) --}}
+                        <form id="delete-return-form" method="POST" style="display:none;">
+                            @csrf
+                            @method('DELETE')
+                        </form>
 
                         {{-- Scripts --}}
                         <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
@@ -137,6 +164,33 @@
                                     }
                                 });
                             });
+
+                            function confirmDeleteReturn(returnId, invoiceNo) {
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        title: 'Delete Sale Return?',
+                                        text: `Are you sure you want to delete return ${invoiceNo}? This will restore stock, ledger balance, and original sale status!`,
+                                        icon: 'warning',
+                                        showCancelButton: true,
+                                        confirmButtonColor: '#dc3545',
+                                        cancelButtonColor: '#6c757d',
+                                        confirmButtonText: 'Yes, Delete!',
+                                        cancelButtonText: 'Cancel'
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            let form = document.getElementById('delete-return-form');
+                                            form.action = `/sale/return/${returnId}`;
+                                            form.submit();
+                                        }
+                                    });
+                                } else {
+                                    if (confirm(`Are you sure you want to delete return ${invoiceNo}? This will restore stock, ledger balance, and original sale status!`)) {
+                                        let form = document.getElementById('delete-return-form');
+                                        form.action = `/sale/return/${returnId}`;
+                                        form.submit();
+                                    }
+                                }
+                            }
                         </script>
 
                     </div>

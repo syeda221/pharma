@@ -626,4 +626,90 @@ class SaleReturnController extends Controller
         $return = SaleReturn::with(['customer', 'sale', 'items.product'])->findOrFail($id);
         return view('admin_panel.sale.sale_return.show', compact('return'));
     }
+
+    /**
+     * Delete a sale return (full or partial) and cleanly reverse ledger, vouchers, stock, and sale status.
+     */
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $return = SaleReturn::with(['items.product', 'sale'])->findOrFail($id);
+            $customerId = $return->customer_id;
+            $returnInvoice = $return->return_invoice;
+            $saleId = $return->sale_id;
+
+            // 1. Revert warehouse stocks (remove returned goods)
+            foreach ($return->items as $item) {
+                $stock = WarehouseStock::where('warehouse_id', $item->warehouse_id)
+                    ->where('product_id', $item->product_id)
+                    ->first();
+                if ($stock) {
+                    $ppb = (int)($item->product->pieces_per_box ?? 1);
+                    if ($ppb <= 0) $ppb = 1;
+                    $stock->total_pieces = $stock->total_pieces - (float)$item->qty;
+                    $stock->quantity = $stock->total_pieces / $ppb;
+                    $stock->save();
+                }
+            }
+
+            // 2. Delete stock movements
+            DB::table('stock_movements')
+                ->where('ref_type', 'SALE_RETURN')
+                ->where('ref_id', $return->id)
+                ->delete();
+
+            // 3. Delete vouchers & journal entries (Credit Note & Payment refunds)
+            $vouchers = \App\Models\VoucherMaster::where('remarks', 'LIKE', "%{$returnInvoice}%")->get();
+            foreach ($vouchers as $vm) {
+                \App\Models\JournalEntry::where('source_type', \App\Models\VoucherMaster::class)
+                    ->where('source_id', $vm->id)
+                    ->delete();
+                \App\Models\VoucherDetail::where('voucher_master_id', $vm->id)->delete();
+                $vm->delete();
+            }
+
+            // 4. Delete CustomerLedger entries if any
+            if ($customerId) {
+                \App\Models\CustomerLedger::where('customer_id', $customerId)
+                    ->where('description', 'LIKE', "%{$returnInvoice}%")
+                    ->delete();
+            }
+
+            // 5. Restore Sale Status if it was marked 'returned'
+            if ($saleId) {
+                $sale = \App\Models\Sale::find($saleId);
+                if ($sale) {
+                    $otherReturns = SaleReturn::where('sale_id', $sale->id)
+                        ->where('id', '!=', $return->id)
+                        ->exists();
+                    if (!$otherReturns && $sale->sale_status === 'returned') {
+                        $sale->update(['sale_status' => 'posted']);
+                    }
+                }
+            }
+
+            // 6. Delete items and return record
+            $return->items()->delete();
+            $return->delete();
+
+            // 7. Re-sync customer balance
+            if ($customerId) {
+                $cust = Customer::find($customerId);
+                if ($cust) {
+                    $cust->previous_balance = app(\App\Services\BalanceService::class)->getCustomerBalance($customerId);
+                    $cust->save();
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('sale.return.index')->with('success', "Sale Return #{$returnInvoice} deleted successfully. Stock, ledger, and sale status have been restored.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error deleting return: ' . $e->getMessage());
+        }
+    }
 }
