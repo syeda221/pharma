@@ -389,7 +389,17 @@ class SaleController extends Controller
             $billAmount = $s->total_bill_amount > 0 ? (float) $s->total_bill_amount : (float) $s->per_total;
             return $billAmount + $inlineVal;
         });
-        $returnGross = max(0, $rawGross - $effectiveGross);
+
+        $directReturnGross = 0;
+        foreach ($sales as $s) {
+            if ($s->returns && $s->returns->count() > 0) {
+                foreach ($s->returns as $ret) {
+                    $retTP = (float) ($ret->bill_amount > 0 ? $ret->bill_amount : ($ret->items ? $ret->items->sum(function($i) { return (float)($i->price ?? 0) * (float)($i->qty ?? 0); }) : (float)($ret->net_amount ?? 0)));
+                    $directReturnGross += $retTP;
+                }
+            }
+        }
+        $returnGross = $directReturnGross > 0 ? $directReturnGross : max(0, $rawGross - $effectiveGross);
 
         $rawSaleCogs = (float) $sales->sum('sale_cogs');
         $rawReturnCogs = (float) $sales->sum('return_cogs');

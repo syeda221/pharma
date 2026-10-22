@@ -1111,8 +1111,9 @@ $(document).ready(function() {
         $('#cardInvoicedNet').text('Rs ' + fmt(invoicedNet));
         $('#cardInvoicedNetSub').text('Gross - Disc (Table Net)');
 
-        $('#cardSalesReturn').text((retNetVal > 0 ? '-Rs ' : 'Rs ') + fmt(retNetVal));
-        $('#cardSalesReturnSub').text(returnGrossVal > retNetVal ? ('TP: Rs ' + fmt(returnGrossVal)) : 'Returns Deducted');
+        let displayReturnVal = returnGrossVal > 0 ? returnGrossVal : retNetVal;
+        $('#cardSalesReturn').text((displayReturnVal > 0 ? '-Rs ' : 'Rs ') + fmt(displayReturnVal));
+        $('#cardSalesReturnSub').text((returnGrossVal > 0 && retNetVal > 0 && returnGrossVal !== retNetVal) ? ('Net Refund: Rs ' + fmt(retNetVal)) : 'Returns Deducted');
 
         $('#cardEffectiveGross').text('Rs ' + fmt(effGrossVal));
         $('#cardEffectiveGrossSub').text('Pre-Discount TP');

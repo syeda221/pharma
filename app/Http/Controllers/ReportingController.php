@@ -1886,11 +1886,14 @@ class ReportingController extends Controller
             $overviewRetQuery->where('sri.product_id', $productId);
         }
 
-        $overviewReturns = $overviewRetQuery->select('sri.qty', 'sri.boxes', 'sri.loose_pieces', 'sri.line_total')->get();
+        $overviewReturns = $overviewRetQuery->select('sri.qty', 'sri.boxes', 'sri.loose_pieces', 'sri.line_total', 'sri.price', 'sr.bill_amount')->get();
         $totalReturnPieces = (float) $overviewReturns->sum('qty');
         $totalReturnBoxes  = (int) $overviewReturns->sum('boxes');
         $totalReturnLoose  = (int) $overviewReturns->sum('loose_pieces');
         $totalReturnAmount = (float) $overviewReturns->sum('line_total');
+        $totalReturnTP     = (float) $overviewReturns->sum(function($r) {
+            return (float)($r->qty ?? 0) * (float)($r->price ?? 0);
+        });
 
         $grandTotalDiscount = $totalItemDiscounts + $totalExtraDiscounts;
         $otherDiscount = max(0, $grandTotalDiscount - ($medicalDiscount + $distributionDiscount + $doctorDiscount));
@@ -1945,7 +1948,7 @@ class ReportingController extends Controller
             'zone_stats' => $zoneList,
             'summary' => [
                 'raw_gross_revenue' => round($totalGrossRevenue, 2),
-                'return_gross' => round(max(0, $totalGrossRevenue - $totalEffectiveGross), 2),
+                'return_gross' => round($totalReturnTP > 0 ? $totalReturnTP : max(0, $totalGrossRevenue - $totalEffectiveGross), 2),
                 'effective_gross' => round($totalEffectiveGross, 2),
                 'gross_revenue' => round($totalEffectiveGross, 2),
                 'total_discount' => round($grandTotalDiscount, 2),

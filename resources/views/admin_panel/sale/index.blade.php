@@ -566,12 +566,13 @@
                     @php 
                         $retGross = (float)($stats['return_gross'] ?? 0);
                         $retNet = (float)($stats['total_returned'] ?? 0);
+                        $displayRet = $retGross > 0 ? $retGross : $retNet;
                     @endphp
                     <div class="col-6 col-md-3">
                         <div class="stat-pill h-100" style="background: #fef2f2; border-color: #fca5a5;">
                             <div class="stat-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sale Return</div>
-                            <div class="stat-val text-danger" id="statSalesReturn">-Rs {{ $retNet == floor($retNet) ? number_format($retNet, 0) : number_format($retNet, 2) }}</div>
-                            <div class="stat-sub text-danger opacity-75" id="statSalesReturnSub">@if($retGross > $retNet) TP: Rs {{ number_format($retGross, 0) }} @else Returns Deducted @endif</div>
+                            <div class="stat-val text-danger" id="statSalesReturn">-Rs {{ $displayRet == floor($displayRet) ? number_format($displayRet, 0) : number_format($displayRet, 2) }}</div>
+                            <div class="stat-sub text-danger opacity-75" id="statSalesReturnSub">@if($retGross > 0 && $retNet > 0 && $retGross != $retNet) Net Refund: Rs {{ number_format($retNet, 0) }} @else Returns Deducted @endif</div>
                         </div>
                     </div>
 
@@ -586,12 +587,15 @@
                     </div>
 
                     {{-- 4. After Sale --}}
-                    @php $netTot = (float)($stats['total_net'] ?? ($rawGross - $retNet - $rawDisc)); @endphp
+                    @php 
+                        $netTot = (float)($stats['total_net'] ?? ($rawGross - $retNet - $rawDisc)); 
+                        $auditNet = max(0, $rawGross - $retGross);
+                    @endphp
                     <div class="col-6 col-md-3">
                         <div class="stat-pill h-100" style="background: #ecfdf5; border-color: #a7f3d0;">
                             <div class="stat-label text-success"><i class="fas fa-receipt me-1"></i>After Sale</div>
                             <div class="stat-val text-success" id="statTotalNet">Rs {{ $netTot == floor($netTot) ? number_format($netTot, 0) : number_format($netTot, 2) }}</div>
-                            <div class="stat-sub text-success opacity-75" id="statGrossRevenueSub">Net Realized Revenue</div>
+                            <div class="stat-sub text-success opacity-75" id="statGrossRevenueSub">Audit Net: Rs {{ number_format($auditNet, 0) }} · Realized</div>
                         </div>
                     </div>
                 </div>
@@ -982,14 +986,17 @@
                             let bonusQtyVal = parseFloat(response.stats.total_bonus_qty || 0);
                             let soldQtyVal = parseFloat(response.stats.total_qty || 0);
 
+                            let displayRet = retGross > 0 ? retGross : retNet;
+                            let auditNet = Math.max(0, rawGross - retGross);
+
                             $('#statRawGross').text('Rs ' + fmt(rawGross));
                             $('#statTopTotalDiscount, #statTotalDiscount').text((rawDisc > 0 ? '-Rs ' : 'Rs ') + fmt(rawDisc));
                             $('#statInvoicedNet').text('Rs ' + fmt(invoicedNet));
-                            $('#statSalesReturn').text((retNet > 0 ? '-Rs ' : 'Rs ') + fmt(retNet));
-                            $('#statSalesReturnSub').text(retGross > retNet ? ('TP: Rs ' + fmt(retGross)) : 'Returns Deducted');
+                            $('#statSalesReturn').text((displayRet > 0 ? '-Rs ' : 'Rs ') + fmt(displayRet));
+                            $('#statSalesReturnSub').text((retGross > 0 && retNet > 0 && retGross !== retNet) ? ('Net Refund: Rs ' + fmt(retNet)) : 'Returns Deducted');
                             $('#statEffectiveGross').text('Rs ' + fmt(effGross));
                             $('#statTotalNet').text('Rs ' + fmt(netVal));
-                            $('#statGrossRevenueSub').text('Realized (Net - Return)');
+                            $('#statGrossRevenueSub').text('Audit Net: Rs ' + fmt(auditNet) + ' · Realized');
                             $('#statTotalCOGS').text('Rs ' + fmt(cogsVal));
                             $('#statTotalBonusAmount').text('Rs ' + fmt(bonusAmtVal));
                             $('#statBonusAmountSub').text('At Cost · ' + fmt(bonusQtyVal) + ' Pcs');
