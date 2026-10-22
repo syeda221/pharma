@@ -26,7 +26,7 @@
         padding-bottom: 2px;
     }
     .summary-pill-bar::-webkit-scrollbar {
-        height: 5px;
+        height: 4px;
     }
     .summary-pill-bar::-webkit-scrollbar-track {
         background: #f1f5f9;
@@ -38,14 +38,19 @@
     }
     .stat-pill {
         flex: 1 1 0px;
-        min-width: 140px;
-        padding: 7px 10px;
+        min-width: 95px;
+        padding: 6px 8px;
         border-radius: 8px;
         border: 1px solid #cbd5e1;
         background: #ffffff;
         text-align: center;
         box-shadow: 0 1px 2px rgba(0,0,0,0.03);
         transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .row .stat-pill {
+        min-width: 0 !important;
+        width: 100%;
+        padding: 8px 10px;
     }
     .stat-pill:hover {
         transform: translateY(-1px);
@@ -525,7 +530,8 @@
                 </div>
             </div>
 
-            <div class="summary-pill-bar">
+            {{-- ROW 1: 8 Waterfall Operational KPI Cards (Matches Sale Screen Sequence) --}}
+            <div class="summary-pill-bar mb-2">
                 {{-- 1. Gross Sales (TP) --}}
                 <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
                     <div class="stat-label text-secondary"><i class="fas fa-file-invoice-dollar me-1"></i>Gross Sales (TP)</div>
@@ -581,47 +587,58 @@
                     <div class="stat-val text-success" id="cardGrossProfit">Rs 0</div>
                     <div class="stat-sub text-success" id="cardGrossProfitSub">Revenue - COGS - Bonus</div>
                 </div>
+            </div>
 
+            {{-- ROW 2: Bottom Line & Partner Equity Distribution Strip (Eliminates horizontal scrolling) --}}
+            <div class="row g-2 pt-2 border-top align-items-stretch">
                 {{-- 9. Total Expenses --}}
-                <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;" id="cardExpensesBox">
-                    <div class="stat-label text-danger" id="cardExpensesLabel"><i class="fas fa-arrow-trend-down me-1"></i>Expenses</div>
-                    <div class="stat-val text-danger" id="cardExpenses">Rs 0</div>
-                    <div class="stat-sub text-danger" id="cardExpensesSub">Operating Costs</div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-pill h-100 d-flex flex-column justify-content-center" style="background: #fef2f2; border-color: #fca5a5;" id="cardExpensesBox">
+                        <div class="stat-label text-danger mb-1" id="cardExpensesLabel" style="font-size: .68rem;"><i class="fas fa-arrow-trend-down me-1"></i>Expenses</div>
+                        <div class="stat-val text-danger fw-bold" id="cardExpenses" style="font-size: 1.08rem;">Rs 0</div>
+                        <div class="stat-sub text-danger opacity-75 mt-0.5" id="cardExpensesSub">Operating Costs</div>
+                    </div>
                 </div>
 
                 {{-- 10. Net Profit / Loss --}}
-                <div class="stat-pill" style="background: #f0f9ff; border-color: #bae6fd;" id="cardNetProfitBox">
-                    <div class="stat-label text-primary" id="cardNetProfitLabel"><i class="fas fa-chart-line me-1"></i>Net Profit / Loss</div>
-                    <div class="stat-val text-primary" id="cardNetProfit">Rs 0</div>
-                    <div class="stat-sub text-primary" id="cardNetProfitSub">Bottom Line</div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-pill h-100 d-flex flex-column justify-content-center" style="background: #f0f9ff; border-color: #bae6fd;" id="cardNetProfitBox">
+                        <div class="stat-label text-primary mb-1" id="cardNetProfitLabel" style="font-size: .68rem;"><i class="fas fa-chart-line me-1"></i>Net Profit / Loss</div>
+                        <div class="stat-val text-primary fw-bold" id="cardNetProfit" style="font-size: 1.08rem;">Rs 0</div>
+                        <div class="stat-sub text-primary opacity-75 mt-0.5" id="cardNetProfitSub">Bottom Line</div>
+                    </div>
                 </div>
 
-                {{-- 11. Partner 1 --}}
-                <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;" id="cardPartner1Box">
-                    <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #7c3aed;">
-                        <i class="fas fa-user-tie"></i>
-                        <span>Partner 1</span>
-                        <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #d8b4fe !important; height: 18px;">
-                            <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 30px; font-size: 10px; outline: none; color: #7c3aed; background: transparent;" title="Change %">
-                            <span style="font-size: 9px; font-weight: 700; color: #7c3aed;">%</span>
-                        </span>
+                {{-- 11. Partner 1 Equity Share --}}
+                <div class="col-6 col-md-3">
+                    <div class="stat-pill h-100 d-flex flex-column justify-content-center" style="background: #faf5ff; border-color: #d8b4fe;" id="cardPartner1Box">
+                        <div class="stat-label d-flex align-items-center justify-content-center gap-1 mb-1" style="color: #7c3aed; font-size: .68rem;">
+                            <i class="fas fa-user-tie"></i>
+                            <span class="fw-bold">Partner 1</span>
+                            <span class="d-inline-flex align-items-center bg-white px-1.5 py-0.5 rounded border shadow-2xs" style="border-color: #d8b4fe !important; height: 19px;">
+                                <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 32px; font-size: 11px; outline: none; color: #7c3aed; background: transparent;" title="Click to adjust %">
+                                <span style="font-size: 10px; font-weight: 700; color: #7c3aed;">%</span>
+                            </span>
+                        </div>
+                        <div class="stat-val fw-bold" style="color: #7c3aed; font-size: 1.08rem;" id="cardPartner1Profit">Rs 0</div>
+                        <div class="stat-sub mt-0.5" style="color: #7c3aed;" id="cardPartner1ProfitSub">Equity Share</div>
                     </div>
-                    <div class="stat-val" style="color: #7c3aed;" id="cardPartner1Profit">Rs 0</div>
-                    <div class="stat-sub" style="color: #7c3aed;" id="cardPartner1ProfitSub">Equity Share</div>
                 </div>
 
-                {{-- 12. Partner 2 --}}
-                <div class="stat-pill" style="background: #fff7ed; border-color: #fed7aa;" id="cardPartner2Box">
-                    <div class="stat-label d-flex align-items-center justify-content-center gap-1" style="color: #ea580c;">
-                        <i class="fas fa-user-tie"></i>
-                        <span>Partner 2</span>
-                        <span class="d-inline-flex align-items-center bg-white px-1 rounded border" style="border-color: #fed7aa !important; height: 18px;">
-                            <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 30px; font-size: 10px; outline: none; color: #ea580c; background: transparent;" title="Change %">
-                            <span style="font-size: 9px; font-weight: 700; color: #ea580c;">%</span>
-                        </span>
+                {{-- 12. Partner 2 Equity Share --}}
+                <div class="col-6 col-md-3">
+                    <div class="stat-pill h-100 d-flex flex-column justify-content-center" style="background: #fff7ed; border-color: #fed7aa;" id="cardPartner2Box">
+                        <div class="stat-label d-flex align-items-center justify-content-center gap-1 mb-1" style="color: #ea580c; font-size: .68rem;">
+                            <i class="fas fa-user-tie"></i>
+                            <span class="fw-bold">Partner 2</span>
+                            <span class="d-inline-flex align-items-center bg-white px-1.5 py-0.5 rounded border shadow-2xs" style="border-color: #fed7aa !important; height: 19px;">
+                                <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 32px; font-size: 11px; outline: none; color: #ea580c; background: transparent;" title="Click to adjust %">
+                                <span style="font-size: 10px; font-weight: 700; color: #ea580c;">%</span>
+                            </span>
+                        </div>
+                        <div class="stat-val fw-bold" style="color: #ea580c; font-size: 1.08rem;" id="cardPartner2Profit">Rs 0</div>
+                        <div class="stat-sub mt-0.5" style="color: #ea580c;" id="cardPartner2ProfitSub">Equity Share</div>
                     </div>
-                    <div class="stat-val" style="color: #ea580c;" id="cardPartner2Profit">Rs 0</div>
-                    <div class="stat-sub" style="color: #ea580c;" id="cardPartner2ProfitSub">Equity Share</div>
                 </div>
             </div>
         </div>

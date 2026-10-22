@@ -1895,12 +1895,8 @@ class ReportingController extends Controller
         $grandTotalDiscount = $totalItemDiscounts + $totalExtraDiscounts;
         $otherDiscount = max(0, $grandTotalDiscount - ($medicalDiscount + $distributionDiscount + $doctorDiscount));
 
-        // When not filtering by product/category, use the clamped per-sale effective net to avoid return overflow distortion
-        if ((!$productId || $productId === 'all') && (!$categoryId || $categoryId === 'all')) {
-            $finalNetRevenue = $totalSaleEffectiveNet;
-        } else {
-            $finalNetRevenue = max(0, $totalNetRevenue - $totalReturnAmount);
-        }
+        // Align finalNetRevenue with exact waterfall: raw_gross - raw_total_discount - return_amount
+        $finalNetRevenue = max(0, $totalGrossRevenue - $rawTotalDiscounts - $totalReturnAmount);
         $finalNetPieces = max(0, $totalSoldPieces - $totalReturnPieces);
 
         // Format Quantity Strings (Sold, Returned, Net Delivered)

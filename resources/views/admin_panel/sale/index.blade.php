@@ -68,14 +68,21 @@
         }
         .stat-pill {
             flex: 1 1 0px;
-            min-width: 140px;
-            padding: 7px 10px;
+            min-width: 105px;
+            padding: 7px 8px;
             border-radius: 8px;
             border: 1px solid #cbd5e1;
             background: #ffffff;
             text-align: center;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03);
             transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .row .stat-pill {
+            min-width: 0 !important;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .stat-pill:hover {
             transform: translateY(-1px);
@@ -543,144 +550,148 @@
                     </div>
                 </div>
 
-                {{-- Primary KPI Strip (Sequence: Gross Sales, Sales Return, Net Sales TP, Total Discount, Net Revenue, Total COGS, Bonus Amount, Gross Profit, Invoices, Product Qty / Bonus) --}}
-                <div class="summary-pill-bar mb-3">
-
-                    {{-- 1. Gross Sales (TP) --}}
+                {{-- LINE 1: Primary Revenue Flow (Gross sale, Sale return, Total discount, After sale) --}}
+                <div class="row g-2 mb-2 align-items-stretch">
+                    {{-- 1. Gross Sale --}}
                     @php $rawGross = (float)($stats['raw_gross'] ?? 0); @endphp
-                    <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
-                        <div class="stat-label text-secondary"><i class="fas fa-file-invoice-dollar me-1"></i>Gross Sales (TP)</div>
-                        <div class="stat-val text-dark" id="statRawGross">Rs {{ $rawGross == floor($rawGross) ? number_format($rawGross, 0) : number_format($rawGross, 2) }}</div>
-                        <div class="stat-sub text-muted">Billed Trade Price</div>
+                    <div class="col-6 col-md-3">
+                        <div class="stat-pill h-100" style="background: #f8fafc; border-color: #cbd5e1;">
+                            <div class="stat-label text-secondary"><i class="fas fa-file-invoice-dollar me-1"></i>Gross Sale</div>
+                            <div class="stat-val text-dark" id="statRawGross">Rs {{ $rawGross == floor($rawGross) ? number_format($rawGross, 0) : number_format($rawGross, 2) }}</div>
+                            <div class="stat-sub text-muted" id="statRawGrossSub" title="Actual Trade Price (Pre-Return & Pre-Discount)">Billed Trade Price</div>
+                        </div>
                     </div>
 
-                    {{-- 2. Total Discount --}}
-                    @php $rawDisc = (float)($stats['raw_discount'] ?? ($stats['total_discount'] ?? 0)); @endphp
-                    <div class="stat-pill" style="background: #fff1f2; border-color: #fecdd3;">
-                        <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
-                        <div class="stat-val text-danger" id="statTopTotalDiscount">-Rs {{ $rawDisc == floor($rawDisc) ? number_format($rawDisc, 0) : number_format($rawDisc, 2) }}</div>
-                        <div class="stat-sub text-danger opacity-75">All Deductions</div>
-                    </div>
-
-                    {{-- 3. Software Net (Invoiced) --}}
-                    @php $invNet = (float)($stats['invoiced_net'] ?? ($rawGross - $rawDisc)); @endphp
-                    <div class="stat-pill" style="background: #eff6ff; border-color: #bfdbfe;">
-                        <div class="stat-label" style="color: #2563eb;"><i class="fas fa-file-invoice me-1"></i>Software Net (Inv)</div>
-                        <div class="stat-val" style="color: #2563eb;" id="statInvoicedNet">Rs {{ $invNet == floor($invNet) ? number_format($invNet, 0) : number_format($invNet, 2) }}</div>
-                        <div class="stat-sub" style="color: #2563eb; opacity: 0.85;">Gross - Disc (Table Net)</div>
-                    </div>
-
-                    {{-- 4. Sales Return --}}
+                    {{-- 2. Sale Return --}}
                     @php 
                         $retGross = (float)($stats['return_gross'] ?? 0);
                         $retNet = (float)($stats['total_returned'] ?? 0);
                     @endphp
-                    <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
-                        <div class="stat-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sales Return</div>
-                        <div class="stat-val text-danger" id="statSalesReturn">-Rs {{ $retNet == floor($retNet) ? number_format($retNet, 0) : number_format($retNet, 2) }}</div>
-                        <div class="stat-sub text-danger opacity-75" id="statSalesReturnSub">@if($retGross > $retNet) TP: Rs {{ number_format($retGross, 0) }} @else Returns Deducted @endif</div>
-                    </div>
-
-                    {{-- 5. Net Revenue --}}
-                    @php $netTot = (float)($stats['total_net'] ?? ($invNet - $retNet)); @endphp
-                    <div class="stat-pill" style="background: #ecfdf5; border-color: #a7f3d0;">
-                        <div class="stat-label text-success"><i class="fas fa-receipt me-1"></i>Net Revenue</div>
-                        <div class="stat-val text-success" id="statTotalNet">Rs {{ $netTot == floor($netTot) ? number_format($netTot, 0) : number_format($netTot, 2) }}</div>
-                        <div class="stat-sub text-success opacity-75" id="statGrossRevenueSub">Realized (Net - Return)</div>
-                    </div>
-
-                    {{-- 6. Total COGS --}}
-                    @php $cogsTot = (float)($stats['total_cogs'] ?? 0); @endphp
-                    <div class="stat-pill" style="background: #fffbeb; border-color: #fde68a;">
-                        <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-boxes-stacked me-1"></i>Total COGS</div>
-                        <div class="stat-val" style="color: #b45309;" id="statTotalCOGS">Rs {{ $cogsTot == floor($cogsTot) ? number_format($cogsTot, 0) : number_format($cogsTot, 2) }}</div>
-                        <div class="stat-sub" style="color: #d97706;">Product Cost</div>
-                    </div>
-
-                    {{-- 7. Bonus Amount --}}
-                    @php $bAmt = (float)($stats['total_bonus_amount'] ?? 0); @endphp
-                    <div class="stat-pill" style="background: #fffbeb; border-color: #f59e0b;">
-                        <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-gift me-1"></i>Bonus Amount</div>
-                        <div class="stat-val" style="color: #b45309;" id="statTotalBonusAmount">Rs {{ $bAmt == floor($bAmt) ? number_format($bAmt, 0) : number_format($bAmt, 2) }}</div>
-                        <div class="stat-sub" style="color: #d97706;" id="statBonusAmountSub">At Cost · {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
-                    </div>
-
-                    {{-- 8. Gross Profit --}}
-                    @php
-                        $gpTot = (float)($stats['total_gross_profit'] ?? 0);
-                        $gpColor = $gpTot >= 0 ? '#059669' : '#dc2626';
-                        $gpBg = $gpTot >= 0 ? '#f0fdf4' : '#fef2f2';
-                        $gpBorder = $gpTot >= 0 ? '#86efac' : '#fca5a5';
-                        $gpSign = $gpTot < 0 ? '-' : '';
-                        $gpAbs = abs($gpTot);
-                    @endphp
-                    <div class="stat-pill" style="background: {{ $gpBg }}; border-color: {{ $gpBorder }};" id="statGrossProfitBox">
-                        <div class="stat-label" style="color: {{ $gpColor }};" id="statGrossProfitLabel"><i class="fas fa-arrow-trend-up me-1"></i>Gross Profit</div>
-                        <div class="stat-val" style="color: {{ $gpColor }};" id="statTotalGrossProfit">{{ $gpSign }}Rs {{ $gpAbs == floor($gpAbs) ? number_format($gpAbs, 0) : number_format($gpAbs, 2) }}</div>
-                        <div class="stat-sub" style="color: {{ $gpColor }};" id="statGrossProfitSub">Revenue - COGS - Bonus</div>
-                    </div>
-
-                    {{-- 9. Invoices Count --}}
-                    <div class="stat-pill" style="background: #ffffff; border-color: #cbd5e1;">
-                        <div class="stat-label text-secondary"><i class="fas fa-file-invoice me-1 text-info"></i>Invoices</div>
-                        <div class="stat-val text-dark" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</div>
-                        <div id="statStatusCounts" class="stat-sub">
-                            P:{{ $stats['posted_count'] ?? 0 }}
-                            @if(($stats['booked_count'] ?? 0) > 0) &nbsp;B:{{ $stats['booked_count'] ?? 0 }} @endif
-                            @if(($stats['returned_count'] ?? 0) > 0) &nbsp;R:{{ $stats['returned_count'] ?? 0 }} @endif
+                    <div class="col-6 col-md-3">
+                        <div class="stat-pill h-100" style="background: #fef2f2; border-color: #fca5a5;">
+                            <div class="stat-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sale Return</div>
+                            <div class="stat-val text-danger" id="statSalesReturn">-Rs {{ $retNet == floor($retNet) ? number_format($retNet, 0) : number_format($retNet, 2) }}</div>
+                            <div class="stat-sub text-danger opacity-75" id="statSalesReturnSub">@if($retGross > $retNet) TP: Rs {{ number_format($retGross, 0) }} @else Returns Deducted @endif</div>
                         </div>
                     </div>
 
-                    {{-- 10. Products Sold Qty / Bonus --}}
-                    <div class="stat-pill" style="background: #faf5ff; border-color: #d8b4fe;">
-                        <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-cubes me-1"></i>Product Qty / Bonus</div>
-                        <div class="stat-val" style="color: #7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
-                        <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;">Sold / Bonus Units</div>
+                    {{-- 3. Total Discount --}}
+                    @php $rawDisc = (float)($stats['raw_discount'] ?? ($stats['total_discount'] ?? 0)); @endphp
+                    <div class="col-6 col-md-3">
+                        <div class="stat-pill h-100" style="background: #fff1f2; border-color: #fecdd3;">
+                            <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
+                            <div class="stat-val text-danger" id="statTopTotalDiscount">-Rs {{ $rawDisc == floor($rawDisc) ? number_format($rawDisc, 0) : number_format($rawDisc, 2) }}</div>
+                            <div class="stat-sub text-danger opacity-75">All Deductions</div>
+                        </div>
                     </div>
 
+                    {{-- 4. After Sale --}}
+                    @php $netTot = (float)($stats['total_net'] ?? ($rawGross - $retNet - $rawDisc)); @endphp
+                    <div class="col-6 col-md-3">
+                        <div class="stat-pill h-100" style="background: #ecfdf5; border-color: #a7f3d0;">
+                            <div class="stat-label text-success"><i class="fas fa-receipt me-1"></i>After Sale</div>
+                            <div class="stat-val text-success" id="statTotalNet">Rs {{ $netTot == floor($netTot) ? number_format($netTot, 0) : number_format($netTot, 2) }}</div>
+                            <div class="stat-sub text-success opacity-75" id="statGrossRevenueSub">Net Realized Revenue</div>
+                        </div>
+                    </div>
                 </div>
 
-                {{-- Discount Cards Strip (Matching Top Row with Backgrounds) --}}
-                <div class="summary-pill-bar mb-3">
-                    {{-- 1. Total Discount --}}
-                    <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
-                        <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
-                        @php $tDisc = (float)($stats['total_discount'] ?? 0); @endphp
-                        <div class="stat-val text-danger" id="statTotalDiscount">Rs {{ $tDisc == floor($tDisc) ? number_format($tDisc, 0) : number_format($tDisc, 2) }}</div>
-                        <div class="stat-sub text-danger opacity-75">All Deductions</div>
+                {{-- LINE 2: Operational Volume (Invoice, Product Qty/Bonus) --}}
+                <div class="row g-2 mb-2 align-items-stretch">
+                    {{-- 1. Invoice --}}
+                    <div class="col-6 col-md-6">
+                        <div class="stat-pill h-100" style="background: #ffffff; border-color: #cbd5e1;">
+                            <div class="stat-label text-secondary"><i class="fas fa-file-invoice me-1 text-info"></i>Invoice</div>
+                            <div class="stat-val text-dark" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</div>
+                            <div id="statStatusCounts" class="stat-sub text-muted">
+                                P:{{ $stats['posted_count'] ?? 0 }}
+                                @if(($stats['booked_count'] ?? 0) > 0) &nbsp;B:{{ $stats['booked_count'] ?? 0 }} @endif
+                                @if(($stats['returned_count'] ?? 0) > 0) &nbsp;R:{{ $stats['returned_count'] ?? 0 }} @endif
+                            </div>
+                        </div>
                     </div>
 
-                    {{-- 2. Medical Store Discount --}}
-                    <div class="stat-pill" style="background: #ecfdf5; border-color: #a7f3d0;">
-                        <div class="stat-label text-success"><i class="fas fa-prescription-bottle-medical me-1"></i>Medical Store</div>
-                        @php $mDisc = (float)($stats['discount_medical'] ?? 0); @endphp
-                        <div class="stat-val text-success" id="statDiscountMed">Rs {{ $mDisc == floor($mDisc) ? number_format($mDisc, 0) : number_format($mDisc, 2) }}</div>
-                        <div class="stat-sub text-success opacity-75">Pharmacy Tier Subsidies</div>
+                    {{-- 2. Product Qty / Bonus --}}
+                    <div class="col-6 col-md-6">
+                        <div class="stat-pill h-100" style="background: #faf5ff; border-color: #d8b4fe;">
+                            <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-cubes me-1"></i>Product Qty / Bonus</div>
+                            <div class="stat-val" style="color: #7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
+                            <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;">Sold / Bonus Units</div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- LINE 3: Costs & Breakdown (Product Cost, Bonus Cost, Doctor, Medical, Distributor, Other) --}}
+                <div class="row g-2 mb-3 align-items-stretch">
+                    {{-- 1. Product Cost --}}
+                    @php $cogsTot = (float)($stats['total_cogs'] ?? 0); @endphp
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="stat-pill h-100" style="background: #fffbeb; border-color: #fde68a;">
+                            <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-boxes-stacked me-1"></i>Product Cost</div>
+                            <div class="stat-val" style="color: #b45309;" id="statTotalCOGS">Rs {{ $cogsTot == floor($cogsTot) ? number_format($cogsTot, 0) : number_format($cogsTot, 2) }}</div>
+                            <div class="stat-sub" style="color: #d97706;">Total COGS</div>
+                        </div>
                     </div>
 
-                    {{-- 3. Distribution Discount --}}
-                    <div class="stat-pill" style="background: #eff6ff; border-color: #bfdbfe;">
-                        <div class="stat-label text-primary"><i class="fas fa-truck-fast me-1"></i>Distribution</div>
-                        @php $distDisc = (float)($stats['discount_distribution'] ?? 0); @endphp
-                        <div class="stat-val text-primary" id="statDiscountDist">Rs {{ $distDisc == floor($distDisc) ? number_format($distDisc, 0) : number_format($distDisc, 2) }}</div>
-                        <div class="stat-sub text-primary opacity-75">Wholesale Tier Subsidies</div>
+                    {{-- 2. Bonus Cost --}}
+                    @php $bAmt = (float)($stats['total_bonus_amount'] ?? 0); @endphp
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="stat-pill h-100" style="background: #fffbeb; border-color: #f59e0b;">
+                            <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-gift me-1"></i>Bonus Cost</div>
+                            <div class="stat-val" style="color: #b45309;" id="statTotalBonusAmount">Rs {{ $bAmt == floor($bAmt) ? number_format($bAmt, 0) : number_format($bAmt, 2) }}</div>
+                            <div class="stat-sub" style="color: #d97706;" id="statBonusAmountSub">At Cost · {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
+                        </div>
                     </div>
 
-                    {{-- 4. Doctor Discount --}}
-                    <div class="stat-pill" style="background: #faf5ff; border-color: #e9d5ff;">
-                        <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-user-doctor me-1"></i>Doctor / Clinic</div>
-                        @php $docDisc = (float)($stats['discount_doctor'] ?? 0); @endphp
-                        <div class="stat-val" style="color: #7c3aed;" id="statDiscountDoc">Rs {{ $docDisc == floor($docDisc) ? number_format($docDisc, 0) : number_format($docDisc, 2) }}</div>
-                        <div class="stat-sub" style="color: #7c3aed; opacity: 0.75;">Practitioner Concessions</div>
+                    {{-- 3. Doctor --}}
+                    @php $docDisc = (float)($stats['discount_doctor'] ?? 0); @endphp
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="stat-pill h-100" style="background: #faf5ff; border-color: #e9d5ff;">
+                            <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-user-doctor me-1"></i>Doctor</div>
+                            <div class="stat-val" style="color: #7c3aed;" id="statDiscountDoc">Rs {{ $docDisc == floor($docDisc) ? number_format($docDisc, 0) : number_format($docDisc, 2) }}</div>
+                            <div class="stat-sub" style="color: #7c3aed; opacity: 0.75;">Clinic Concessions</div>
+                        </div>
                     </div>
 
-                    {{-- 5. Other / Extra Discount --}}
-                    <div class="stat-pill" style="background: #fffbeb; border-color: #fde68a;">
-                        <div class="stat-label" style="color: #b45309;"><i class="fas fa-file-invoice-dollar me-1"></i>Extra / Other</div>
-                        @php $oDisc = (float)($stats['discount_other'] ?? ($stats['additional_discount'] ?? 0)); @endphp
-                        <div class="stat-val" style="color: #b45309;" id="statDiscountOther">Rs {{ $oDisc == floor($oDisc) ? number_format($oDisc, 0) : number_format($oDisc, 2) }}</div>
-                        <div class="stat-sub" style="color: #b45309; opacity: 0.75;">Invoice & Manual Extra</div>
+                    {{-- 4. Medical --}}
+                    @php $mDisc = (float)($stats['discount_medical'] ?? 0); @endphp
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="stat-pill h-100" style="background: #ecfdf5; border-color: #a7f3d0;">
+                            <div class="stat-label text-success"><i class="fas fa-prescription-bottle-medical me-1"></i>Medical</div>
+                            <div class="stat-val text-success" id="statDiscountMed">Rs {{ $mDisc == floor($mDisc) ? number_format($mDisc, 0) : number_format($mDisc, 2) }}</div>
+                            <div class="stat-sub text-success opacity-75">Pharmacy Subsidies</div>
+                        </div>
                     </div>
+
+                    {{-- 5. Distributor --}}
+                    @php $distDisc = (float)($stats['discount_distribution'] ?? 0); @endphp
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="stat-pill h-100" style="background: #eff6ff; border-color: #bfdbfe;">
+                            <div class="stat-label text-primary"><i class="fas fa-truck-fast me-1"></i>Distributor</div>
+                            <div class="stat-val text-primary" id="statDiscountDist">Rs {{ $distDisc == floor($distDisc) ? number_format($distDisc, 0) : number_format($distDisc, 2) }}</div>
+                            <div class="stat-sub text-primary opacity-75">Wholesale Subsidies</div>
+                        </div>
+                    </div>
+
+                    {{-- 6. Other --}}
+                    @php $oDisc = (float)($stats['discount_other'] ?? ($stats['additional_discount'] ?? 0)); @endphp
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="stat-pill h-100" style="background: #fffbeb; border-color: #fde68a;">
+                            <div class="stat-label" style="color: #b45309;"><i class="fas fa-file-invoice-dollar me-1"></i>Other</div>
+                            <div class="stat-val" style="color: #b45309;" id="statDiscountOther">Rs {{ $oDisc == floor($oDisc) ? number_format($oDisc, 0) : number_format($oDisc, 2) }}</div>
+                            <div class="stat-sub" style="color: #b45309; opacity: 0.75;">Extra / Manual</div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Hidden fallback holders for JS compatibility --}}
+                <div style="display:none;" id="statGrossProfitBox">
+                    <span id="statGrossProfitLabel"></span>
+                    <span id="statTotalGrossProfit"></span>
+                    <span id="statGrossProfitSub"></span>
+                    <span id="statInvoicedNet"></span>
+                    <span id="statEffectiveGross"></span>
+                    <span id="statTotalDiscount"></span>
                 </div>
 
                 {{-- Status Filter Pills --}}
@@ -972,7 +983,7 @@
                             let soldQtyVal = parseFloat(response.stats.total_qty || 0);
 
                             $('#statRawGross').text('Rs ' + fmt(rawGross));
-                            $('#statTopTotalDiscount').text((rawDisc > 0 ? '-Rs ' : 'Rs ') + fmt(rawDisc));
+                            $('#statTopTotalDiscount, #statTotalDiscount').text((rawDisc > 0 ? '-Rs ' : 'Rs ') + fmt(rawDisc));
                             $('#statInvoicedNet').text('Rs ' + fmt(invoicedNet));
                             $('#statSalesReturn').text((retNet > 0 ? '-Rs ' : 'Rs ') + fmt(retNet));
                             $('#statSalesReturnSub').text(retGross > retNet ? ('TP: Rs ' + fmt(retGross)) : 'Returns Deducted');

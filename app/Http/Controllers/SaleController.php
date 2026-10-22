@@ -416,6 +416,7 @@ class SaleController extends Controller
             return $inlineVal + $extra;
         });
         $invoicedNet = (float) $sales->sum('total_net');
+        $realizedNet = round(max(0, $rawGross - $totalReturned - $rawDiscount), 2);
 
         $stats = [
             'total_count' => $sales->count(),
@@ -430,10 +431,10 @@ class SaleController extends Controller
             'effective_gross' => $effectiveGross,
             'raw_invoice_net' => $rawInvoiceNet,
             'total_returned' => $totalReturned,
-            'total_gross' => (float) $sales->sum('effective_net'),
+            'total_gross' => $realizedNet,
             'total_cogs' => $totalCogs,
-            'total_gross_profit' => (float) $sales->sum('effective_net') - $totalCogs - (float) $sales->sum('effective_bonus_amount'),
-            'total_net' => (float) $sales->sum('effective_net'),
+            'total_gross_profit' => round($realizedNet - $totalCogs - (float) $sales->sum('effective_bonus_amount'), 2),
+            'total_net' => $realizedNet,
             'inline_discount' => (float) $sales->sum('effective_inline_discount'),
             'additional_discount' => (float) $sales->sum('effective_additional_discount'),
             'total_discount' => $totDisc,
