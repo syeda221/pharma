@@ -1644,8 +1644,7 @@ class ReportingController extends Controller
         }
         unset($zs);
 
-        // 5. Global Sales, Quantity & Discount Overview (Reacting to all active filters)
-        $overviewSaleQuery = \App\Models\Sale::with(['customer_relation.customerTypeModel', 'items.product', 'returns']);
+        $overviewSaleQuery = \App\Models\Sale::with(['customer_relation.customerTypeModel', 'items.product', 'returns.items']);
         if ($start && $end) {
             $overviewSaleQuery->whereBetween('created_at', [$start, $end]);
         }
@@ -1659,6 +1658,8 @@ class ReportingController extends Controller
 
         $totalGrossRevenue = 0;
         $totalEffectiveGross = 0;
+        $totalDirectReturnGross = 0;
+        $totalDirectReturnNet = 0;
         $totalNetRevenue = 0;
         $totalSaleEffectiveNet = 0;
         $rawTotalDiscounts = 0;
@@ -1682,25 +1683,45 @@ class ReportingController extends Controller
             $hasMatchingItem = false;
             $isSaleReturned = ($sale->sale_status === 'returned' || $sale->sale_status == 1);
 
-            $returnedAmount = $sale->returns ? (float) $sale->returns->sum('net_amount') : 0;
-            $isFullyReturned = $isSaleReturned && ($returnedAmount <= 0 || (float)$sale->total_net <= $returnedAmount);
+            $saleReturnGross = 0;
+            $returnedAmount = 0;
+            if ($sale->returns && $sale->returns->count() > 0) {
+                foreach ($sale->returns as $ret) {
+                    $retTP = (float) ($ret->bill_amount > 0 
+                        ? $ret->bill_amount 
+                        : ($ret->items ? $ret->items->sum(function($i) { return (float)($i->price ?? 0) * (float)($i->qty ?? 0); }) : (float)($ret->net_amount ?? 0)));
+                    $saleReturnGross += $retTP;
+                    $returnedAmount += (float)$ret->net_amount;
+                }
+            }
 
             $saleInlineVal = $sale->items ? (float) $sale->items->sum('discount_amount') : 0;
             $saleBillAmount = $sale->total_bill_amount > 0 ? (float) $sale->total_bill_amount : (float) $sale->per_total;
             $saleGrossSubtotal = $saleBillAmount + $saleInlineVal;
+
+            if ($isSaleReturned && $saleReturnGross <= 0) {
+                $saleReturnGross = $saleGrossSubtotal;
+            }
+            if ($isSaleReturned && $returnedAmount <= 0) {
+                $returnedAmount = (float)$sale->total_net;
+            }
+
+            $totalDirectReturnGross += $saleReturnGross;
+            $totalDirectReturnNet += $returnedAmount;
+
+            $isFullyReturned = $isSaleReturned && ((float)$sale->total_net <= $returnedAmount || $returnedAmount <= 0);
 
             $remRatio = 1.0;
             $effGross = 0;
             if ($isFullyReturned) {
                 $remRatio = 0.0;
                 $effGross = 0;
-            } elseif ($returnedAmount > 0 && $saleGrossSubtotal > 0 && (float)$sale->total_net > 0) {
-                $ratio = $saleGrossSubtotal / (float)$sale->total_net;
-                $returnedGross = $returnedAmount * $ratio;
-                $effGross = max(0, $saleGrossSubtotal - $returnedGross);
+            } elseif ($saleReturnGross > 0 && $saleGrossSubtotal > 0) {
+                $effGross = max(0, $saleGrossSubtotal - $saleReturnGross);
                 $remRatio = $effGross / $saleGrossSubtotal;
             } else {
                 $effGross = $saleGrossSubtotal;
+                $remRatio = 1.0;
             }
             $totalEffectiveGross += $effGross;
 
@@ -1898,8 +1919,12 @@ class ReportingController extends Controller
         $grandTotalDiscount = $totalItemDiscounts + $totalExtraDiscounts;
         $otherDiscount = max(0, $grandTotalDiscount - ($medicalDiscount + $distributionDiscount + $doctorDiscount));
 
+        // Use direct returns from sales (handling cross-month returns accurately matching SaleController)
+        $finalReturnAmount = $totalDirectReturnNet > 0 ? $totalDirectReturnNet : $totalReturnAmount;
+        $finalReturnGross  = $totalDirectReturnGross > 0 ? $totalDirectReturnGross : ($totalReturnTP > 0 ? $totalReturnTP : max(0, $totalGrossRevenue - $totalEffectiveGross));
+
         // Align finalNetRevenue with exact waterfall: raw_gross - raw_total_discount - return_amount
-        $finalNetRevenue = max(0, $totalGrossRevenue - $rawTotalDiscounts - $totalReturnAmount);
+        $finalNetRevenue = max(0, $totalGrossRevenue - $rawTotalDiscounts - $finalReturnAmount);
         $finalNetPieces = max(0, $totalSoldPieces - $totalReturnPieces);
 
         // Format Quantity Strings (Sold, Returned, Net Delivered)
@@ -1948,7 +1973,7 @@ class ReportingController extends Controller
             'zone_stats' => $zoneList,
             'summary' => [
                 'raw_gross_revenue' => round($totalGrossRevenue, 2),
-                'return_gross' => round($totalReturnTP > 0 ? $totalReturnTP : max(0, $totalGrossRevenue - $totalEffectiveGross), 2),
+                'return_gross' => round($finalReturnGross, 2),
                 'effective_gross' => round($totalEffectiveGross, 2),
                 'audit_net' => round($totalEffectiveGross, 2),
                 'gross_revenue' => round($totalEffectiveGross, 2),
@@ -1959,7 +1984,7 @@ class ReportingController extends Controller
                 'distribution_discount' => round($distributionDiscount, 2),
                 'doctor_discount' => round($doctorDiscount, 2),
                 'other_discount' => round($otherDiscount, 2),
-                'return_amount' => round($totalReturnAmount, 2),
+                'return_amount' => round($finalReturnAmount, 2),
                 'net_revenue' => round($finalNetRevenue, 2),
                 'cogs' => round($totalCogs, 2),
                 'bonus_amount' => round($totalBonusAmount, 2),
