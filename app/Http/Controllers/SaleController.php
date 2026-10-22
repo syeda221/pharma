@@ -89,8 +89,12 @@ class SaleController extends Controller
 
         // Apply Customer Type Filter
         if ($request->filled('customer_type')) {
-            $query->whereHas('customer_relation', function($q) use ($request) {
-                $q->where('customer_type', $request->customer_type);
+            $cType = trim($request->customer_type);
+            $query->whereHas('customer_relation', function($q) use ($cType) {
+                $q->where(function($sub) use ($cType) {
+                    $sub->where('customer_type', $cType)
+                        ->orWhere('customer_type', 'like', "%{$cType}%");
+                });
             });
         }
 
@@ -428,6 +432,8 @@ class SaleController extends Controller
         $invoicedNet = (float) $sales->sum('total_net');
         $realizedNet = round(max(0, $rawGross - $totalReturned - $rawDiscount), 2);
 
+        $auditNet = max(0, $rawGross - $returnGross);
+
         $stats = [
             'total_count' => $sales->count(),
             'total_qty' => $effectiveSoldPieces > 0 ? $effectiveSoldPieces : (float) $sales->sum('effective_sold_qty'),
@@ -438,6 +444,7 @@ class SaleController extends Controller
             'raw_discount' => $rawDiscount,
             'invoiced_net' => $invoicedNet,
             'return_gross' => $returnGross,
+            'audit_net' => $auditNet,
             'effective_gross' => $effectiveGross,
             'raw_invoice_net' => $rawInvoiceNet,
             'total_returned' => $totalReturned,
@@ -469,8 +476,9 @@ class SaleController extends Controller
         // Load all customers for filter dropdown
         $customers = Customer::orderBy('customer_name')->get();
         $zones = \App\Models\Zone::all();
+        $customerTypes = Customer::distinct()->whereNotNull('customer_type')->where('customer_type', '!=', '')->pluck('customer_type');
 
-        return view('admin_panel.sale.index', compact('sales', 'customers', 'stats', 'zones'));
+        return view('admin_panel.sale.index', compact('sales', 'customers', 'stats', 'zones', 'customerTypes'));
     }
 
     public function addsale()

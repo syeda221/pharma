@@ -550,11 +550,19 @@
                     </div>
                 </div>
 
-                {{-- LINE 1: Primary Revenue Flow (Gross sale, Sale return, Total discount, After sale) --}}
+                {{-- LINE 1: Primary Revenue Flow Waterfall (Gross sale, Sale return, Sale after return, Total discount, After sale) --}}
+                @php 
+                    $rawGross = (float)($stats['raw_gross'] ?? 0);
+                    $retGross = (float)($stats['return_gross'] ?? 0);
+                    $retNet = (float)($stats['total_returned'] ?? 0);
+                    $displayRet = $retGross > 0 ? $retGross : $retNet;
+                    $auditNet = (float)($stats['audit_net'] ?? max(0, $rawGross - $retGross));
+                    $rawDisc = (float)($stats['raw_discount'] ?? ($stats['total_discount'] ?? 0));
+                    $netTot = (float)($stats['total_net'] ?? ($rawGross - $retNet - $rawDisc));
+                @endphp
                 <div class="row g-2 mb-2 align-items-stretch">
                     {{-- 1. Gross Sale --}}
-                    @php $rawGross = (float)($stats['raw_gross'] ?? 0); @endphp
-                    <div class="col-6 col-md-3">
+                    <div class="col-12 col-sm-6 col-md-4 col-lg" style="flex: 1 1 0; min-width: 140px;">
                         <div class="stat-pill h-100" style="background: #f8fafc; border-color: #cbd5e1;">
                             <div class="stat-label text-secondary"><i class="fas fa-file-invoice-dollar me-1"></i>Gross Sale</div>
                             <div class="stat-val text-dark" id="statRawGross">Rs {{ $rawGross == floor($rawGross) ? number_format($rawGross, 0) : number_format($rawGross, 2) }}</div>
@@ -562,13 +570,8 @@
                         </div>
                     </div>
 
-                    {{-- 2. Sale Return --}}
-                    @php 
-                        $retGross = (float)($stats['return_gross'] ?? 0);
-                        $retNet = (float)($stats['total_returned'] ?? 0);
-                        $displayRet = $retGross > 0 ? $retGross : $retNet;
-                    @endphp
-                    <div class="col-6 col-md-3">
+                    {{-- 2. Sale Return (-4,718) --}}
+                    <div class="col-12 col-sm-6 col-md-4 col-lg" style="flex: 1 1 0; min-width: 140px;">
                         <div class="stat-pill h-100" style="background: #fef2f2; border-color: #fca5a5;">
                             <div class="stat-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sale Return</div>
                             <div class="stat-val text-danger" id="statSalesReturn">-Rs {{ $displayRet == floor($displayRet) ? number_format($displayRet, 0) : number_format($displayRet, 2) }}</div>
@@ -576,9 +579,17 @@
                         </div>
                     </div>
 
-                    {{-- 3. Total Discount --}}
-                    @php $rawDisc = (float)($stats['raw_discount'] ?? ($stats['total_discount'] ?? 0)); @endphp
-                    <div class="col-6 col-md-3">
+                    {{-- 3. Sale After Return (Audit Net: 196,333) --}}
+                    <div class="col-12 col-sm-6 col-md-4 col-lg" style="flex: 1 1 0; min-width: 140px;">
+                        <div class="stat-pill h-100" style="background: #eff6ff; border-color: #93c5fd;">
+                            <div class="stat-label text-primary"><i class="fas fa-balance-scale me-1"></i>Sale After Return</div>
+                            <div class="stat-val text-primary" id="statAuditNet">Rs {{ $auditNet == floor($auditNet) ? number_format($auditNet, 0) : number_format($auditNet, 2) }}</div>
+                            <div class="stat-sub text-primary opacity-75" id="statAuditNetSub">Audit Net · Gross - Return</div>
+                        </div>
+                    </div>
+
+                    {{-- 4. Total Discount (-40,940) --}}
+                    <div class="col-12 col-sm-6 col-md-4 col-lg" style="flex: 1 1 0; min-width: 140px;">
                         <div class="stat-pill h-100" style="background: #fff1f2; border-color: #fecdd3;">
                             <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
                             <div class="stat-val text-danger" id="statTopTotalDiscount">-Rs {{ $rawDisc == floor($rawDisc) ? number_format($rawDisc, 0) : number_format($rawDisc, 2) }}</div>
@@ -586,16 +597,12 @@
                         </div>
                     </div>
 
-                    {{-- 4. After Sale --}}
-                    @php 
-                        $netTot = (float)($stats['total_net'] ?? ($rawGross - $retNet - $rawDisc)); 
-                        $auditNet = max(0, $rawGross - $retGross);
-                    @endphp
-                    <div class="col-6 col-md-3">
+                    {{-- 5. After Sale (155,865) --}}
+                    <div class="col-12 col-sm-6 col-md-4 col-lg" style="flex: 1 1 0; min-width: 140px;">
                         <div class="stat-pill h-100" style="background: #ecfdf5; border-color: #a7f3d0;">
                             <div class="stat-label text-success"><i class="fas fa-receipt me-1"></i>After Sale</div>
                             <div class="stat-val text-success" id="statTotalNet">Rs {{ $netTot == floor($netTot) ? number_format($netTot, 0) : number_format($netTot, 2) }}</div>
-                            <div class="stat-sub text-success opacity-75" id="statGrossRevenueSub">Audit Net: Rs {{ number_format($auditNet, 0) }} · Realized</div>
+                            <div class="stat-sub text-success opacity-75" id="statGrossRevenueSub">Realized Net Revenue</div>
                         </div>
                     </div>
                 </div>
@@ -751,9 +758,10 @@
                                 <form id="filterForm" autocomplete="off" onsubmit="return false;">
                                     <div class="filter-toolbar-row">
                                         {{-- Quick Filter --}}
-                                        <div style="width: 82px; flex-shrink: 0;">
+                                        <div style="width: 105px; flex-shrink: 0;">
                                             <select id="quick_filter" class="form-select text-center" title="Quick Filter">
                                                 <option value="custom">Range</option>
+                                                <option value="sep2026">Sep 2026 (Audit)</option>
                                                 <option value="daily">Today</option>
                                                 <option value="weekly">Week</option>
                                                 <option value="monthly">Month</option>
@@ -794,20 +802,25 @@
                                         </div>
 
                                         {{-- Customer Type --}}
-                                        <div style="width: 82px; flex-shrink: 0;">
+                                        <div style="width: 105px; flex-shrink: 0;">
                                             <select class="form-select text-center" name="customer_type" id="filter_customer_type" title="Customer Type">
-                                                <option value="">Type</option>
-                                                <option value="doctor">Doctor</option>
-                                                <option value="company">Company</option>
-                                                <option value="normal">Normal</option>
-                                                <option value="distributor">Distributor</option>
+                                                <option value="">All Types</option>
+                                                @if(isset($customerTypes) && count($customerTypes))
+                                                    @foreach($customerTypes as $ct)
+                                                        <option value="{{ $ct }}" {{ request('customer_type') == $ct ? 'selected' : '' }}>{{ $ct }}</option>
+                                                    @endforeach
+                                                @else
+                                                    <option value="Doctors (DG khan)">Doctors (DG khan)</option>
+                                                    <option value="Medical Store">Medical Store</option>
+                                                    <option value="doctor">Doctors</option>
+                                                @endif
                                             </select>
                                         </div>
 
                                         {{-- Zone --}}
-                                        <div style="width: 82px; flex-shrink: 0;">
+                                        <div style="width: 95px; flex-shrink: 0;">
                                             <select class="form-select text-center" name="zone_id" id="filter_zone_id" title="Zone">
-                                                <option value="">Zone</option>
+                                                <option value="">All Zones</option>
                                                 @foreach($zones as $z)
                                                     <option value="{{ $z->id }}">{{ $z->zone }}</option>
                                                 @endforeach
@@ -930,16 +943,20 @@
 
                 // Ensure Flatpickr values are synced to hidden inputs before serializing
                 let $fromElem = $('#filter_from_date');
-                if ($fromElem.length && !$fromElem.val()) {
-                    let $fromAlt = $fromElem.next('input.flatpickr-input');
-                    if ($fromAlt.length && $fromAlt.val()) {
+                let $fromAlt = $fromElem.next('input.flatpickr-input');
+                if ($fromAlt.length) {
+                    if (!$fromAlt.val()) {
+                        $fromElem.val('');
+                    } else if (!$fromElem.val()) {
                         $fromElem.val($fromAlt.val());
                     }
                 }
                 let $toElem = $('#filter_to_date');
-                if ($toElem.length && !$toElem.val()) {
-                    let $toAlt = $toElem.next('input.flatpickr-input');
-                    if ($toAlt.length && $toAlt.val()) {
+                let $toAlt = $toElem.next('input.flatpickr-input');
+                if ($toAlt.length) {
+                    if (!$toAlt.val()) {
+                        $toElem.val('');
+                    } else if (!$toElem.val()) {
                         $toElem.val($toAlt.val());
                     }
                 }
@@ -987,16 +1004,16 @@
                             let soldQtyVal = parseFloat(response.stats.total_qty || 0);
 
                             let displayRet = retGross > 0 ? retGross : retNet;
-                            let auditNet = Math.max(0, rawGross - retGross);
+                            let auditNet = parseFloat(response.stats.audit_net !== undefined ? response.stats.audit_net : Math.max(0, rawGross - retGross));
 
                             $('#statRawGross').text('Rs ' + fmt(rawGross));
-                            $('#statTopTotalDiscount, #statTotalDiscount').text((rawDisc > 0 ? '-Rs ' : 'Rs ') + fmt(rawDisc));
-                            $('#statInvoicedNet').text('Rs ' + fmt(invoicedNet));
+                            $('#statAuditNet').text('Rs ' + fmt(auditNet));
                             $('#statSalesReturn').text((displayRet > 0 ? '-Rs ' : 'Rs ') + fmt(displayRet));
                             $('#statSalesReturnSub').text((retGross > 0 && retNet > 0 && retGross !== retNet) ? ('Net Refund: Rs ' + fmt(retNet)) : 'Returns Deducted');
+                            $('#statTopTotalDiscount, #statTotalDiscount').text((rawDisc > 0 ? '-Rs ' : 'Rs ') + fmt(rawDisc));
+                            $('#statInvoicedNet').text('Rs ' + fmt(invoicedNet));
                             $('#statEffectiveGross').text('Rs ' + fmt(effGross));
                             $('#statTotalNet').text('Rs ' + fmt(netVal));
-                            $('#statGrossRevenueSub').text('Audit Net: Rs ' + fmt(auditNet) + ' · Realized');
                             $('#statTotalCOGS').text('Rs ' + fmt(cogsVal));
                             $('#statTotalBonusAmount').text('Rs ' + fmt(bonusAmtVal));
                             $('#statBonusAmountSub').text('At Cost · ' + fmt(bonusQtyVal) + ' Pcs');
@@ -1066,22 +1083,8 @@
                 let today = new Date();
                 let start = new Date();
                 let end = new Date();
-
-                if (val === 'daily') {
-                    start = new Date();
-                    end = new Date();
-                } else if (val === 'weekly') {
-                    let day = today.getDay();
-                    let diff = today.getDate() - day + (day === 0 ? -6 : 1);
-                    start = new Date(today.setDate(diff));
-                    end = new Date();
-                } else if (val === 'monthly') {
-                    start = new Date(today.getFullYear(), today.getMonth(), 1);
-                    end = new Date();
-                } else if (val === 'yearly') {
-                    start = new Date(today.getFullYear(), 0, 1);
-                    end = new Date();
-                }
+                let startStr = '';
+                let endStr = '';
 
                 let formatDate = function(d) {
                     let year = d.getFullYear();
@@ -1090,8 +1093,32 @@
                     return `${year}-${month}-${day}`;
                 };
 
-                let startStr = formatDate(start);
-                let endStr = formatDate(end);
+                if (val === 'sep2026') {
+                    startStr = '2026-09-01';
+                    endStr = '2026-09-30';
+                } else if (val === 'daily') {
+                    start = new Date();
+                    end = new Date();
+                    startStr = formatDate(start);
+                    endStr = formatDate(end);
+                } else if (val === 'weekly') {
+                    let day = today.getDay();
+                    let diff = today.getDate() - day + (day === 0 ? -6 : 1);
+                    start = new Date(today.setDate(diff));
+                    end = new Date();
+                    startStr = formatDate(start);
+                    endStr = formatDate(end);
+                } else if (val === 'monthly') {
+                    start = new Date(today.getFullYear(), today.getMonth(), 1);
+                    end = new Date();
+                    startStr = formatDate(start);
+                    endStr = formatDate(end);
+                } else if (val === 'yearly') {
+                    start = new Date(today.getFullYear(), 0, 1);
+                    end = new Date();
+                    startStr = formatDate(start);
+                    endStr = formatDate(end);
+                }
 
                 let pickerFrom = document.getElementById('filter_from_date') ? document.getElementById('filter_from_date')._flatpickr : null;
                 let pickerTo = document.getElementById('filter_to_date') ? document.getElementById('filter_to_date')._flatpickr : null;
@@ -1105,31 +1132,39 @@
                 applySalesFilter();
             });
 
-            // Auto-filter on changing Zone, Customer Type, or Customer dropdowns
+            // Direct listeners on Select2, Zone, Customer Type dropdowns
+            $('#filter_customer_id').on('change select2:select select2:clear', function() {
+                applySalesFilter();
+            });
+            $('#filter_zone_id, #filter_customer_type').on('change', function() {
+                applySalesFilter();
+            });
+
+            // Delegated fallback for dynamic changes
             $(document).on('change', '#filter_zone_id, #filter_customer_type, #filter_customer_id', function() {
                 applySalesFilter();
             });
 
             // Auto-filter on Date inputs change
-            $(document).on('change', '#filter_from_date, #filter_to_date', function() {
+            $(document).on('change input', '#filter_from_date, #filter_to_date', function() {
                 applySalesFilter();
             });
 
-            // Attach Flatpickr onChange listener when initialized
-            setTimeout(function() {
+            // Bind Flatpickr onChange listener safely
+            function bindFlatpickrChange() {
                 let fromPicker = document.getElementById('filter_from_date') ? document.getElementById('filter_from_date')._flatpickr : null;
                 let toPicker = document.getElementById('filter_to_date') ? document.getElementById('filter_to_date')._flatpickr : null;
-                if (fromPicker && fromPicker.config && Array.isArray(fromPicker.config.onChange)) {
-                    fromPicker.config.onChange.push(function() {
-                        applySalesFilter();
-                    });
+                if (fromPicker && fromPicker.config) {
+                    fromPicker.config.onChange = [function() { applySalesFilter(); }];
                 }
-                if (toPicker && toPicker.config && Array.isArray(toPicker.config.onChange)) {
-                    toPicker.config.onChange.push(function() {
-                        applySalesFilter();
-                    });
+                if (toPicker && toPicker.config) {
+                    toPicker.config.onChange = [function() { applySalesFilter(); }];
                 }
-            }, 300);
+            }
+            bindFlatpickrChange();
+            setTimeout(bindFlatpickrChange, 300);
+            setTimeout(bindFlatpickrChange, 800);
+            setTimeout(bindFlatpickrChange, 1500);
 
             // Debounced search on Bill# / Reference typing
             let filterDebounce = null;

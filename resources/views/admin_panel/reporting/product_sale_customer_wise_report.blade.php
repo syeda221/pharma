@@ -116,6 +116,11 @@
 </style>
 
 <div class="sale-report-container">
+    @php
+        $latestSale = \App\Models\Sale::max('created_at');
+        $defaultFrom = $latestSale ? \Carbon\Carbon::parse($latestSale)->startOfMonth()->format('Y-m-d') : date('Y-m-01');
+        $defaultTo = $latestSale ? \Carbon\Carbon::parse($latestSale)->endOfMonth()->format('Y-m-d') : date('Y-m-d');
+    @endphp
 
     {{-- DESKTOP WEB VIEW FILTER CARD (d-none d-md-block) --}}
     <div class="card border-0 shadow-sm mb-2 no-print d-none d-md-block" style="border-radius: 10px;">
@@ -135,10 +140,10 @@
                     {{-- 2. MID: Date Range Inputs & Return Mode Toggle --}}
                     <div class="d-flex align-items-center gap-2 me-auto flex-wrap">
                         <label for="filterFromDateDesk" class="sale-filter-label mb-0 ms-1 me-1">From:</label>
-                        <input type="date" name="from_date" id="filterFromDateDesk" class="form-control form-control-sm fw-bold" value="{{ date('Y-m-01') }}" style="height: 32px; width: 130px; font-size: .78rem; border-radius: 6px;">
+                        <input type="date" name="from_date" id="filterFromDateDesk" class="form-control form-control-sm fw-bold" value="{{ $defaultFrom }}" style="height: 32px; width: 130px; font-size: .78rem; border-radius: 6px;">
                         
                         <label for="filterToDateDesk" class="sale-filter-label mb-0 ms-2 me-1">To:</label>
-                        <input type="date" name="to_date" id="filterToDateDesk" class="form-control form-control-sm fw-bold" value="{{ date('Y-m-d') }}" style="height: 32px; width: 130px; font-size: .78rem; border-radius: 6px;">
+                        <input type="date" name="to_date" id="filterToDateDesk" class="form-control form-control-sm fw-bold" value="{{ $defaultTo }}" style="height: 32px; width: 130px; font-size: .78rem; border-radius: 6px;">
 
                         <label for="filterReturnModeDesk" class="sale-filter-label mb-0 ms-2 me-1 text-primary"><i class="fas fa-sync-alt me-1"></i>Returns:</label>
                         <select name="return_mode" id="filterReturnModeDesk" class="form-select form-select-sm fw-bold returnModeSelect" style="height: 32px; width: 175px; font-size: .78rem; border-radius: 6px; border-color: #93c5fd; background-color: #eff6ff;">
@@ -254,11 +259,11 @@
                     {{-- 3. From Date & To Date --}}
                     <div class="col-6 mb-1">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">From Date</label>
-                        <input type="date" name="from_date" id="filterFromDateMob" class="form-control form-control-sm" value="{{ date('Y-m-01') }}" style="font-size: 11px;">
+                        <input type="date" name="from_date" id="filterFromDateMob" class="form-control form-control-sm" value="{{ $defaultFrom }}" style="font-size: 11px;">
                     </div>
                     <div class="col-6 mb-1">
                         <label class="form-label mb-1 fw-bold text-secondary" style="font-size: 11px;">To Date</label>
-                        <input type="date" name="to_date" id="filterToDateMob" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" style="font-size: 11px;">
+                        <input type="date" name="to_date" id="filterToDateMob" class="form-control form-control-sm" value="{{ $defaultTo }}" style="font-size: 11px;">
                     </div>
 
                     {{-- Return Mode Toggle --}}
@@ -684,10 +689,18 @@
                 loadReportData();
             });
 
+            // Auto-filter on changing any multi-select or return mode
+            $('.select2-multi, .returnModeSelect').on('change', function() {
+                loadReportData();
+            });
+            $('#filterFromDateDesk, #filterToDateDesk, #filterFromDateMob, #filterToDateMob').on('change', function() {
+                loadReportData();
+            });
+
             // Reset Filters
             $('.btnResetTrigger').on('click', function() {
-                $('#filterFromDateDesk, #filterFromDateMob').val('{{ date("Y-m-01") }}');
-                $('#filterToDateDesk, #filterToDateMob').val('{{ date("Y-m-d") }}');
+                $('#filterFromDateDesk, #filterFromDateMob').val('{{ $defaultFrom }}');
+                $('#filterToDateDesk, #filterToDateMob').val('{{ $defaultTo }}');
                 $('#filterReturnModeDesk, #filterReturnModeMob').val('sale_date');
                 $('.select2-multi').val(null).trigger('change');
                 loadReportData();
