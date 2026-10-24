@@ -403,6 +403,32 @@ class SaleController extends Controller
                 }
             }
         }
+        
+        // Include standalone direct returns (where sale_id IS NULL)
+        $standaloneRetQuery = \App\Models\SaleReturn::whereNull("sale_id")->with("items");
+        if ($request->customer_id && $request->customer_id !== "all") {
+            $standaloneRetQuery->where("customer_id", $request->customer_id);
+        } elseif ($request->filled("zone_id") && $request->zone_id !== "all") {
+            $zCustIds = \App\Models\Customer::where("zone", $request->zone_id)->pluck("id")->toArray();
+            $standaloneRetQuery->whereIn("customer_id", $zCustIds);
+        }
+        if ($request->start_date && $request->end_date) {
+            $standaloneRetQuery->where(function($q) use ($request) {
+                $q->whereBetween("return_date", [$request->start_date, $request->end_date])
+                  ->orWhereBetween("created_at", [$request->start_date . " 00:00:00", $request->end_date . " 23:59:59"]);
+            });
+        }
+        $standaloneReturns = $standaloneRetQuery->get();
+        foreach ($standaloneReturns as $sr) {
+            $srGross = (float) ($sr->bill_amount > 0 ? $sr->bill_amount : ($sr->items ? $sr->items->sum(fn($i) => (float)($i->price ?? 0) * (float)($i->qty ?? 0)) : (float)($sr->net_amount ?? 0)));
+            $directReturnGross += $srGross;
+            $totalReturned += (float) $sr->net_amount;
+            foreach ($sr->items as $sri) {
+                $pPurchPrice = (float) (\App\Models\Product::where("id", $sri->product_id)->value("purchase_price_per_piece") ?? 0);
+                $totalCogs = max(0, $totalCogs - ((float)$sri->qty * $pPurchPrice));
+            }
+        }
+
         $returnGross = $directReturnGross > 0 ? $directReturnGross : max(0, $rawGross - $effectiveGross);
 
         $rawSaleCogs = (float) $sales->sum('sale_cogs');

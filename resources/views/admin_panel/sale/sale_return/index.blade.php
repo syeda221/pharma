@@ -8,8 +8,18 @@
                     <div class="col-lg-12">
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h3>Sale Returns</h3>
-                            <a class="btn btn-primary" href="{{ route('sale.index') }}">Back to Sales</a>
+                            <div>
+                                <h3 class="mb-0">Sale Returns</h3>
+                                <small class="text-muted">Manage customer invoice returns &amp; standalone direct returns</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <a class="btn btn-success fw-bold shadow-sm" href="{{ route('sale.return.create_direct') }}">
+                                    <i class="fas fa-plus-circle me-1"></i> + Add Direct Return
+                                </a>
+                                <a class="btn btn-outline-primary" href="{{ route('sale.index') }}">
+                                    <i class="fas fa-arrow-left me-1"></i> Back to Sales
+                                </a>
+                            </div>
                         </div>
 
                         @if (session('success'))

@@ -533,6 +533,10 @@
                             href="{{ route('sale.return.index') }}" style="border-radius: 8px;">
                             <i class="fas fa-undo"></i> Returns
                         </a>
+                        <a class="btn btn-outline-success px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1"
+                            href="{{ route('sale.return.create_direct') }}" style="border-radius: 8px;" title="Direct Return without invoice">
+                            <i class="fas fa-plus-circle"></i> + Direct Return
+                        </a>
                         <a class="btn btn-outline-primary px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1"
                             href="{{ url('bookings') }}" style="border-radius: 8px;">
                             <i class="fas fa-bookmark"></i> Bookings

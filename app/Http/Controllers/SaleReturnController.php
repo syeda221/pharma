@@ -18,6 +18,81 @@ use Carbon\Carbon;
 
 class SaleReturnController extends Controller
 {
+
+    /**
+     * Show Standalone Direct Sale Return Form
+     */
+    public function showDirectReturnForm()
+    {
+        $customers = Customer::where("status", "active")
+            ->orderBy("customer_name")
+            ->get();
+            
+        $warehouses = Warehouse::all();
+        
+        $accounts = Account::whereHas("head", function($q) {
+            $q->whereIn("name", ["Cash", "Bank"]);
+        })->where("status", 1)->orderBy("title")->get();
+        
+        $products = Product::with(["brand", "unit"])
+            ->where("is_active", true)
+            ->orderBy("item_name")
+            ->get();
+            
+        $productOptions = [];
+        foreach ($products as $p) {
+            $variants = [];
+            if (!empty($p->color)) {
+                $decoded = json_decode($p->color, true);
+                if (is_array($decoded) && count($decoded) > 0) {
+                    $variants = $decoded;
+                }
+            }
+            if (empty($variants)) {
+                $variants = [[
+                    "name" => $p->item_name,
+                    "size" => "-",
+                    "color" => "-",
+                    "sale_price" => (float)($p->retail_price ?? 0),
+                    "wholesale_price" => (float)($p->wholesale_price ?? 0),
+                    "purch_price" => (float)($p->purchase_price_per_piece ?? 0),
+                    "conv_factor" => (float)($p->pieces_per_box ?: 1),
+                    "unit" => $p->unit->name ?? "Pcs",
+                    "barcode" => $p->barcode_path ?? ""
+                ]];
+            }
+            foreach ($variants as $vIdx => $v) {
+                $tpPrice = (float)($v["sale_price"] ?? ($v["price"] ?? 0));
+                $vSize = $v["size"] ?? "-";
+                $vUnit = $v["unit"] ?? ($p->unit->name ?? "Pcs");
+                $label = $p->item_name . ($vSize !== "-" && $vSize ? " ({$vSize})" : "") . " [TP: Rs " . number_format($tpPrice, 2) . "]";
+                $productOptions[] = [
+                    "product_id" => $p->id,
+                    "product_name" => $p->item_name,
+                    "variant_index" => $vIdx,
+                    "label" => $label,
+                    "price" => $tpPrice,
+                    "purch_price" => (float)($v["purch_price"] ?? ($p->purchase_price_per_piece ?? 0)),
+                    "conv_factor" => (float)($v["conv_factor"] ?? ($p->pieces_per_box ?: 1)),
+                    "size" => $vSize,
+                    "unit" => $vUnit,
+                    "color_payload" => base64_encode(json_encode($v))
+                ];
+            }
+        }
+        
+        // Next Return Invoice
+        $lastReturnId = SaleReturn::max("id") ?? 0;
+        do {
+            $lastReturnId++;
+            $nextInvoice = "SR-" . str_pad($lastReturnId, 4, "0", STR_PAD_LEFT);
+        } while (SaleReturn::where("return_invoice", $nextInvoice)->exists());
+
+        return view("admin_panel.sale.sale_return.create_direct", compact(
+            "customers", "warehouses", "accounts", "products", "productOptions", "nextInvoice"
+        ));
+    }
+
     public function showReturnForm($id)
     {
         $sale = Sale::with(['customer_relation', 'items.product.brand'])->findOrFail($id);
@@ -266,18 +341,19 @@ class SaleReturnController extends Controller
                 throw new \Exception("Please enter a return quantity for at least one item.");
             }
 
+            $saleId = !empty($validated['sale_id']) ? $validated['sale_id'] : ($request->input('sale_id') ?: null);
             // Create Sale Return Header
             $return = SaleReturn::create([
-                'sale_id' => $validated['sale_id'] ?? null,
+                'sale_id' => $saleId,
                 'return_invoice' => $nextInvoice,
                 'customer_id' => $customerId,
-                'warehouse_id' => $validated['warehouse_id'],
-                'return_date' => $validated['return_date'],
-                'remarks' => $validated['return_reason'] ?? null,
+                'warehouse_id' => $validated['warehouse_id'] ?? $request->input('warehouse_id'),
+                'return_date' => $validated['return_date'] ?? $request->input('return_date'),
+                'remarks' => $request->input('return_reason'),
                 'status' => 'posted',
             ]);
 
-            $sale = $validated['sale_id'] ? Sale::find($validated['sale_id']) : null;
+            $sale = $saleId ? Sale::find($saleId) : null;
             $now = Carbon::now();
             $movements = [];
             $grossSubtotal = 0;
@@ -661,7 +737,9 @@ class SaleReturnController extends Controller
                 ->delete();
 
             // 3. Delete vouchers & journal entries (Credit Note & Payment refunds)
-            $vouchers = \App\Models\VoucherMaster::where('remarks', 'LIKE', "%{$returnInvoice}%")->get();
+            $vouchers = \App\Models\VoucherMaster::where('remarks', 'LIKE', "%{$returnInvoice}%")
+                ->orWhereHas('details', fn($q) => $q->where('narration', 'LIKE', "%{$returnInvoice}%"))
+                ->get();
             foreach ($vouchers as $vm) {
                 \App\Models\JournalEntry::where('source_type', \App\Models\VoucherMaster::class)
                     ->where('source_id', $vm->id)

@@ -947,7 +947,15 @@ class ReportingController extends Controller
                     ->where('sri.product_id', $product->id);
                 
                 if ($start && $end) {
-                    $returnQuery->whereBetween('sr.created_at', [$start, $end]);
+                    $returnQuery->where(function($q) use ($start, $end) {
+                        $q->whereBetween('sr.created_at', [$start, $end])
+                          ->orWhereExists(function($sq) use ($start, $end) {
+                              $sq->select(DB::raw(1))
+                                 ->from('sales as s')
+                                 ->whereColumn('s.id', 'sr.sale_id')
+                                 ->whereBetween('s.created_at', [$start, $end]);
+                          });
+                    });
                 }
                 if ($customerId && $customerId !== 'all') {
                     $returnQuery->where('sr.customer_id', $customerId);
@@ -1195,7 +1203,15 @@ class ReportingController extends Controller
                     ->where('sri.product_id', $product->id);
                 
                 if ($start && $end) {
-                    $returnQuery->whereBetween('sr.created_at', [$start, $end]);
+                    $returnQuery->where(function($q) use ($start, $end) {
+                        $q->whereBetween('sr.created_at', [$start, $end])
+                          ->orWhereExists(function($sq) use ($start, $end) {
+                              $sq->select(DB::raw(1))
+                                 ->from('sales as s')
+                                 ->whereColumn('s.id', 'sr.sale_id')
+                                 ->whereBetween('s.created_at', [$start, $end]);
+                          });
+                    });
                 }
                 if ($customerId && $customerId !== 'all') {
                     $returnQuery->where('sr.customer_id', $customerId);

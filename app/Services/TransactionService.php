@@ -412,7 +412,7 @@ class TransactionService
                 'status' => \App\Models\VoucherMaster::STATUS_POSTED,
                 'party_type' => \App\Models\Customer::class,
                 'party_id' => $return->customer_id,
-                'remarks' => $return->remarks ?? "Sale Return #{$return->return_invoice}",
+                'remarks' => "Sale Return #{$return->return_invoice}" . (!empty($return->remarks) ? " - {$return->remarks}" : ""),
             ];
 
             // 4. Create Voucher
