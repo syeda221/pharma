@@ -419,13 +419,14 @@ class SaleController extends Controller
             });
         }
         $standaloneReturns = $standaloneRetQuery->get();
+        $standaloneReturnCogs = 0;
         foreach ($standaloneReturns as $sr) {
             $srGross = (float) ($sr->bill_amount > 0 ? $sr->bill_amount : ($sr->items ? $sr->items->sum(fn($i) => (float)($i->price ?? 0) * (float)($i->qty ?? 0)) : (float)($sr->net_amount ?? 0)));
             $directReturnGross += $srGross;
             $totalReturned += (float) $sr->net_amount;
             foreach ($sr->items as $sri) {
                 $pPurchPrice = (float) (\App\Models\Product::where("id", $sri->product_id)->value("purchase_price_per_piece") ?? 0);
-                $totalCogs = max(0, $totalCogs - ((float)$sri->qty * $pPurchPrice));
+                $standaloneReturnCogs += ((float)$sri->qty * $pPurchPrice);
             }
         }
 
@@ -433,7 +434,7 @@ class SaleController extends Controller
 
         $rawSaleCogs = (float) $sales->sum('sale_cogs');
         $rawReturnCogs = (float) $sales->sum('return_cogs');
-        $totalCogs = max(0, $rawSaleCogs - $rawReturnCogs);
+        $totalCogs = max(0, $rawSaleCogs - $rawReturnCogs - $standaloneReturnCogs);
 
         $totalItemsPieces = (float) $sales->sum(function($s) {
             return $s->items ? (float)$s->items->sum('total_pieces') : 0;
