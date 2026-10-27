@@ -746,9 +746,9 @@
                 <div class="col-6 col-md-3">
                     <div class="overview-card" style="background: #f8fafc; border-color: #cbd5e1;">
                         <div class="ov-header">
-                            <span class="ov-label text-dark"><i class="fas fa-box-open text-primary me-1"></i>Products Sold</span>
+                            <span class="ov-label text-dark"><i class="fas fa-box-open text-primary me-1"></i>Products Sold / Bonus</span>
                         </div>
-                        <div class="ov-val text-dark" id="cardSoldQty">0 Pcs</div>
+                        <div class="ov-val text-dark" id="cardSoldQty">0 Pcs / 0 Pcs</div>
                         <div class="ov-sub text-muted" id="cardSoldPieces">0 Total Pieces Sold</div>
                     </div>
                 </div>
@@ -1288,9 +1288,10 @@ $(document).ready(function() {
         let docDiscVal   = parseFloat(s.doctor_discount || 0);
         let otherDiscVal = parseFloat(s.other_discount || 0);
 
-        $('#cardTotalDiscount, #cardTotalDiscountHeader').text('Rs ' + fmt(totalDiscVal));
+        $('#cardTotalDiscount').text('Rs ' + fmt(rawDiscVal));
+        $('#cardTotalDiscountHeader').text('Rs ' + fmt(totalDiscVal));
         if (rawDiscVal > totalDiscVal) {
-            $('#cardTotalDiscountSub').html('Net of Returns <span title="Gross before returns" class="d-block" style="font-size: 8.5px; opacity: 0.85;">(Gross: Rs ' + fmt(rawDiscVal) + ')</span>');
+            $('#cardTotalDiscountSub').html('All Deductions <span title="Net after returns" class="d-block" style="font-size: 8.5px; opacity: 0.85;">(Net of Returns: Rs ' + fmt(totalDiscVal) + ')</span>');
         } else {
             $('#cardTotalDiscountSub').text('All Deductions');
         }
@@ -1300,7 +1301,9 @@ $(document).ready(function() {
         $('#cardOtherDiscount').text('Rs ' + fmt(otherDiscVal));
 
         // 3. Product Sales Quantities & Volume Overview Cards
-        $('#cardSoldQty').text(s.sold_qty_display || '0 Pcs');
+        let bonusQtyPieces = parseFloat(s.bonus_qty || 0);
+        let soldDisplay = s.sold_qty_display || '0 Pcs';
+        $('#cardSoldQty').html(soldDisplay + ' / <span style="color: #b45309;">' + fmt(bonusQtyPieces) + ' Pcs</span>');
         $('#cardSoldPieces').text(fmt(s.total_sold_pieces || 0) + ' Total Pieces Sold');
         $('#cardReturnQty').text(s.return_qty_display || '0 Pcs');
         $('#cardReturnAmount').text('Rs ' + fmt(s.return_amount || 0) + ' Total Value');
