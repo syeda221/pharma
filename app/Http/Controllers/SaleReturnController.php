@@ -481,6 +481,7 @@ class SaleReturnController extends Controller
                     'color' => $request->color[$idx] ?? null,
                     'warehouse_id' => $validated['warehouse_id'],
                     'qty' => $qty,
+                    'bonus_qty' => $bonusReturnQty,
                     'boxes' => $boxes + ($loosePieces / $ppb), // Decimal boxes
                     'loose_pieces' => $loosePieces,
                     'price' => $price,

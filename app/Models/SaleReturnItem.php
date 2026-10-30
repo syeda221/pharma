@@ -19,6 +19,7 @@ class SaleReturnItem extends Model
         'color',
         'warehouse_id',
         'qty',
+        'bonus_qty',
         'boxes',
         'loose_pieces',
         'price',

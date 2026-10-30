@@ -737,6 +737,8 @@
                                     <tbody id="salesTableBody">
                                         @php
                                             $returnedQtyMap = [];
+                                            $returnedBilledMap = [];
+                                            $returnedBonusMap = [];
                                             if (isset($sale) && $sale->returns) {
                                                 foreach ($sale->returns as $ret) {
                                                     if ($ret->items) {
@@ -746,10 +748,19 @@
                                                             } else {
                                                                 $k = $retItem->product_id . '_' . ($retItem->color ?? '');
                                                             }
-                                                            $returnedQtyMap[$k] = ($returnedQtyMap[$k] ?? 0) + (float)$retItem->qty;
+                                                            $rTotal = (float)$retItem->qty;
+                                                            $rBonus = (float)($retItem->bonus_qty ?? 0);
+                                                            $rBilled = max(0, $rTotal - $rBonus);
+
+                                                            $returnedQtyMap[$k] = ($returnedQtyMap[$k] ?? 0) + $rTotal;
+                                                            $returnedBilledMap[$k] = ($returnedBilledMap[$k] ?? 0) + $rBilled;
+                                                            $returnedBonusMap[$k] = ($returnedBonusMap[$k] ?? 0) + $rBonus;
+
                                                             if (!$retItem->is_manual && $retItem->product_id) {
                                                                 $pKey = 'PROD_' . $retItem->product_id;
-                                                                $returnedQtyMap[$pKey] = ($returnedQtyMap[$pKey] ?? 0) + (float)$retItem->qty;
+                                                                $returnedQtyMap[$pKey] = ($returnedQtyMap[$pKey] ?? 0) + $rTotal;
+                                                                $returnedBilledMap[$pKey] = ($returnedBilledMap[$pKey] ?? 0) + $rBilled;
+                                                                $returnedBonusMap[$pKey] = ($returnedBonusMap[$pKey] ?? 0) + $rBonus;
                                                             }
                                                         }
                                                     }
@@ -768,10 +779,16 @@
                                                         : ($item->product_id . '_' . ($item->color ?? ''));
 
                                                     $returnedQty = 0;
+                                                    $retBilledPieces = 0;
+                                                    $retBonusPieces = 0;
                                                     if (isset($returnedQtyMap[$itemKey])) {
                                                         $returnedQty = $returnedQtyMap[$itemKey];
+                                                        $retBilledPieces = $returnedBilledMap[$itemKey] ?? 0;
+                                                        $retBonusPieces = $returnedBonusMap[$itemKey] ?? 0;
                                                     } elseif (!$item->is_manual && isset($returnedQtyMap['PROD_' . $item->product_id])) {
                                                         $returnedQty = $returnedQtyMap['PROD_' . $item->product_id];
+                                                        $retBilledPieces = $returnedBilledMap['PROD_' . $item->product_id] ?? 0;
+                                                        $retBonusPieces = $returnedBonusMap['PROD_' . $item->product_id] ?? 0;
                                                     }
 
                                                     $variantData = [];
@@ -851,8 +868,15 @@
                                                         }
                                                     }
 
-                                                    $netBilledPieces = max(0, $billedPieces - $returnedQty);
-                                                    $netTotalPieces = $netBilledPieces + $bonusPieces;
+                                                    // If legacy return item had total qty without explicit bonus split:
+                                                    if ($returnedQty > 0 && ($retBilledPieces == 0 && $retBonusPieces == 0)) {
+                                                        $retBilledPieces = min($returnedQty, $billedPieces);
+                                                        $retBonusPieces = min(max(0, $returnedQty - $retBilledPieces), $bonusPieces);
+                                                    }
+
+                                                    $netBilledPieces = max(0, $billedPieces - $retBilledPieces);
+                                                    $netBonusPieces = max(0, $bonusPieces - $retBonusPieces);
+                                                    $netTotalPieces = $netBilledPieces + $netBonusPieces;
 
                                                     $cartons = 0;
                                                     $loose = 0;
@@ -920,17 +944,18 @@
                                                         $itemTotalPieces = (float) $netTotalPieces;
                                                     }
 
-                                                    // Format returned quantity matching unit mode (carton.loose if by_cartons)
-                                                    $retDisplayQty = (float) $returnedQty;
+                                                    // Format returned billed quantity matching unit mode (carton.loose if by_cartons)
+                                                    $retBilledDisplay = (float) $retBilledPieces;
                                                     if ($sizeMode === 'by_cartons' && !$isPcs && $ppb > 1) {
-                                                        $retCartons = floor($returnedQty / $ppb);
-                                                        $retLoose = $returnedQty % $ppb;
-                                                        $retDisplayQty = $retLoose > 0 ? "{$retCartons}.{$retLoose}" : $retCartons;
+                                                        $retCartons = floor($retBilledPieces / $ppb);
+                                                        $retLoose = $retBilledPieces % $ppb;
+                                                        $retBilledDisplay = $retLoose > 0 ? "{$retCartons}.{$retLoose}" : $retCartons;
                                                     } elseif ($sizeMode === 'by_size' && $ppb > 1) {
-                                                        $retCartons = floor($returnedQty / $ppb);
-                                                        $retLoose = $returnedQty % $ppb;
-                                                        $retDisplayQty = $retLoose > 0 ? "{$retCartons}.{$retLoose}" : $retCartons;
+                                                        $retCartons = floor($retBilledPieces / $ppb);
+                                                        $retLoose = $retBilledPieces % $ppb;
+                                                        $retBilledDisplay = $retLoose > 0 ? "{$retCartons}.{$retLoose}" : $retCartons;
                                                     }
+                                                    $retBonusDisplay = (float) $retBonusPieces;
 
                                                     $pieceRetailPrice = 0;
                                                     if ($liveVariant && !empty($liveVariant['sale_price']) && (float)$liveVariant['sale_price'] > 0) {
@@ -958,10 +983,10 @@
                                                     $variantLabel = '';
                                                     $vSize = '-';
                                                     $vCol = '-';
-                                                    if (!empty($item->bonus_qty) && (float)$item->bonus_qty > 0) {
-                                                        $vCol = (float)$item->bonus_qty;
+                                                    if ($bonusPieces > 0) {
+                                                        $vCol = (float)$netBonusPieces;
                                                     } elseif ($variantData && isset($variantData['bonus']) && $variantData['bonus'] !== '-') {
-                                                        $vCol = $variantData['bonus'];
+                                                        $vCol = max(0, (float)$variantData['bonus'] - $retBonusPieces);
                                                     } elseif ($variantData && isset($variantData['color']) && $variantData['color'] !== '-') {
                                                         $vCol = $variantData['color'];
                                                     }
@@ -1035,13 +1060,13 @@
                                                                 {{ $toggleText }}
                                                             </button>
                                                         </div>
-                                                        @if($returnedQty > 0)
-                                                            <div class="text-danger fw-bold" style="font-size: 0.65rem; line-height: 1.1; margin-top: 2px;" title="Original Sold: {{ (float)$billedPieces }} pcs, Returned: {{ $retDisplayQty }} ({{ (float)$returnedQty }} pcs)">
-                                                                -{{ $retDisplayQty }} ret
+                                                        @if($retBilledPieces > 0)
+                                                            <div class="text-danger fw-bold" style="font-size: 0.65rem; line-height: 1.1; margin-top: 2px;" title="Original Sold: {{ (float)$billedPieces }} pcs, Returned: {{ $retBilledDisplay }} ({{ (float)$retBilledPieces }} pcs)">
+                                                                -{{ $retBilledDisplay }} ret
                                                             </div>
                                                         @endif
                                                         <input type="hidden" class="hidden-sub-unit-mode" name="sub_unit_mode[]" value="{{ $unitMode }}">
-                                                        <input type="hidden" class="returned-pieces-hidden" name="returned_pieces[]" value="{{ (float)$returnedQty }}">
+                                                        <input type="hidden" class="returned-pieces-hidden" name="returned_pieces[]" value="{{ (float)$retBilledPieces }}">
                                                     </td>
 
                                                     <!-- Loose Pieces (hidden) -->
@@ -1067,6 +1092,11 @@
                                                             name="bonus_display[]"
                                                             value="{{ ($vCol ?? '') !== '-' ? ($vCol ?? '') : '' }}"
                                                             placeholder="0">
+                                                        @if($retBonusPieces > 0)
+                                                            <div class="text-danger fw-bold text-center" style="font-size: 0.65rem; line-height: 1.1; margin-top: 2px;" title="Original Bonus: {{ (float)$bonusPieces }} pcs, Returned Bonus: {{ (float)$retBonusPieces }} pcs">
+                                                                -{{ $retBonusDisplay }} ret
+                                                            </div>
+                                                        @endif
                                                     </td>
 
                                                     <!-- Total Pieces -->
