@@ -1200,12 +1200,14 @@
                         else if (s === 'draft') $(this).removeClass('btn-outline-warning').addClass('btn-warning text-dark');
                         else if (s === 'booked') $(this).removeClass('btn-outline-info').addClass('btn-info text-white');
                         else if (s === 'returned') $(this).removeClass('btn-outline-danger').addClass('btn-danger');
+                        else if (s === 'direct_returns') $(this).removeClass('btn-outline-danger').addClass('btn-danger text-white');
                     } else {
                         if (s === 'all') $(this).removeClass('btn-secondary').addClass('btn-outline-secondary');
                         else if (s === 'posted') $(this).removeClass('btn-success').addClass('btn-outline-success');
                         else if (s === 'draft') $(this).removeClass('btn-warning text-dark').addClass('btn-outline-warning');
                         else if (s === 'booked') $(this).removeClass('btn-info text-white').addClass('btn-outline-info');
                         else if (s === 'returned') $(this).removeClass('btn-danger').addClass('btn-outline-danger');
+                        else if (s === 'direct_returns') $(this).removeClass('btn-danger text-white').addClass('btn-outline-danger');
                     }
                 });
 
