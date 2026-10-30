@@ -731,6 +731,10 @@
                         class="btn btn-sm status-filter-btn {{ request('status') == 'returned' ? 'btn-danger' : 'btn-outline-danger' }} rounded-3 shadow-sm px-3 fw-bold">
                         Returned <span class="badge bg-white text-danger ms-1" id="statBadgeReturned">{{ $stats['returned_count'] ?? 0 }}</span>
                     </button>
+                    <button type="button" data-status="direct_returns"
+                        class="btn btn-sm status-filter-btn {{ request('status') == 'direct_returns' ? 'btn-danger' : 'btn-outline-danger' }} rounded-3 shadow-sm px-3 fw-bold">
+                        <i class="fas fa-undo-alt me-1"></i> Direct Returns <span class="badge bg-white text-danger ms-1" id="statBadgeDirectReturns">{{ $stats['direct_returns_count'] ?? 0 }}</span>
+                    </button>
                 </div>
 
                 <div class="card premium-card">
@@ -1055,6 +1059,9 @@
                             $('#statBadgeDraft').text(Number(response.stats.draft_count || 0).toLocaleString());
                             $('#statBadgeBooked').text(Number(response.stats.booked_count || 0).toLocaleString());
                             $('#statBadgeReturned').text(Number(response.stats.returned_count || 0).toLocaleString());
+                            if (response.stats.direct_returns_count !== undefined) {
+                                $('#statBadgeDirectReturns').text(Number(response.stats.direct_returns_count || 0).toLocaleString());
+                            }
 
                             let statusHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 9.5px;"><i class="fas fa-check-circle me-0.5"></i> Posted: ' + (response.stats.posted_count || 0) + '</span>';
                             if (Number(response.stats.booked_count || 0) > 0) {

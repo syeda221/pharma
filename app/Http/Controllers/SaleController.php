@@ -405,7 +405,7 @@ class SaleController extends Controller
         }
         
         // Include standalone direct returns (where sale_id IS NULL)
-        $standaloneRetQuery = \App\Models\SaleReturn::whereNull("sale_id")->with("items");
+        $standaloneRetQuery = \App\Models\SaleReturn::whereNull("sale_id")->with(["items.product", "customer"]);
         if ($request->customer_id && $request->customer_id !== "all") {
             $standaloneRetQuery->where("customer_id", $request->customer_id);
         } elseif ($request->filled("zone_id") && $request->zone_id !== "all") {
@@ -493,6 +493,75 @@ class SaleController extends Controller
             'booked_count' => $sales->where('sale_status', 'booked')->count(),
             'returned_count' => $sales->whereIn('sale_status', ['returned', 1])->count(),
         ];
+
+        // Transform standalone direct returns into row objects for the sales table
+        $directReturnRows = collect();
+        foreach ($standaloneReturns as $sr) {
+            $srItemsPieces = (float)$sr->items->sum('qty');
+            $srBonusPieces = (float)$sr->items->sum('bonus_qty');
+            $srGross = (float) ($sr->bill_amount > 0 ? $sr->bill_amount : ($sr->items ? $sr->items->sum(fn($i) => (float)($i->price ?? 0) * (float)($i->qty ?? 0)) : (float)($sr->net_amount ?? 0)));
+            $srNet = (float) $sr->net_amount;
+
+            $directSale = new \App\Models\Sale();
+            $directSale->id = $sr->id;
+            $directSale->is_direct_return = true;
+            $directSale->return_id = $sr->id;
+            $directSale->invoice_no = $sr->return_invoice ?: ('SR-' . str_pad($sr->id, 4, '0', STR_PAD_LEFT));
+            $directSale->customer_id = $sr->customer_id;
+            $directSale->customer_relation = $sr->customer;
+            $directSale->reference = $sr->remarks ?: 'Direct Return';
+            $directSale->sale_status = 'direct_return';
+            $directSale->created_at = $sr->return_date ? \Carbon\Carbon::parse($sr->return_date) : $sr->created_at;
+            $directSale->total_items = -$srItemsPieces;
+            $directSale->qty = -$srItemsPieces;
+            $directSale->effective_qty = -$srItemsPieces;
+            $directSale->returned_qty = $srItemsPieces;
+            $directSale->effective_sold_qty = -max(0, $srItemsPieces - $srBonusPieces);
+            $directSale->bonus_qty = -$srBonusPieces;
+            $directSale->effective_gross = -$srGross;
+            $directSale->total_bill_amount = -$srGross;
+            $directSale->per_total = -$srGross;
+            $directSale->total_net = -$srNet;
+            $directSale->effective_net = -$srNet;
+            $directSale->total_returned = $srNet;
+            $directSale->total_extradiscount = $sr->extra_discount ?? 0;
+            $directSale->tier_medical_discount = 0;
+            $directSale->tier_doctor_discount = 0;
+            $directSale->tier_distribution_discount = 0;
+            $directSale->items = $sr->items->map(function($sri) {
+                $itemObj = new \stdClass();
+                $itemObj->product = $sri->product;
+                $itemObj->product_name = $sri->product ? $sri->product->item_name : ($sri->product_name ?: 'Product');
+                $itemObj->qty = -$sri->qty;
+                $itemObj->price = (float)$sri->price;
+                $itemObj->discount_amount = 0;
+                return $itemObj;
+            });
+
+            $directReturnRows->push($directSale);
+        }
+
+        // Apply bill_no search to direct returns if provided
+        $billNoSearch = trim($request->input('bill_no') ?? $request->input('invoice_no') ?? '');
+        if (!empty($billNoSearch)) {
+            $directReturnRows = $directReturnRows->filter(function($dr) use ($billNoSearch) {
+                return str_contains(strtolower($dr->invoice_no), strtolower($billNoSearch))
+                    || str_contains(strtolower($dr->reference), strtolower($billNoSearch))
+                    || str_contains((string)$dr->return_id, $billNoSearch);
+            });
+        }
+
+        $directReturnsCount = $directReturnRows->count();
+        $stats['direct_returns_count'] = $directReturnsCount;
+        $stats['total_count'] = $sales->count() + $directReturnsCount;
+
+        // Apply status filter to table rows
+        $statusFilter = $request->input('status', 'all');
+        if ($statusFilter === 'direct_returns') {
+            $sales = $directReturnRows;
+        } elseif ($statusFilter === 'all' || empty($statusFilter)) {
+            $sales = $sales->concat($directReturnRows)->sortByDesc('created_at')->values();
+        }
 
         // If AJAX request, return only table rows partial & stats
         if ($request->ajax()) {

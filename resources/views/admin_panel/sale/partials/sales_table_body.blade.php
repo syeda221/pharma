@@ -1,14 +1,121 @@
 @foreach ($sales as $sale)
     @php
         $pNames = 'N/A';
-        if ($sale->items && $sale->items->count() > 0) {
-            $pNames = $sale->items
-                ->map(fn($item) => optional($item->product)->item_name ?? '?')
-                ->implode(', ');
+        if ($sale->items && count($sale->items) > 0) {
+            $pNames = collect($sale->items)
+                ->map(function($item) {
+                    if (is_object($item)) {
+                        return optional($item->product)->item_name ?? ($item->product_name ?? '?');
+                    }
+                    return '?';
+                })
+                ->filter(fn($n) => $n !== '?' && !empty($n))
+                ->implode(', ') ?: 'Returned Products';
         } elseif ($sale->product) {
             $pNames = $sale->product;
         }
+    @endphp
 
+    @if (!empty($sale->is_direct_return))
+        {{-- Standalone Direct Return Row --}}
+        <tr class="border-bottom-0" style="background-color: #fff1f2 !important;">
+            {{-- 1. Return Invoice# --}}
+            <td class="ps-2 fw-bold font-monospace text-nowrap">
+                <span class="text-danger fw-bold"><i class="fas fa-undo-alt me-1"></i>{{ $sale->invoice_no }}</span>
+                <small class="text-danger opacity-75 d-block" style="font-size: 10px;">Direct Return</small>
+            </td>
+
+            {{-- 2. Customer --}}
+            <td class="text-nowrap">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-circle bg-danger-subtle text-danger me-1.5 fw-bold d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                        style="width: 24px; height: 24px; font-size: 11px; background-color: #fee2e2; color: #dc2626;">
+                        {{ strtoupper(substr(optional($sale->customer_relation)->customer_name ?? 'C', 0, 1)) }}
+                    </div>
+                    <span class="fw-medium text-dark text-truncate d-inline-block" style="max-width: 105px; vertical-align: middle;" title="{{ optional($sale->customer_relation)->customer_name }}">{{ optional($sale->customer_relation)->customer_name ?? 'N/A' }}</span>
+                </div>
+            </td>
+
+            {{-- 3. M.Bill --}}
+            <td class="font-monospace text-danger text-center small text-nowrap">
+                <span class="badge rounded-pill" style="font-size: 9px; background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">Ret Slip</span>
+            </td>
+
+            {{-- 4. Product --}}
+            <td title="{{ $pNames }}" class="text-danger small text-truncate" style="max-width: 95px;">
+                {{ \Illuminate\Support\Str::limit($pNames, 18) }}
+            </td>
+
+            {{-- 5. Qty --}}
+            <td class="text-center font-monospace text-nowrap">
+                <span class="text-danger fw-bold">-{{ number_format(abs($sale->effective_qty), 0) }}</span>
+                <small class="text-danger d-block" style="font-size: 9px;">wapsi</small>
+            </td>
+
+            {{-- 6. Gross --}}
+            <td class="text-right font-monospace align-middle text-nowrap" style="text-align: right !important; white-space: nowrap;">
+                <span class="text-danger fw-bold">-Rs. {{ number_format(abs($sale->total_bill_amount), 2) }}</span>
+            </td>
+
+            {{-- 7. Pharm --}}
+            <td class="text-right font-monospace align-middle text-muted pe-1" style="text-align: right !important; opacity: 0.35;">—</td>
+
+            {{-- 8. Doctor --}}
+            <td class="text-right font-monospace align-middle text-muted pe-1" style="text-align: right !important; opacity: 0.35;">—</td>
+
+            {{-- 9. Dist --}}
+            <td class="text-right font-monospace align-middle text-muted pe-1" style="text-align: right !important; opacity: 0.35;">—</td>
+
+            {{-- 10. Extra --}}
+            <td class="text-right font-monospace align-middle text-muted pe-1" style="text-align: right !important; opacity: 0.35;">—</td>
+
+            {{-- 11. Net Total --}}
+            <td class="text-right fw-bold font-monospace align-middle text-nowrap" style="text-align: right !important; white-space: nowrap;">
+                <span class="text-danger d-block fs-6">-Rs. {{ number_format(abs($sale->total_net), 2) }}</span>
+                <small class="text-danger opacity-75 d-block" style="font-size: 9.5px;">Return Credit</small>
+            </td>
+
+            {{-- 12. Date --}}
+            <td class="text-nowrap small text-muted text-center" style="font-size: 11px;">
+                {{ $sale->created_at ? $sale->created_at->format('d/m/Y') : '-' }}
+            </td>
+
+            {{-- 13. Status --}}
+            <td class="text-center text-nowrap">
+                <span class="badge badge-danger border border-danger"><i class="fas fa-undo-alt me-1"></i>Direct Return</span>
+            </td>
+
+            {{-- 14. Action --}}
+            <td class="text-center text-nowrap px-1">
+                <div class="dropdown">
+                    <button class="btn btn-premium-action dropdown-toggle" type="button" data-toggle="dropdown" data-display="static" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v me-1"></i> Action
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-right border-0 shadow-lg rounded-3">
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="{{ route('sale.return.view', $sale->return_id) }}" target="_blank">
+                                <i class="fas fa-file-invoice text-danger fa-fw"></i> View Return Slip
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-secondary" href="{{ route('sale.return.index') }}">
+                                <i class="fas fa-list text-secondary fa-fw"></i> Go to All Returns
+                            </a>
+                        </li>
+                        @can('sales.delete')
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger fw-bold" href="{{ route('sale.return.destroy', $sale->return_id) }}" onclick="return confirm('Are you sure you want to delete this Direct Return?');">
+                                    <i class="fas fa-trash-alt fa-fw"></i> Delete Return
+                                </a>
+                            </li>
+                        @endcan
+                    </ul>
+                </div>
+            </td>
+        </tr>
+    @else
+        @php
         $statusBadge = '<span class="badge badge-warning text-dark border border-warning">Draft</span>';
         $isExchange = \Illuminate\Support\Str::startsWith($sale->reference, 'Exchange for');
         
@@ -363,4 +470,5 @@
             </div>
         </td>
     </tr>
+    @endif
 @endforeach
