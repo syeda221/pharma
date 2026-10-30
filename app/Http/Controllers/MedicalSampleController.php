@@ -139,15 +139,17 @@ class MedicalSampleController extends Controller
                     ]);
                 }
 
-                // Record Stock Movement
+                // Record Stock Movement (type='out', qty=-$qty for physical deduction tracking)
                 try {
-                    StockMovement::create([
+                    DB::table('stock_movements')->insert([
                         'product_id' => $productId,
-                        'warehouse_id' => $validated['warehouse_id'],
-                        'quantity' => -$qty,
-                        'type' => 'sample',
-                        'reference' => 'Sample #' . $sampleNo . ($sample->doctor_name ? ' (' . $sample->doctor_name . ')' : ''),
+                        'type' => 'out',
+                        'qty' => -$qty,
+                        'ref_type' => 'sample',
+                        'ref_id' => $sample->id,
+                        'note' => 'Physician Sample Issued #' . $sampleNo . ($sample->doctor_name ? ' (' . $sample->doctor_name . ')' : '') . " (Warehouse #{$validated['warehouse_id']})",
                         'created_at' => Carbon::now(),
+                        'updated_at' => Carbon::now(),
                     ]);
                 } catch (\Exception $e) {
                     Log::warning('StockMovement record failed for sample: ' . $e->getMessage());
@@ -215,6 +217,12 @@ class MedicalSampleController extends Controller
                     $stock->save();
                 }
             }
+
+            // Remove stock movements recorded for this sample
+            DB::table('stock_movements')
+                ->where('ref_type', 'sample')
+                ->where('ref_id', $sample->id)
+                ->delete();
 
             $sample->delete();
             DB::commit();

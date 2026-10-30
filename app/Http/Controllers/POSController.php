@@ -90,6 +90,13 @@ class POSController extends Controller
                     ->select('pri.qty', 'pri.color')
                     ->get();
 
+                // Fetch all medical samples
+                $samplesList = DB::table('medical_sample_items as msi')
+                    ->join('medical_samples as ms', 'ms.id', '=', 'msi.medical_sample_id')
+                    ->where('msi.product_id', $p->id)
+                    ->select('msi.qty', 'msi.variant_color')
+                    ->get();
+
                 $variantItems = [];
                 $totalStockPieces = 0;
 
@@ -167,7 +174,24 @@ class POSController extends Controller
                             $vBalance = (int) floor(max(0, $totalStockPieces) / $factor);
                         }
                     } else {
-                        $vBalance = max(0, $initial + $purchased - $sold + $returnedQty - $pReturned);
+                        // Calculate Medical Sample variant qty
+                        $sampleQty = 0;
+                        foreach ($samplesList as $smItem) {
+                            if (count($variants) <= 1) {
+                                $sampleQty += (float) $smItem->qty;
+                            } elseif (empty($smItem->variant_color)) {
+                                if (!empty($v['is_base_variant']) || $v === $variants[0]) {
+                                    $sampleQty += (float) $smItem->qty;
+                                }
+                            } else {
+                                $smCopy = (object)['color' => $smItem->variant_color, 'qty' => $smItem->qty];
+                                if ($this->matchSaleItemToVariant($smCopy, $v)) {
+                                    $sampleQty += (float) $smItem->qty;
+                                }
+                            }
+                        }
+
+                        $vBalance = max(0, $initial + $purchased - $sold - $sampleQty + $returnedQty - $pReturned);
                         $totalStockPieces += $vBalance;
                     }
 

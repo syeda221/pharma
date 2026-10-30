@@ -259,6 +259,17 @@ class ReportingController extends Controller
                     if ($dateTo)   $adjQuery->whereDate('created_at', '<=', $dateTo);
                     $adjList = $adjQuery->select('qty', 'note', 'ref_type')->get();
 
+                    // Fetch Medical Samples
+                    $samplesQuery = DB::table('medical_sample_items as msi')
+                        ->join('medical_samples as ms', 'ms.id', '=', 'msi.medical_sample_id')
+                        ->where('msi.product_id', $product->id);
+                    if ($warehouseId && $warehouseId !== 'all') {
+                        $samplesQuery->where('ms.warehouse_id', $warehouseId);
+                    }
+                    if ($dateFrom) $samplesQuery->whereDate('ms.sample_date', '>=', $dateFrom);
+                    if ($dateTo)   $samplesQuery->whereDate('ms.sample_date', '<=', $dateTo);
+                    $samplesList = $samplesQuery->select('msi.qty', 'msi.variant_color', 'msi.wos_line_total')->get();
+
                     $saleIds = $returnsList->pluck('sale_id')->unique()->toArray();
                     $saleItemsMap = [];
                     if (!empty($saleIds)) {
@@ -391,8 +402,29 @@ class ReportingController extends Controller
                             }
                         }
 
-                        // Balance in Total Pieces = Initial + Purchased - Sold + Returned - Purchased Returned + Adjustments
-                        $balance = $initial + $purchased - $sold + $returnedQty - $pReturned + $adjustments;
+                        // Medical Samples for variant
+                        $sampleQty = 0;
+                        $sampleWosAmount = 0;
+                        foreach ($samplesList as $smItem) {
+                            if ($variantsCount <= 1) {
+                                $sampleQty += (float) $smItem->qty;
+                                $sampleWosAmount += (float) $smItem->wos_line_total;
+                            } elseif (empty($smItem->variant_color)) {
+                                if (!empty($v['is_base_variant']) || $v === $variants[0]) {
+                                    $sampleQty += (float) $smItem->qty;
+                                    $sampleWosAmount += (float) $smItem->wos_line_total;
+                                }
+                            } else {
+                                $smCopy = (object)['color' => $smItem->variant_color, 'qty' => $smItem->qty];
+                                if ($this->matchSaleItemToVariant($smCopy, $v, $variantsCount)) {
+                                    $sampleQty += (float) $smItem->qty;
+                                    $sampleWosAmount += (float) $smItem->wos_line_total;
+                                }
+                            }
+                        }
+
+                        // Balance in Total Pieces = Initial + Purchased - Sold - Samples + Returned - Purchased Returned + Adjustments
+                        $balance = $initial + $purchased - $sold - $sampleQty + $returnedQty - $pReturned + $adjustments;
                     }
 
                     // Weighted Average Purchase Price
@@ -487,6 +519,8 @@ class ReportingController extends Controller
                         'returned_qty'    => $returnedQty,
                         'purch_returned_qty' => $pReturned,
                         'adjustments'     => $adjustments,
+                        'sample_qty'      => $sampleQty,
+                        'sample_wos'      => $sampleWosAmount,
                         'balance'         => $balance,
                         'formatted_stock' => $formattedStock,
                         'carton_display'  => $cartonDisplay,
@@ -556,6 +590,18 @@ class ReportingController extends Controller
                 if ($dateFrom) $adjQuery->whereDate('created_at', '>=', $dateFrom);
                 if ($dateTo)   $adjQuery->whereDate('created_at', '<=', $dateTo);
                 $adjustments = (float) $adjQuery->sum('qty');
+
+                // Medical Samples
+                $sampleQuery = DB::table('medical_sample_items as msi')
+                    ->join('medical_samples as ms', 'ms.id', '=', 'msi.medical_sample_id')
+                    ->where('msi.product_id', $product->id);
+                if ($warehouseId && $warehouseId !== 'all') {
+                    $sampleQuery->where('ms.warehouse_id', $warehouseId);
+                }
+                if ($dateFrom) $sampleQuery->whereDate('ms.sample_date', '>=', $dateFrom);
+                if ($dateTo)   $sampleQuery->whereDate('ms.sample_date', '<=', $dateTo);
+                $sampleQty = (float) $sampleQuery->sum('msi.qty');
+                $sampleWos = (float) $sampleQuery->sum('msi.wos_line_total');
 
                 // Opening stock
                 $initial = max(0, $balance - $purchased + $sold - $returnedQty + $pReturned - $adjustments);
@@ -655,6 +701,8 @@ class ReportingController extends Controller
                     'returned_qty'    => $returnedQty,
                     'purch_returned_qty' => $pReturned,
                     'adjustments'     => $adjustments,
+                    'sample_qty'      => $sampleQty,
+                    'sample_wos'      => $sampleWos,
                     'balance'         => $balance,
                     'formatted_stock' => $formattedStock,
                     'carton_display'  => $cartonDisplay,

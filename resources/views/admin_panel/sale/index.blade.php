@@ -1371,6 +1371,20 @@
     {{-- ISSUE PHYSICIAN / MEDICAL SAMPLE MODAL                    --}}
     {{-- ======================================================== --}}
     <style>
+        #issueSampleModal .modal-dialog {
+            max-width: 860px !important;
+            margin: 1.5rem auto;
+        }
+        #issueSampleModal .modal-content {
+            border-radius: 12px !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
+            border: none !important;
+            overflow: hidden !important;
+        }
+        #issueSampleModal .table-responsive {
+            min-height: auto !important;
+            border-radius: 6px !important;
+        }
         #issueSampleModal .select2-container {
             width: 100% !important;
         }
@@ -1399,51 +1413,61 @@
             border-radius: 6px !important;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
         }
-        #issueSampleModal .modal-content {
-            border-radius: 12px !important;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
-            border: none !important;
+        #issueSampleModal .card {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+        }
+        #sampleItemsTable th {
+            border-top: none !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+        #sampleItemsTable td {
+            border-top: 1px solid #f1f5f9 !important;
+            vertical-align: middle !important;
         }
     </style>
 
     <div class="modal fade" id="issueSampleModal" tabindex="-1" aria-labelledby="issueSampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 860px;">
+            <div class="modal-content border-0 shadow-lg">
                 {{-- Modal Header --}}
-                <div class="modal-header text-white align-items-center" style="background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%); padding: 14px 20px;">
+                <div class="modal-header text-white align-items-center" style="background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 100%); padding: 12px 18px;">
                     <div class="d-flex align-items-center gap-2">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-white text-purple" style="width: 38px; height: 38px; color: #6d28d9; font-size: 16px; flex-shrink: 0;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-white" style="width: 36px; height: 36px; color: #6d28d9; font-size: 15px; flex-shrink: 0;">
                             <i class="fas fa-vial"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title font-weight-bold mb-0 text-white" style="font-size: 1.15rem; letter-spacing: -0.2px;">
+                            <h5 class="modal-title font-weight-bold mb-0 text-white" style="font-size: 1.08rem; letter-spacing: -0.2px;">
                                 Issue Physician / Medical Sample
                             </h5>
-                            <div class="text-white opacity-85 small" style="font-size: 11.5px;">
+                            <div class="text-white opacity-85 small" style="font-size: 11px;">
                                 Free Promotional Stock <span class="mx-1">·</span> Stock Auto-Deducted <span class="mx-1">·</span> WOS Tracked at Purchase Cost
                             </div>
                         </div>
                     </div>
-                    <button type="button" class="close text-white" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="opacity: 0.9; font-size: 1.6rem; text-shadow: none; border: none; background: transparent; cursor: pointer;">
+                    <button type="button" class="close text-white" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="opacity: 0.9; font-size: 1.5rem; text-shadow: none; border: none; background: transparent; cursor: pointer;">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
 
                 <form id="issueSampleForm" method="POST" action="{{ route('samples.store') }}">
                     @csrf
-                    <div class="modal-body p-3 p-md-4" style="background: #f8fafc; max-height: calc(88vh - 130px); overflow-y: auto;">
+                    @php $defaultWhId = auth()->user()->warehouse_id ?? ($allWarehouses->first()?->id ?? 1); @endphp
+                    {{-- Hidden Warehouse Input (Warehouse removed from visible UI as requested) --}}
+                    <input type="hidden" name="warehouse_id" id="sample_warehouse_id" value="{{ $defaultWhId }}">
+
+                    <div class="modal-body p-3" style="background: #f8fafc; max-height: calc(88vh - 110px); overflow-y: auto;">
                         
-                        {{-- Card 1: Doctor / Recipient & Logistics --}}
-                        <div class="card border-0 shadow-sm mb-3" style="background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0 !important;">
-                            <div class="card-body p-3">
+                        {{-- Card 1: Doctor & Issue Date --}}
+                        <div class="card border-0 shadow-sm mb-2.5" style="background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0 !important;">
+                            <div class="card-body p-2.5">
                                 <div class="row g-2 align-items-end">
-                                    {{-- 1. Doctor / Clinic Dropdown with Select2 --}}
-                                    <div class="col-md-5">
-                                        <label class="form-label font-weight-bold text-dark small mb-1 d-flex justify-content-between">
-                                            <span><i class="fas fa-user-md text-primary mr-1"></i> Select Registered Doctor / Hospital</span>
-                                            <span class="text-muted" style="font-size: 10px;">(Auto-fills details)</span>
+                                    {{-- 1. Doctor / Hospital Dropdown with Select2 --}}
+                                    <div class="col-md-7">
+                                        <label class="form-label font-weight-bold text-dark small mb-1">
+                                            <i class="fas fa-user-md text-primary mr-1"></i> Doctor / Hospital <span class="text-danger">*</span>
                                         </label>
-                                        <select name="customer_id" id="sample_customer_id" class="form-control form-control-sm select2-sample-doctor" style="width: 100%;">
+                                        <select name="customer_id" id="sample_customer_id" class="form-control form-control-sm select2-sample-doctor" required style="width: 100%;">
                                             <option value="">-- Search & Choose Doctor / Hospital --</option>
                                             @php
                                                 $docGroups = $customers->groupBy(function($c) {
@@ -1462,78 +1486,42 @@
                                         </select>
                                     </div>
 
-                                    {{-- 2. Doctor Name / Clinic Text Input (auto-filled or custom) --}}
-                                    <div class="col-md-4">
-                                        <label class="form-label font-weight-bold text-dark small mb-1">
-                                            <i class="fas fa-stethoscope text-info mr-1"></i> Doctor / Clinic Name (On Challan) <span class="text-danger">*</span>
-                                        </label>
-                                        <input type="text" name="doctor_name" id="sample_doctor_name" class="form-control form-control-sm" placeholder="e.g. DR ZAHID LATIF / City Clinic" required style="border-color: #cbd5e1; height: 33px; font-weight: 500;">
-                                    </div>
+                                    {{-- Hidden Doctor Name (Auto-populated from selected doctor) --}}
+                                    <input type="hidden" name="doctor_name" id="sample_doctor_name" value="">
 
-                                    {{-- 3. Medical Rep (MR) --}}
-                                    <div class="col-md-3">
-                                        <label class="form-label font-weight-bold text-dark small mb-1">
-                                            <i class="fas fa-user-tie text-secondary mr-1"></i> Medical Rep (MR) / Delivered By
-                                        </label>
-                                        <input type="text" name="mr_name" class="form-control form-control-sm" placeholder="e.g. Ali (MR)" style="border-color: #cbd5e1; height: 33px;">
-                                    </div>
-                                </div>
-
-                                <div class="row g-2 align-items-end mt-2 pt-2 border-top" style="border-color: #f1f5f9 !important;">
-                                    {{-- 4. Warehouse (Default to Sale's Warehouse) --}}
-                                    <div class="col-md-6">
-                                        <label class="form-label font-weight-bold text-dark small mb-1">
-                                            <i class="fas fa-warehouse text-warning mr-1"></i> Stock Source Warehouse <span class="text-danger">*</span>
-                                        </label>
-                                        @php $defaultWhId = auth()->user()->warehouse_id ?? 1; @endphp
-                                        <select name="warehouse_id" id="sample_warehouse_id" class="form-control form-control-sm" required style="border-color: #cbd5e1; height: 33px; font-weight: 500;">
-                                            @foreach($allWarehouses as $wh)
-                                                @php 
-                                                    $whTitle = $wh->warehouse_name ?? ($wh->name ?? ('Warehouse #' . $wh->id));
-                                                    if (!empty($wh->location)) {
-                                                        $whTitle .= ' (' . $wh->location . ')';
-                                                    }
-                                                @endphp
-                                                <option value="{{ $wh->id }}" {{ $wh->id == $defaultWhId ? 'selected' : '' }}>
-                                                    🏬 {{ $whTitle }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-
-                                    {{-- 5. Issue Date --}}
-                                    <div class="col-md-6">
+                                    {{-- 2. Issue Date --}}
+                                    <div class="col-md-5">
                                         <label class="form-label font-weight-bold text-dark small mb-1">
                                             <i class="fas fa-calendar-day text-primary mr-1"></i> Issue Date <span class="text-danger">*</span>
                                         </label>
-                                        <input type="date" name="sample_date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" required style="border-color: #cbd5e1; height: 33px;">
+                                        <input type="date" name="sample_date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" required style="border-color: #cbd5e1; height: 33px; font-size: 12.5px;">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {{-- Card 2: Sample Medicines Repeater --}}
-                        <div class="card border-0 shadow-sm mb-3" style="background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0 !important; overflow: hidden;">
-                            <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center border-bottom" style="background: #f8fafc !important;">
+                        <div class="card border-0 shadow-sm mb-2.5" style="background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0 !important; overflow: hidden;">
+                            <div class="card-header bg-white py-1.5 px-3 d-flex justify-content-between align-items-center border-bottom" style="background: #f8fafc !important;">
                                 <div>
                                     <span class="font-weight-bold small text-dark"><i class="fas fa-boxes-stacked mr-1 text-primary"></i> Sample Medicines</span>
-                                    <span class="text-muted small ml-1 d-none d-sm-inline">(Search medicines, verify stock, enter sample pieces)</span>
+                                    <span class="text-muted small ml-1 d-none d-sm-inline" style="font-size: 11px;">(Search medicine & enter pieces)</span>
                                 </div>
-                                <button type="button" class="btn btn-sm text-white px-3 font-weight-bold" id="btnAddSampleRow" style="background: #7c3aed; font-size: 12px; border-radius: 6px;">
+                                <button type="button" class="btn btn-sm text-white px-2.5 py-1 font-weight-bold" id="btnAddSampleRow" style="background: #7c3aed; font-size: 11.5px; border-radius: 6px;">
                                     <i class="fas fa-plus mr-1"></i> Add Medicine
                                 </button>
                             </div>
                             <div class="card-body p-0">
-                                <div class="table-responsive">
+                                <div class="table-responsive" style="min-height: auto !important; margin: 0;">
                                     <table class="table table-sm table-hover align-middle mb-0" id="sampleItemsTable" style="margin-bottom: 0;">
-                                        <thead style="background: #f1f5f9; font-size: 11.5px; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">
+                                        <thead style="background: #f1f5f9; font-size: 11px; text-transform: uppercase; color: #475569; letter-spacing: 0.3px;">
                                             <tr>
-                                                <th style="min-width: 320px; padding: 9px 12px;">Medicine / Product</th>
-                                                <th style="width: 140px; padding: 9px 10px;" class="text-center">Available Stock</th>
-                                                <th style="width: 130px; padding: 9px 10px;" class="text-center">Sample Qty (Pcs) <span class="text-danger">*</span></th>
-                                                <th style="width: 130px; padding: 9px 10px;" class="text-right">Unit Cost</th>
-                                                <th style="width: 140px; padding: 9px 12px;" class="text-right">Est. WOS</th>
-                                                <th style="width: 50px; padding: 9px 10px;" class="text-center">Action</th>
+                                                <th style="min-width: 260px; padding: 7px 10px;">Medicine / Product</th>
+                                                <th style="width: 120px; padding: 7px 8px;" class="text-center">Avail. Stock</th>
+                                                <th style="width: 110px; padding: 7px 8px;" class="text-center">Sample Qty (Pcs) <span class="text-danger">*</span></th>
+                                                <th style="width: 100px; padding: 7px 8px;" class="text-right">Unit Cost</th>
+                                                <th style="width: 110px; padding: 7px 8px;" class="text-right">Est. WOS</th>
+                                                <th style="width: 45px; padding: 7px 6px;" class="text-center">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody id="sampleItemsBody">
@@ -1545,39 +1533,39 @@
                         </div>
 
                         {{-- Card 3: Notes & Financial Summary --}}
-                        <div class="row g-3 align-items-stretch">
-                            <div class="col-md-6">
-                                <div class="card h-100 border-0 shadow-sm" style="background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0 !important;">
-                                    <div class="card-body p-3">
+                        <div class="row g-2 align-items-stretch">
+                            <div class="col-md-7">
+                                <div class="card h-100 border-0 shadow-sm" style="background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0 !important;">
+                                    <div class="card-body p-2.5">
                                         <label class="form-label font-weight-bold text-dark small mb-1">
-                                            <i class="fas fa-clipboard-list text-secondary mr-1"></i> Clinical Notes / Purpose of Sample
+                                            <i class="fas fa-clipboard-list text-secondary mr-1"></i> Remarks / Purpose of Sample
                                         </label>
-                                        <textarea name="remarks" class="form-control form-control-sm" rows="3" placeholder="e.g. Promotional physician samples for Bonirex & Mebiotic launch with Dr. Salman" style="border-color: #cbd5e1; border-radius: 6px;"></textarea>
-                                        <small class="text-muted d-block mt-1" style="font-size: 11px;">
-                                            <i class="fas fa-info-circle text-info mr-1"></i> These remarks will be printed on the Physician Sample Delivery Slip.
+                                        <textarea name="remarks" class="form-control form-control-sm" rows="2" placeholder="e.g. Promotional physician samples for Bonirex launch..." style="border-color: #cbd5e1; border-radius: 6px; font-size: 12px;"></textarea>
+                                        <small class="text-muted d-block mt-1" style="font-size: 10.5px;">
+                                            <i class="fas fa-info-circle text-info mr-1"></i> Printed on Physician Sample Delivery Slip.
                                         </small>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="p-3 shadow-sm h-100 d-flex flex-column justify-content-between" style="background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 10px;">
+                            <div class="col-md-5">
+                                <div class="p-2.5 shadow-sm h-100 d-flex flex-column justify-content-between" style="background: #faf5ff; border: 1.5px solid #d8b4fe; border-radius: 8px;">
                                     <div>
-                                        <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom" style="border-color: #e9d5ff !important;">
-                                            <span class="font-weight-bold text-dark small"><i class="fas fa-calculator mr-1" style="color: #7c3aed;"></i> Sample Value Summary</span>
-                                            <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 11px;">Rs 0.00 (100% FREE)</span>
+                                        <div class="d-flex justify-content-between align-items-center pb-1.5 mb-1.5 border-bottom" style="border-color: #e9d5ff !important;">
+                                            <span class="font-weight-bold text-dark small" style="font-size: 11.5px;"><i class="fas fa-calculator mr-1" style="color: #7c3aed;"></i> Value Summary</span>
+                                            <span class="badge badge-success px-2 py-0.5 font-weight-bold" style="font-size: 10.5px;">100% FREE</span>
                                         </div>
-                                        <div class="d-flex justify-content-between small mb-1.5">
-                                            <span class="text-muted font-weight-medium">Total Sample Pieces:</span>
-                                            <strong class="text-dark font-monospace fs-6" id="sampleTotalPcs">0 Pcs</strong>
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="text-muted font-weight-medium" style="font-size: 11.5px;">Total Pieces:</span>
+                                            <strong class="text-dark font-monospace" style="font-size: 12.5px;" id="sampleTotalPcs">0 Pcs</strong>
                                         </div>
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span style="color: #6d28d9; font-weight: 700;">Worth of Samples (WOS):</span>
-                                            <strong class="font-monospace" style="color: #6d28d9; font-size: 1.25rem;" id="sampleTotalWos">Rs 0.00</strong>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span style="color: #6d28d9; font-weight: 700; font-size: 12px;">Total WOS:</span>
+                                            <strong class="font-monospace" style="color: #6d28d9; font-size: 1.15rem;" id="sampleTotalWos">Rs 0.00</strong>
                                         </div>
                                     </div>
-                                    <div class="pt-2 border-top mt-2" style="border-color: #e9d5ff !important;">
-                                        <small class="text-muted d-block" style="font-size: 11px; line-height: 1.35;">
-                                            <i class="fas fa-shield-halved text-success mr-1"></i> Stock will deduct from warehouse instantly. WOS (Purchase Cost) will deduct from Gross Profit in P&L.
+                                    <div class="pt-1.5 border-top mt-1" style="border-color: #e9d5ff !important;">
+                                        <small class="text-muted d-block" style="font-size: 10px; line-height: 1.3;">
+                                            <i class="fas fa-shield-alt text-success mr-1"></i> Stock auto-deducted · WOS tracked in P&L
                                         </small>
                                     </div>
                                 </div>
@@ -1585,11 +1573,11 @@
                         </div>
 
                     </div>
-                    <div class="modal-footer bg-white border-top py-2.5 px-3 d-flex justify-content-between">
-                        <button type="button" class="btn btn-light btn-sm px-3 text-secondary border font-weight-bold" data-dismiss="modal" data-bs-dismiss="modal">
+                    <div class="modal-footer bg-white border-top py-2 px-3 d-flex justify-content-between">
+                        <button type="button" class="btn btn-light btn-sm px-3 text-secondary border font-weight-bold" data-dismiss="modal" data-bs-dismiss="modal" style="font-size: 12.5px;">
                             <i class="fas fa-times mr-1"></i> Close
                         </button>
-                        <button type="submit" class="btn btn-sm text-white px-4 font-weight-bold shadow-sm" id="btnSubmitSample" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; font-size: 13px; padding-top: 7px; padding-bottom: 7px;">
+                        <button type="submit" class="btn btn-sm text-white px-3.5 font-weight-bold shadow-sm" id="btnSubmitSample" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; font-size: 12.5px; padding-top: 6px; padding-bottom: 6px; border-radius: 6px;">
                             <i class="fas fa-check-circle mr-1"></i> Issue Sample Now
                         </button>
                     </div>
@@ -1686,21 +1674,21 @@
                 let optionsHtml = $('#sampleProductOptionsTpl').html() || '';
                 let rowHtml = `
                     <tr class="sample-row align-middle">
-                        <td style="padding: 6px 10px; min-width: 300px;">
+                        <td style="padding: 5px 8px; min-width: 260px;">
                             <select name="product_id[]" class="form-control form-control-sm sample-product-select" style="width: 100%;" required>
                                 ${optionsHtml}
                             </select>
                         </td>
-                        <td class="text-center align-middle sample-stock-display" style="padding: 6px 10px;">
+                        <td class="text-center align-middle sample-stock-display" style="padding: 5px 8px; width: 120px;">
                             <span class="badge badge-light border text-muted">Select Product</span>
                         </td>
-                        <td style="padding: 6px 10px; width: 130px;">
-                            <input type="number" name="qty[]" class="form-control form-control-sm text-center font-weight-bold sample-qty-input" min="1" step="1" value="1" required style="border-color: #cbd5e1; height: 33px;">
+                        <td style="padding: 5px 8px; width: 110px;">
+                            <input type="number" name="qty[]" class="form-control form-control-sm text-center font-weight-bold sample-qty-input" min="1" step="1" value="1" required style="border-color: #cbd5e1; height: 32px; font-size: 13px;">
                         </td>
-                        <td class="text-right font-monospace sample-cost-display align-middle text-muted" style="text-align: right; padding: 6px 10px; font-size: 13px;">Rs 0.00</td>
-                        <td class="text-right font-monospace font-weight-bold sample-wos-display align-middle" style="text-align: right; color: #6d28d9; font-size: 13.5px; padding: 6px 10px;">Rs 0.00</td>
-                        <td class="text-center align-middle" style="padding: 6px 10px;">
-                            <button type="button" class="btn btn-outline-danger btn-sm py-0.5 px-1.5 btn-remove-sample-row rounded-circle" title="Remove Item">
+                        <td class="text-right font-monospace sample-cost-display align-middle text-muted" style="text-align: right; padding: 5px 8px; font-size: 12px; width: 100px;">Rs 0.00</td>
+                        <td class="text-right font-monospace font-weight-bold sample-wos-display align-middle" style="text-align: right; color: #6d28d9; font-size: 12.5px; padding: 5px 8px; width: 110px;">Rs 0.00</td>
+                        <td class="text-center align-middle" style="padding: 5px 8px; width: 45px;">
+                            <button type="button" class="btn btn-outline-danger btn-sm p-0 d-inline-flex align-items-center justify-content-center btn-remove-sample-row rounded-circle" style="width: 26px; height: 26px;" title="Remove Item">
                                 <i class="fas fa-trash-alt" style="font-size: 11px;"></i>
                             </button>
                         </td>
@@ -1786,6 +1774,7 @@
                         if (resp.success) {
                             $('#issueSampleModal').modal('hide');
                             $('#issueSampleForm')[0].reset();
+                            $('#sample_warehouse_id').val('{{ $defaultWhId }}');
                             $('#sampleItemsBody').empty();
 
                             Swal.fire({
