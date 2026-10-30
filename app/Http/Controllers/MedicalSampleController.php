@@ -39,9 +39,21 @@ class MedicalSampleController extends Controller
         try {
             $sampleNo = MedicalSample::generateSampleNo();
 
-            // Resolve Customer ID (fallback to Walking / Doctor if empty)
+            // Resolve Customer ID & Doctor Name
             $customerId = $validated['customer_id'] ?? null;
-            if (!$customerId) {
+            $doctorName = trim($validated['doctor_name'] ?? '');
+
+            if ($customerId && empty($doctorName)) {
+                $cObj = Customer::find($customerId);
+                if ($cObj) {
+                    $doctorName = $cObj->customer_name;
+                }
+            }
+
+            if (!$customerId && !empty($doctorName)) {
+                $matchedCust = Customer::where('customer_name', $doctorName)->first();
+                $customerId = $matchedCust ? $matchedCust->id : (Customer::first()?->id);
+            } elseif (!$customerId) {
                 $defaultCust = Customer::first();
                 $customerId = $defaultCust ? $defaultCust->id : null;
             }
@@ -51,7 +63,7 @@ class MedicalSampleController extends Controller
                 'customer_id' => $customerId,
                 'warehouse_id' => $validated['warehouse_id'],
                 'sample_date' => $validated['sample_date'],
-                'doctor_name' => $validated['doctor_name'] ?? null,
+                'doctor_name' => $doctorName ?: ($validated['doctor_name'] ?? null),
                 'mr_name' => $validated['mr_name'] ?? null,
                 'remarks' => $validated['remarks'] ?? null,
                 'status' => 'posted',

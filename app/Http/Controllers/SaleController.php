@@ -652,7 +652,7 @@ class SaleController extends Controller
         $customers = Customer::orderBy('customer_name')->get();
         $zones = \App\Models\Zone::all();
         $customerTypes = Customer::distinct()->whereNotNull('customer_type')->where('customer_type', '!=', '')->pluck('customer_type');
-        $activeProducts = Product::where('is_active', true)->orderBy('item_name')->get();
+        $activeProducts = Product::where('is_active', true)->with('warehouseStocks')->orderBy('item_name')->get();
         $allWarehouses = Warehouse::all();
 
         return view('admin_panel.sale.index', compact('sales', 'customers', 'stats', 'zones', 'customerTypes', 'activeProducts', 'allWarehouses'));
