@@ -553,14 +553,91 @@ class SaleController extends Controller
 
         $directReturnsCount = $directReturnRows->count();
         $stats['direct_returns_count'] = $directReturnsCount;
-        $stats['total_count'] = $sales->count() + $directReturnsCount;
+
+        // Query Medical / Physician Samples
+        $medicalSamplesQuery = \App\Models\MedicalSample::with(['items.product', 'customer', 'warehouse']);
+        if ($request->customer_id && $request->customer_id !== "all") {
+            $medicalSamplesQuery->where("customer_id", $request->customer_id);
+        } elseif ($request->filled("zone_id") && $request->zone_id !== "all") {
+            $zCustIds = \App\Models\Customer::where("zone", $request->zone_id)->pluck("id")->toArray();
+            $medicalSamplesQuery->whereIn("customer_id", $zCustIds);
+        }
+        if ($startDate && $endDate) {
+            $medicalSamplesQuery->where(function($q) use ($startDate, $endDate) {
+                $q->whereBetween("sample_date", [$startDate, $endDate])
+                  ->orWhereBetween("created_at", [$startDate . " 00:00:00", $endDate . " 23:59:59"]);
+            });
+        }
+        $medicalSamples = $medicalSamplesQuery->get();
+        $totalWosAmount = (float)$medicalSamples->sum('wos_amount');
+        $totalSamplePieces = (float)$medicalSamples->sum('total_pieces');
+
+        // Transform Medical Samples into Sale-compatible rows for listing table
+        $sampleRows = collect();
+        foreach ($medicalSamples as $ms) {
+            $sampleObj = new \App\Models\Sale();
+            $sampleObj->id = $ms->id;
+            $sampleObj->is_sample = true;
+            $sampleObj->sample_id = $ms->id;
+            $sampleObj->invoice_no = $ms->sample_no;
+            $sampleObj->customer_id = $ms->customer_id;
+            $sampleObj->customer_relation = $ms->customer;
+            $sampleObj->reference = $ms->doctor_name ? ('Dr. ' . $ms->doctor_name) : ($ms->remarks ?: 'Physician Sample');
+            $sampleObj->sale_status = 'sample';
+            $sampleObj->created_at = $ms->sample_date ? \Carbon\Carbon::parse($ms->sample_date) : $ms->created_at;
+            $sampleObj->total_items = (float)$ms->total_pieces;
+            $sampleObj->qty = (float)$ms->total_pieces;
+            $sampleObj->effective_qty = (float)$ms->total_pieces;
+            $sampleObj->effective_sold_qty = (float)$ms->total_pieces;
+            $sampleObj->bonus_qty = 0;
+            $sampleObj->effective_gross = 0;
+            $sampleObj->total_bill_amount = 0;
+            $sampleObj->per_total = 0;
+            $sampleObj->total_net = 0; // Customer gets sample free
+            $sampleObj->effective_net = 0;
+            $sampleObj->wos_amount = (float)$ms->wos_amount; // Worth of Sample at Purchase Cost
+            $sampleObj->total_returned = 0;
+            $sampleObj->total_extradiscount = 0;
+            $sampleObj->tier_medical_discount = 0;
+            $sampleObj->tier_doctor_discount = 0;
+            $sampleObj->tier_distribution_discount = 0;
+            $sampleObj->items = $ms->items->map(function($si) {
+                $it = new \stdClass();
+                $it->product = $si->product;
+                $it->product_name = $si->product ? $si->product->item_name : 'Sample Product';
+                $it->qty = $si->qty;
+                $it->price = 0;
+                $it->discount_amount = 0;
+                return $it;
+            });
+            $sampleRows->push($sampleObj);
+        }
+
+        // Apply bill_no search to samples if provided
+        if (!empty($billNoSearch)) {
+            $sampleRows = $sampleRows->filter(function($sr) use ($billNoSearch) {
+                return str_contains(strtolower($sr->invoice_no), strtolower($billNoSearch))
+                    || str_contains(strtolower($sr->reference), strtolower($billNoSearch))
+                    || str_contains((string)$sr->sample_id, $billNoSearch);
+            });
+        }
+
+        $samplesCount = $sampleRows->count();
+        $stats['total_wos_amount'] = $totalWosAmount;
+        $stats['total_samples_qty'] = $totalSamplePieces;
+        $stats['samples_count'] = $samplesCount;
+        $stats['total_count'] = $sales->count() + $directReturnsCount + $samplesCount;
+        // Deduct WOS (Worth of Samples) from Gross Profit
+        $stats['total_gross_profit'] = round($realizedNet - $totalCogs - (float) $sales->sum('effective_bonus_amount') - $totalWosAmount, 2);
 
         // Apply status filter to table rows
         $statusFilter = $request->input('status', 'all');
         if ($statusFilter === 'direct_returns') {
             $sales = $directReturnRows;
+        } elseif ($statusFilter === 'samples') {
+            $sales = $sampleRows;
         } elseif ($statusFilter === 'all' || empty($statusFilter)) {
-            $sales = $sales->concat($directReturnRows)->sortByDesc('created_at')->values();
+            $sales = $sales->concat($directReturnRows)->concat($sampleRows)->sortByDesc('created_at')->values();
         }
 
         // If AJAX request, return only table rows partial & stats
@@ -575,8 +652,10 @@ class SaleController extends Controller
         $customers = Customer::orderBy('customer_name')->get();
         $zones = \App\Models\Zone::all();
         $customerTypes = Customer::distinct()->whereNotNull('customer_type')->where('customer_type', '!=', '')->pluck('customer_type');
+        $activeProducts = Product::where('is_active', true)->orderBy('item_name')->get();
+        $allWarehouses = Warehouse::all();
 
-        return view('admin_panel.sale.index', compact('sales', 'customers', 'stats', 'zones', 'customerTypes'));
+        return view('admin_panel.sale.index', compact('sales', 'customers', 'stats', 'zones', 'customerTypes', 'activeProducts', 'allWarehouses'));
     }
 
     public function addsale()

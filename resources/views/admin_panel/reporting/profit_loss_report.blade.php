@@ -581,6 +581,13 @@
                     <div class="stat-sub" style="color: #d97706;" id="cardBonusAmountSub">At Base Price</div>
                 </div>
 
+                {{-- 7b. WOS (Worth of Samples) --}}
+                <div class="stat-pill" style="background: #faf5ff; border-color: #ddd6fe;" id="cardWosBox">
+                    <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-vial me-1"></i>WOS (Samples)</div>
+                    <div class="stat-val" style="color: #6d28d9;" id="cardWosAmount">Rs 0</div>
+                    <div class="stat-sub opacity-75" style="color: #7c3aed;" id="cardWosAmountSub">0 Pcs (At Cost)</div>
+                </div>
+
                 {{-- 8. Gross Profit --}}
                 <div class="stat-pill" style="background: #f0fdf4; border-color: #86efac;" id="cardGrossProfitBox">
                     <div class="stat-label text-success" id="cardGrossProfitLabel"><i class="fas fa-arrow-trend-up me-1"></i>Gross Profit</div>
@@ -1127,16 +1134,22 @@ $(document).ready(function() {
         $('#cardNetRevenue, #cardSec3NetRevenue').text('Rs ' + fmt(netRevVal));
         $('#cardNetRevenueSub').text('Realized (Net - Return)');
 
+        let wosAmtVal     = parseFloat(s.wos_amount || 0);
+        let wosQtyVal     = parseFloat(s.total_sample_pieces || 0);
+
         $('#cardCOGS').text('Rs ' + fmt(cogsVal));
         $('#cardBonusAmount').text('Rs ' + fmt(bonusAmtVal));
         $('#cardBonusAmountSub').text('At Cost · ' + fmt(bonusQtyVal) + ' Pcs');
+
+        $('#cardWosAmount').text('Rs ' + fmt(wosAmtVal));
+        $('#cardWosAmountSub').text(fmt(wosQtyVal) + ' Pcs (At Cost)');
 
         let grossProfColor = grossProf >= 0 ? '#059669' : '#dc2626';
         let grossSign = grossProf < 0 ? '-' : '';
         $('#cardGrossProfit, #mobCardGrossProfit').text(grossSign + 'Rs ' + fmt(Math.abs(grossProf))).css('color', grossProfColor);
         $('#cardGrossProfitSub')
-            .text('Revenue - COGS - Bonus')
-            .attr('title', 'Net Revenue: Rs ' + fmt(netRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal));
+            .text('Revenue - COGS - Bonus - WOS')
+            .attr('title', 'Net Revenue: Rs ' + fmt(netRevVal) + ' | COGS: -Rs ' + fmt(cogsVal) + ' | Bonus: -Rs ' + fmt(bonusAmtVal) + ' | WOS: -Rs ' + fmt(wosAmtVal));
 
         // Expenses Stat Pill
         if (isWithout) {

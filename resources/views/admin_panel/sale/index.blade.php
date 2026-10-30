@@ -546,6 +546,11 @@
                             <i class="fas fa-tags text-warning"></i> Bulk Discounts
                         </a>
                         @can('sales.create')
+                            <button type="button" class="btn px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1 text-white"
+                                style="background: #7c3aed; border-color: #6d28d9; border-radius: 8px;"
+                                data-bs-toggle="modal" data-bs-target="#issueSampleModal">
+                                <i class="fas fa-vial"></i> Issue Sample
+                            </button>
                             <a class="btn btn-primary px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1"
                                 href="{{ route('sale.add') }}" style="border-radius: 8px;">
                                 <i class="fas fa-plus"></i> Add Sale
@@ -607,6 +612,19 @@
                             <div class="stat-label text-success"><i class="fas fa-receipt me-1"></i>After Sale</div>
                             <div class="stat-val text-success" id="statTotalNet">Rs {{ $netTot == floor($netTot) ? number_format($netTot, 0) : number_format($netTot, 2) }}</div>
                             <div class="stat-sub text-success opacity-75" id="statGrossRevenueSub">Realized Net Revenue</div>
+                        </div>
+                    </div>
+
+                    {{-- 6. WOS (Worth of Samples) --}}
+                    @php 
+                        $wosAmt = (float)($stats['total_wos_amount'] ?? 0); 
+                        $wosQty = (int)($stats['total_samples_qty'] ?? 0);
+                    @endphp
+                    <div class="col-12 col-sm-6 col-md-4 col-lg" style="flex: 1 1 0; min-width: 140px;">
+                        <div class="stat-pill h-100" style="background: #faf5ff; border-color: #ddd6fe;">
+                            <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-vial me-1"></i>WOS (Samples)</div>
+                            <div class="stat-val" style="color: #6d28d9;" id="statTotalWos">Rs {{ $wosAmt == floor($wosAmt) ? number_format($wosAmt, 0) : number_format($wosAmt, 2) }}</div>
+                            <div class="stat-sub opacity-75" style="color: #7c3aed;" id="statTotalWosSub">{{ number_format($wosQty, 0) }} Pcs Free (At Cost)</div>
                         </div>
                     </div>
                 </div>
@@ -734,6 +752,10 @@
                     <button type="button" data-status="direct_returns"
                         class="btn btn-sm status-filter-btn {{ request('status') == 'direct_returns' ? 'btn-danger' : 'btn-outline-danger' }} rounded-3 shadow-sm px-3 fw-bold">
                         <i class="fas fa-undo-alt me-1"></i> Direct Returns <span class="badge bg-white text-danger ms-1" id="statBadgeDirectReturns">{{ $stats['direct_returns_count'] ?? 0 }}</span>
+                    </button>
+                    <button type="button" data-status="samples"
+                        class="btn btn-sm status-filter-btn {{ request('status') == 'samples' ? 'btn-purple text-white' : 'btn-outline-secondary' }} rounded-3 shadow-sm px-3 fw-bold" style="border-color: #8b5cf6; color: #7c3aed;">
+                        <i class="fas fa-vial me-1"></i> Samples <span class="badge bg-white text-dark ms-1" id="statBadgeSamples">{{ $stats['samples_count'] ?? 0 }}</span>
                     </button>
                 </div>
 
@@ -1025,6 +1047,14 @@
                             $('#statTotalCOGS').text('Rs ' + fmt(cogsVal));
                             $('#statTotalBonusAmount').text('Rs ' + fmt(bonusAmtVal));
                             $('#statBonusAmountSub').text('At Cost · ' + fmt(bonusQtyVal) + ' Pcs');
+
+                            let wosAmtVal = parseFloat(response.stats.total_wos_amount || 0);
+                            let wosQtyVal = parseFloat(response.stats.total_samples_qty || 0);
+                            $('#statTotalWos').text('Rs ' + fmt(wosAmtVal));
+                            $('#statTotalWosSub').text(fmt(wosQtyVal) + ' Pcs Free (At Cost)');
+                            if (response.stats.samples_count !== undefined) {
+                                $('#statBadgeSamples').text(Number(response.stats.samples_count || 0).toLocaleString());
+                            }
 
                             // Gross Profit
                             let gpVal = parseFloat(response.stats.total_gross_profit || 0);
@@ -1334,6 +1364,311 @@
         @csrf
         @method('DELETE')
     </form>
+
+    {{-- ======================================================== --}}
+    {{-- ISSUE PHYSICIAN / MEDICAL SAMPLE MODAL                    --}}
+    {{-- ======================================================== --}}
+    <div class="modal fade" id="issueSampleModal" tabindex="-1" aria-labelledby="issueSampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="issueSampleModalLabel">
+                            <i class="fas fa-vial me-2"></i> Issue Physician / Medical Sample
+                        </h5>
+                        <small class="opacity-75">Promotional stock given free of cost. Stock reduces; WOS deducted at cost.</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="issueSampleForm" method="POST" action="{{ route('samples.store') }}">
+                    @csrf
+                    <div class="modal-body p-4 bg-light">
+                        {{-- Meta Details --}}
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body p-3">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-secondary small mb-1">Doctor Name / Clinic</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white"><i class="fas fa-user-md text-primary"></i></span>
+                                            <input type="text" name="doctor_name" class="form-control" placeholder="e.g. Dr. Salman / City Clinic" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-secondary small mb-1">Medical Rep (MR) / Delivered By</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-white"><i class="fas fa-user-tie text-info"></i></span>
+                                            <input type="text" name="mr_name" class="form-control" placeholder="e.g. Ali (MR)">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold text-secondary small mb-1">Customer / Chemist (Optional)</label>
+                                        <select name="customer_id" class="form-select form-select-sm">
+                                            <option value="">-- Direct / Walk-in Doctor --</option>
+                                            @foreach($customers as $c)
+                                                <option value="{{ $c->id }}">{{ $c->customer_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold text-secondary small mb-1">Warehouse (Stock Source) <span class="text-danger">*</span></label>
+                                        <select name="warehouse_id" id="sample_warehouse_id" class="form-select form-select-sm" required>
+                                            @foreach($allWarehouses as $wh)
+                                                <option value="{{ $wh->id }}">{{ $wh->name ?? ('Warehouse #' . $wh->id) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold text-secondary small mb-1">Issue Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="sample_date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Products Repeater --}}
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold small text-dark"><i class="fas fa-boxes-stacked me-1 text-primary"></i> Sample Medicines</span>
+                                <button type="button" class="btn btn-sm text-white" id="btnAddSampleRow" style="background: #7c3aed; font-size: 11px;">
+                                    <i class="fas fa-plus me-1"></i> Add Medicine
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle mb-0" id="sampleItemsTable">
+                                        <thead class="table-light small">
+                                            <tr>
+                                                <th style="min-width: 250px;">Medicine / Product</th>
+                                                <th style="width: 120px;" class="text-center">Sample Qty (Pcs)</th>
+                                                <th style="width: 130px;" class="text-end">Cost Price</th>
+                                                <th style="width: 130px;" class="text-end">Est. WOS</th>
+                                                <th style="width: 50px;" class="text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="sampleItemsBody">
+                                            {{-- Rows dynamically appended --}}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Remarks & Live Summary --}}
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold text-secondary small mb-1">Remarks / Clinical Notes</label>
+                                <textarea name="remarks" class="form-control form-control-sm" rows="2" placeholder="e.g. Promotional sample for Bonirex launch"></textarea>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="p-3 rounded-3" style="background: #faf5ff; border: 1px solid #ddd6fe;">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span class="text-muted">Total Pieces:</span>
+                                        <strong class="text-dark" id="sampleTotalPcs">0 Pcs</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span style="color: #7c3aed;">WOS (Worth of Sample):</span>
+                                        <strong style="color: #6d28d9;" id="sampleTotalWos">Rs 0.00</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                        <span class="small fw-bold text-secondary">Customer Bill:</span>
+                                        <span class="badge bg-success px-2 py-1">Rs 0.00 (FREE)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-white border-top">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-sm text-white px-4 fw-bold" id="btnSubmitSample" style="background: #7c3aed;">
+                            <i class="fas fa-check-circle me-1"></i> Issue Sample
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Product Options Template for JS Repeater --}}
+    <template id="sampleProductOptionsTpl">
+        <option value="">-- Select Medicine --</option>
+        @foreach($activeProducts as $ap)
+            <option value="{{ $ap->id }}" 
+                    data-purch-price="{{ (float)($ap->purchase_price_per_piece ?: 0) }}"
+                    data-retail-price="{{ (float)($ap->retail_price ?: ($ap->sale_price_per_piece ?: 0)) }}"
+                    data-ppb="{{ (float)($ap->pieces_per_box ?: 1) }}">
+                {{ $ap->item_name }} (Cost: Rs {{ number_format((float)($ap->purchase_price_per_piece ?: 0), 2) }})
+            </option>
+        @endforeach
+    </template>
+
+    <script>
+        $(document).ready(function() {
+            // Function to add a new sample item row
+            function addSampleRow() {
+                let optionsHtml = $('#sampleProductOptionsTpl').html();
+                let rowIdx = $('#sampleItemsBody tr').length;
+                let rowHtml = `
+                    <tr class="sample-row">
+                        <td>
+                            <select name="product_id[]" class="form-select form-select-sm sample-product-select" required>
+                                ${optionsHtml}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" name="qty[]" class="form-control form-control-sm text-center sample-qty-input" min="1" step="1" value="1" required>
+                        </td>
+                        <td class="text-end font-monospace sample-cost-display">Rs 0.00</td>
+                        <td class="text-end font-monospace fw-bold sample-wos-display" style="color: #6d28d9;">Rs 0.00</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1 btn-remove-sample-row">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                $('#sampleItemsBody').append(rowHtml);
+                recalcSampleTotals();
+            }
+
+            // Add initial row when modal opens if empty
+            $('#issueSampleModal').on('shown.bs.modal', function() {
+                if ($('#sampleItemsBody tr').length === 0) {
+                    addSampleRow();
+                }
+            });
+
+            // Add row button
+            $('#btnAddSampleRow').on('click', function() {
+                addSampleRow();
+            });
+
+            // Remove row button
+            $(document).on('click', '.btn-remove-sample-row', function() {
+                if ($('#sampleItemsBody tr').length > 1) {
+                    $(this).closest('tr').remove();
+                    recalcSampleTotals();
+                } else {
+                    Swal.fire('Notice', 'At least one medicine is required in the sample.', 'info');
+                }
+            });
+
+            // On Product or Qty change
+            $(document).on('change keyup', '.sample-product-select, .sample-qty-input', function() {
+                let $row = $(this).closest('tr');
+                let $select = $row.find('.sample-product-select');
+                let $opt = $select.find('option:selected');
+                let purchPrice = parseFloat($opt.data('purch-price') || 0);
+                let qty = parseFloat($row.find('.sample-qty-input').val() || 0);
+
+                let wos = qty * purchPrice;
+                $row.find('.sample-cost-display').text('Rs ' + purchPrice.toFixed(2));
+                $row.find('.sample-wos-display').text('Rs ' + wos.toFixed(2));
+
+                recalcSampleTotals();
+            });
+
+            function recalcSampleTotals() {
+                let totalPcs = 0;
+                let totalWos = 0;
+
+                $('#sampleItemsBody tr').each(function() {
+                    let $row = $(this);
+                    let $opt = $row.find('.sample-product-select option:selected');
+                    let purchPrice = parseFloat($opt.data('purch-price') || 0);
+                    let qty = parseFloat($row.find('.sample-qty-input').val() || 0);
+
+                    if (qty > 0) {
+                        totalPcs += qty;
+                        totalWos += (qty * purchPrice);
+                    }
+                });
+
+                $('#sampleTotalPcs').text(totalPcs + ' Pcs');
+                $('#sampleTotalWos').text('Rs ' + totalWos.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            }
+
+            // AJAX Form Submit for Issue Sample
+            $('#issueSampleForm').on('submit', function(e) {
+                e.preventDefault();
+                let $btn = $('#btnSubmitSample');
+                let origText = $btn.html();
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Issuing...');
+
+                $.ajax({
+                    url: $(this).attr('action'),
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function(resp) {
+                        $btn.prop('disabled', false).html(origText);
+                        if (resp.success) {
+                            $('#issueSampleModal').modal('hide');
+                            $('#issueSampleForm')[0].reset();
+                            $('#sampleItemsBody').empty();
+
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Sample Issued!',
+                                text: resp.message || 'Medical sample issued successfully. Stock updated.',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+
+                            // Refresh Sales listing & stats
+                            applySalesFilter();
+                        } else {
+                            Swal.fire('Error', resp.message || 'Failed to issue sample.', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        $btn.prop('disabled', false).html(origText);
+                        let errMsg = 'Failed to issue sample.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errMsg = xhr.responseJSON.message;
+                        } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            errMsg = Object.values(xhr.responseJSON.errors).flat().join('<br>');
+                        }
+                        Swal.fire('Validation Error', errMsg, 'error');
+                    }
+                });
+            });
+        });
+
+        // Delete Sample Confirmation
+        function confirmDeleteSample(sampleId, sampleNo) {
+            Swal.fire({
+                title: 'Delete Sample?',
+                text: `Do you want to delete Sample #${sampleNo}? Stock will be restored to warehouse.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Delete & Restore Stock',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/samples/${sampleId}`,
+                        method: 'DELETE',
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr('content') || '{{ csrf_token() }}'
+                        },
+                        success: function(resp) {
+                            if (resp.success) {
+                                Swal.fire('Deleted', resp.message || 'Sample deleted and stock restored.', 'success');
+                                applySalesFilter();
+                            } else {
+                                Swal.fire('Error', resp.message || 'Failed to delete sample.', 'error');
+                            }
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error', 'Failed to delete sample.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
 
 @endsection
 

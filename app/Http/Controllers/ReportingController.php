@@ -1968,7 +1968,26 @@ class ReportingController extends Controller
             || $request->input('without_expenses') === '1'
             || $request->input('without_expenses') === 1;
 
-        $adjustedGrossProfit = $finalNetRevenue - $totalCogs - $totalBonusAmount;
+        // Medical / Physician Samples (WOS - Worth Of Samples at Cost)
+        $sampleQuery = \App\Models\MedicalSample::query();
+        if ($start && $end) {
+            $sampleQuery->whereBetween('sample_date', [substr($start, 0, 10), substr($end, 0, 10)]);
+        }
+        if ($customerId && $customerId !== 'all') {
+            $sampleQuery->where('customer_id', $customerId);
+        } elseif ($zoneCustomerIds !== null) {
+            $sampleQuery->whereIn('customer_id', $zoneCustomerIds);
+        }
+        if ($productId && $productId !== 'all') {
+            $sampleQuery->whereHas('items', function($q) use ($productId) {
+                $q->where('product_id', $productId);
+            });
+        }
+        $totalWosAmount = (float) $sampleQuery->sum('wos_amount');
+        $totalSamplePieces = (float) $sampleQuery->sum('total_pieces');
+
+        // Deduct COGS, Bonus Amount, and WOS (Worth Of Samples) before Expenses
+        $adjustedGrossProfit = $finalNetRevenue - $totalCogs - $totalBonusAmount - $totalWosAmount;
         $netProfitWithExpenses = $adjustedGrossProfit - $totalExpenses;
         $netProfitWithoutExpenses = $adjustedGrossProfit;
 
@@ -2005,6 +2024,8 @@ class ReportingController extends Controller
                 'cogs' => round($totalCogs, 2),
                 'bonus_amount' => round($totalBonusAmount, 2),
                 'bonus_qty' => round($totalBonusQty, 2),
+                'wos_amount' => round($totalWosAmount, 2),
+                'total_sample_pieces' => round($totalSamplePieces, 2),
                 'gross_profit' => round($adjustedGrossProfit, 2),
                 'expenses' => round($totalExpenses, 2),
                 'net_profit' => round($adjustedNetProfit, 2),

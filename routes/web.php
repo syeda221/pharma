@@ -380,6 +380,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales/{id}/dc-thermal', [SaleController::class, 'saledcThermal'])->middleware('permission:sales.view')->name('sales.dc_thermal');
     Route::get('/sales/{id}/recepit', [SaleController::class, 'salereceipt'])->middleware('permission:sales.view')->name('sales.receipt');
 
+    // Medical / Physician Samples Routes
+    Route::post('samples/store', [\App\Http\Controllers\MedicalSampleController::class, 'store'])->middleware('permission:sales.create')->name('samples.store');
+    Route::get('samples/{id}/view', [\App\Http\Controllers\MedicalSampleController::class, 'view'])->middleware('permission:sales.view')->name('samples.view');
+    Route::delete('samples/{id}', [\App\Http\Controllers\MedicalSampleController::class, 'destroy'])->middleware('permission:sales.delete')->name('samples.destroy');
+
     // booking system
 
     Route::get('bookings', [ProductBookingController::class, 'index'])->middleware('permission:bookings.view')->name('bookings.index');

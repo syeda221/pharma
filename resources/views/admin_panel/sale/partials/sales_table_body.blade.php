@@ -114,6 +114,107 @@
                 </div>
             </td>
         </tr>
+    @elseif (!empty($sale->is_sample))
+        {{-- Medical / Physician Sample Row --}}
+        <tr class="border-bottom-0" style="background-color: #faf5ff !important;">
+            {{-- 1. Sample# --}}
+            <td class="ps-2 fw-bold font-monospace text-nowrap">
+                <span class="fw-bold" style="color: #7c3aed;"><i class="fas fa-vial me-1"></i>{{ $sale->invoice_no }}</span>
+                <small class="text-muted d-block" style="font-size: 10px;">Sample #{{ $sale->sample_id }}</small>
+            </td>
+
+            {{-- 2. Customer / Doctor --}}
+            <td class="text-nowrap">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-circle me-1.5 fw-bold d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                        style="width: 24px; height: 24px; font-size: 11px; background-color: #ede9fe; color: #6d28d9;">
+                        <i class="fas fa-user-md" style="font-size: 10px;"></i>
+                    </div>
+                    <span class="fw-medium text-dark text-truncate d-inline-block" style="max-width: 105px; vertical-align: middle;" title="{{ $sale->reference ?: (optional($sale->customer_relation)->customer_name ?? 'Doctor / Chemist') }}">
+                        {{ $sale->reference ?: (optional($sale->customer_relation)->customer_name ?? 'Doctor') }}
+                    </span>
+                </div>
+            </td>
+
+            {{-- 3. M.Bill --}}
+            <td class="font-monospace text-center small text-nowrap">
+                <span class="badge rounded-pill" style="font-size: 9px; background-color: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe;">Sample</span>
+            </td>
+
+            {{-- 4. Product --}}
+            <td title="{{ $pNames }}" class="small text-truncate" style="max-width: 95px; color: #6d28d9;">
+                {{ \Illuminate\Support\Str::limit($pNames, 18) }}
+            </td>
+
+            {{-- 5. Qty --}}
+            <td class="text-center font-monospace text-nowrap">
+                <span class="fw-bold" style="color: #7c3aed;">{{ number_format(abs($sale->effective_qty), 0) }}</span>
+                <small class="text-muted d-block" style="font-size: 9px;">free pcs</small>
+            </td>
+
+            {{-- 6. Gross --}}
+            <td class="text-right font-monospace align-middle text-nowrap" style="text-align: right !important; white-space: nowrap;">
+                <span class="text-muted fw-semibold">FREE (Rs. 0)</span>
+            </td>
+
+            {{-- 7. Pharm --}}
+            <td class="text-right font-monospace align-middle text-muted pe-1" style="text-align: right !important; opacity: 0.35;">—</td>
+
+            {{-- 8. Doctor --}}
+            <td class="text-right font-monospace align-middle text-muted pe-1" style="text-align: right !important; opacity: 0.35;">—</td>
+
+            {{-- 9. Dist --}}
+            <td class="text-right font-monospace align-middle text-muted pe-1" style="text-align: right !important; opacity: 0.35;">—</td>
+
+            {{-- 10. Extra --}}
+            <td class="text-right font-monospace align-middle text-muted pe-1" style="text-align: right !important; opacity: 0.35;">—</td>
+
+            {{-- 11. Net Total --}}
+            <td class="text-right fw-bold font-monospace align-middle text-nowrap" style="text-align: right !important; white-space: nowrap;">
+                <span class="text-success d-block fs-6">Rs. 0.00</span>
+                <small class="d-block text-nowrap" style="font-size: 9.5px; color: #7c3aed;" title="Worth of Sample at Purchase Cost">WOS: Rs. {{ number_format($sale->wos_amount ?? 0, 0) }}</small>
+            </td>
+
+            {{-- 12. Date --}}
+            <td class="text-nowrap small text-muted text-center" style="font-size: 11px;">
+                {{ $sale->created_at ? $sale->created_at->format('d/m/Y') : '-' }}
+            </td>
+
+            {{-- 13. Status --}}
+            <td class="text-center text-nowrap">
+                <span class="badge border" style="background-color: #f5f3ff; color: #7c3aed; border-color: #ddd6fe !important;">
+                    <i class="fas fa-certificate me-1"></i>Sample
+                </span>
+            </td>
+
+            {{-- 14. Action --}}
+            <td class="text-center text-nowrap px-1">
+                <div class="dropdown">
+                    <button class="btn btn-premium-action dropdown-toggle" type="button" data-toggle="dropdown" data-display="static" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v me-1"></i> Action
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-right border-0 shadow-lg rounded-3">
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" style="color: #6d28d9;" href="{{ route('samples.view', $sale->sample_id) }}" target="_blank">
+                                <i class="fas fa-print fa-fw" style="color: #7c3aed;"></i> Print Sample Challan
+                            </a>
+                        </li>
+                        @can('sales.delete')
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{{ route('samples.destroy', $sale->sample_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this Sample and restore stock?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="dropdown-item text-danger d-flex align-items-center gap-2 py-2 fw-semibold">
+                                        <i class="fas fa-trash-alt fa-fw"></i> Delete Sample
+                                    </button>
+                                </form>
+                            </li>
+                        @endcan
+                    </ul>
+                </div>
+            </td>
+        </tr>
     @else
         @php
         $statusBadge = '<span class="badge badge-warning text-dark border border-warning">Draft</span>';
