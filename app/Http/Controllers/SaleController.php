@@ -412,10 +412,12 @@ class SaleController extends Controller
             $zCustIds = \App\Models\Customer::where("zone", $request->zone_id)->pluck("id")->toArray();
             $standaloneRetQuery->whereIn("customer_id", $zCustIds);
         }
-        if ($request->start_date && $request->end_date) {
-            $standaloneRetQuery->where(function($q) use ($request) {
-                $q->whereBetween("return_date", [$request->start_date, $request->end_date])
-                  ->orWhereBetween("created_at", [$request->start_date . " 00:00:00", $request->end_date . " 23:59:59"]);
+        $startDate = $request->start_date ? $request->start_date : ($request->from_date ? $parseDate($request->from_date) : null);
+        $endDate = $request->end_date ? $request->end_date : ($request->to_date ? $parseDate($request->to_date) : null);
+        if ($startDate && $endDate) {
+            $standaloneRetQuery->where(function($q) use ($startDate, $endDate) {
+                $q->whereBetween("return_date", [$startDate, $endDate])
+                  ->orWhereBetween("created_at", [$startDate . " 00:00:00", $endDate . " 23:59:59"]);
             });
         }
         $standaloneReturns = $standaloneRetQuery->get();
@@ -445,8 +447,8 @@ class SaleController extends Controller
         if ($request->customer_id && $request->customer_id !== 'all') {
             $allReturnQuery->where('sr.customer_id', $request->customer_id);
         }
-        if ($request->start_date && $request->end_date) {
-            $allReturnQuery->whereBetween('sr.created_at', [$request->start_date . ' 00:00:00', $request->end_date . ' 23:59:59']);
+        if ($startDate && $endDate) {
+            $allReturnQuery->whereBetween('sr.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
         }
         $totalReturnPieces = (float) $allReturnQuery->sum('sri.qty');
         $effectiveSoldPieces = max(0, $totalItemsPieces - $totalBonusPieces - $totalReturnPieces);

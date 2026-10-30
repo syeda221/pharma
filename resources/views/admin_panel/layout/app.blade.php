@@ -960,6 +960,8 @@
                                                     @can('sales.view')
                                                         <li><a href="{{ url('sale') }}"><i class="fas fa-receipt"></i>
                                                                 Sales</a></li>
+                                                        <li><a href="{{ route('sale.return.index') }}"><i class="fas fa-undo-alt"></i>
+                                                                Sale Returns</a></li>
                                                     @endcan
                                                     @can('sales.create')
                                                         <li><a href="{{ route('pos.index') }}"><i class="fas fa-cash-register"></i>
