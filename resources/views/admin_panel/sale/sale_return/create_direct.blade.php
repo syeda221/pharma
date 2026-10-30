@@ -528,8 +528,10 @@
                             <input type="number" step="0.01" min="0" name="price[]" class="form-control text-end input-price font-monospace fw-bold" placeholder="0.00" required>
                         </td>
                         <td>
-                            <input type="number" step="1" min="1" name="qty[]" class="form-control text-center input-qty font-monospace fw-bold" value="1" required>
+                            <input type="number" step="1" min="0" class="form-control text-center input-qty font-monospace fw-bold" value="1" required>
                             <small class="text-muted d-block text-center col-boxes" style="font-size: 10px;">(1 Box)</small>
+                            <input type="hidden" name="qty[]" class="input-total-qty" value="1">
+                            <input type="hidden" name="billable_qty[]" class="input-billable-qty" value="1">
                         </td>
                         <td>
                             <input type="number" step="1" min="0" name="return_bonus[]" class="form-control text-center input-bonus font-monospace" value="0">
@@ -648,14 +650,24 @@
 
             function recomputeRow($tr, recalcDisc = true) {
                 let price = parseFloat($tr.find('.input-price').val() || 0);
-                let qty = parseFloat($tr.find('.input-qty').val() || 0);
+                let billedQty = parseFloat($tr.find('.input-qty').val() || 0);
+                let bonusQty = parseFloat($tr.find('.input-bonus').val() || 0);
+                let totalQty = billedQty + bonusQty;
                 let conv = parseFloat($tr.data('conv') || 1);
                 if (conv <= 0) conv = 1;
 
-                let boxes = (qty / conv).toFixed(1);
-                $tr.find('.col-boxes').text(`(${boxes} Box)`);
+                // Sync hidden inputs for backend
+                $tr.find('.input-total-qty').val(totalQty);
+                $tr.find('.input-billable-qty').val(billedQty);
 
-                let gross = price * qty;
+                let boxes = (totalQty / conv).toFixed(1);
+                if (bonusQty > 0) {
+                    $tr.find('.col-boxes').html(`(${boxes} Box)<br><span class="text-success fw-bold" style="font-size: 9px;">+${bonusQty} Bonus</span>`);
+                } else {
+                    $tr.find('.col-boxes').text(`(${boxes} Box)`);
+                }
+
+                let gross = price * billedQty;
 
                 if (recalcDisc) {
                     let discPct = parseFloat($tr.find('.input-disc-pct').val() || 0);
@@ -741,15 +753,16 @@
                 let validItems = 0;
                 $('#returnTableBody tr').each(function() {
                     let prodId = $(this).find('.input-prod-id').val();
-                    let qty = parseFloat($(this).find('.input-qty').val() || 0);
-                    if (prodId && qty > 0) {
+                    let billed = parseFloat($(this).find('.input-qty').val() || 0);
+                    let bonus = parseFloat($(this).find('.input-bonus').val() || 0);
+                    if (prodId && (billed > 0 || bonus > 0)) {
                         validItems++;
                     }
                 });
 
                 if (validItems === 0) {
                     e.preventDefault();
-                    alert("Please select at least one product with a return quantity greater than 0.");
+                    alert("Please select at least one product with a return or bonus quantity greater than 0.");
                     return false;
                 }
 

@@ -331,8 +331,10 @@ class SaleReturnController extends Controller
             // Validate that at least one item has return quantity > 0
             $hasItems = false;
             foreach ($request->product_id as $idx => $productId) {
-                $qty = (float) $request->qty[$idx];
-                if ($qty > 0) {
+                $qVal = (float) ($request->qty[$idx] ?? 0);
+                $bVal = (float) ($request->return_bonus[$idx] ?? 0);
+                $bqVal = (float) ($request->billable_qty[$idx] ?? 0);
+                if ($qVal > 0 || $bVal > 0 || $bqVal > 0) {
                     $hasItems = true;
                     break;
                 }
@@ -362,7 +364,37 @@ class SaleReturnController extends Controller
 
             // Process Each Return Item
             foreach ($request->product_id as $idx => $productId) {
-                $qty = (float) $request->qty[$idx]; // Total pieces
+                $qty = (float) ($request->qty[$idx] ?? 0);
+                $bonusReturnQty = isset($request->return_bonus[$idx]) && is_numeric($request->return_bonus[$idx])
+                    ? (float) $request->return_bonus[$idx]
+                    : 0;
+
+                if (!empty($saleId)) {
+                    // Invoice-based Return (sale_id is present)
+                    $billableQty = $qty;
+                    if (isset($request->billable_qty[$idx]) && is_numeric($request->billable_qty[$idx])) {
+                        $billableQty = (float) $request->billable_qty[$idx];
+                    } elseif ($bonusReturnQty > 0) {
+                        $billableQty = max(0, $qty - $bonusReturnQty);
+                    }
+                    if ($billableQty > $qty) {
+                        $billableQty = $qty;
+                    }
+                    $bonusReturnQty = max(0, $qty - $billableQty);
+                } else {
+                    // Standalone Direct Return (sale_id is null)
+                    if (isset($request->billable_qty[$idx]) && is_numeric($request->billable_qty[$idx])) {
+                        $billableQty = (float) $request->billable_qty[$idx];
+                        if ($qty < ($billableQty + $bonusReturnQty)) {
+                            $qty = $billableQty + $bonusReturnQty;
+                        }
+                    } else {
+                        // Fallback: if direct form sent qty as billed qty without separate billable_qty
+                        $billableQty = $qty;
+                        $qty = $billableQty + $bonusReturnQty;
+                    }
+                }
+
                 if ($qty <= 0) continue;
 
                 $price = (float) $request->price[$idx];
@@ -424,20 +456,7 @@ class SaleReturnController extends Controller
 
                 if ($ppb <= 0) $ppb = 1;
 
-                // Determine billable quantity (excluding free bonus)
-                $billableQty = $qty;
-                if (isset($request->billable_qty[$idx]) && is_numeric($request->billable_qty[$idx])) {
-                    $billableQty = (float) $request->billable_qty[$idx];
-                } elseif (isset($request->return_bonus[$idx]) && is_numeric($request->return_bonus[$idx])) {
-                    $bRet = (float) $request->return_bonus[$idx];
-                    $billableQty = max(0, $qty - $bRet);
-                }
-                if ($billableQty > $qty) {
-                    $billableQty = $qty;
-                }
-                $bonusReturnQty = max(0, $qty - $billableQty);
-
-                // Calculate Line Total Logic based on size mode
+                // Calculate Line Total Logic based on size mode (using resolved billableQty)
                 if ($sizeMode === 'by_size') {
                     $lineGross = round($ppm2 * $billableQty * $price, 2);
                 } elseif ($sizeMode === 'by_cartons' || $sizeMode === 'by_carton') {
