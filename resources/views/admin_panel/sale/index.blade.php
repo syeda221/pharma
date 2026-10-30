@@ -546,8 +546,10 @@
                             <i class="fas fa-tags text-warning"></i> Bulk Discounts
                         </a>
                         @can('sales.create')
-                            <button type="button" class="btn px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1 text-white"
-                                style="background: #7c3aed; border-color: #6d28d9; border-radius: 8px;"
+                            <button type="button" id="btnOpenIssueSampleModal" 
+                                class="btn px-3 shadow-sm fw-medium d-inline-flex align-items-center justify-content-center gap-1 text-white"
+                                style="background: #7c3aed; border-color: #6d28d9; border-radius: 8px; cursor: pointer;"
+                                data-toggle="modal" data-target="#issueSampleModal"
                                 data-bs-toggle="modal" data-bs-target="#issueSampleModal">
                                 <i class="fas fa-vial"></i> Issue Sample
                             </button>
@@ -1378,7 +1380,9 @@
                         </h5>
                         <small class="opacity-75">Promotional stock given free of cost. Stock reduces; WOS deducted at cost.</small>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="close text-white" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close" style="opacity: 0.9; font-size: 1.5rem; text-shadow: none; border: none; background: transparent; cursor: pointer;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <form id="issueSampleForm" method="POST" action="{{ route('samples.store') }}">
                     @csrf
@@ -1479,7 +1483,7 @@
                         </div>
                     </div>
                     <div class="modal-footer bg-white border-top">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-sm text-white px-4 fw-bold" id="btnSubmitSample" style="background: #7c3aed;">
                             <i class="fas fa-check-circle me-1"></i> Issue Sample
                         </button>
@@ -1489,8 +1493,8 @@
         </div>
     </div>
 
-    {{-- Product Options Template for JS Repeater --}}
-    <template id="sampleProductOptionsTpl">
+    {{-- Product Options Hidden Select for JS Repeater --}}
+    <select id="sampleProductOptionsTpl" style="display: none !important;">
         <option value="">-- Select Medicine --</option>
         @foreach($activeProducts as $ap)
             <option value="{{ $ap->id }}" 
@@ -1500,26 +1504,34 @@
                 {{ $ap->item_name }} (Cost: Rs {{ number_format((float)($ap->purchase_price_per_piece ?: 0), 2) }})
             </option>
         @endforeach
-    </template>
+    </select>
 
     <script>
         $(document).ready(function() {
+            // Explicit click handler to open Issue Sample Modal
+            $(document).on('click', '#btnOpenIssueSampleModal', function(e) {
+                e.preventDefault();
+                $('#issueSampleModal').modal('show');
+                if ($('#sampleItemsBody tr').length === 0) {
+                    addSampleRow();
+                }
+            });
+
             // Function to add a new sample item row
             function addSampleRow() {
-                let optionsHtml = $('#sampleProductOptionsTpl').html();
-                let rowIdx = $('#sampleItemsBody tr').length;
+                let optionsHtml = $('#sampleProductOptionsTpl').html() || '';
                 let rowHtml = `
                     <tr class="sample-row">
                         <td>
-                            <select name="product_id[]" class="form-select form-select-sm sample-product-select" required>
+                            <select name="product_id[]" class="form-control form-control-sm sample-product-select" required>
                                 ${optionsHtml}
                             </select>
                         </td>
                         <td>
                             <input type="number" name="qty[]" class="form-control form-control-sm text-center sample-qty-input" min="1" step="1" value="1" required>
                         </td>
-                        <td class="text-end font-monospace sample-cost-display">Rs 0.00</td>
-                        <td class="text-end font-monospace fw-bold sample-wos-display" style="color: #6d28d9;">Rs 0.00</td>
+                        <td class="text-right font-monospace sample-cost-display" style="text-align: right;">Rs 0.00</td>
+                        <td class="text-right font-monospace fw-bold sample-wos-display" style="text-align: right; color: #6d28d9;">Rs 0.00</td>
                         <td class="text-center">
                             <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1 btn-remove-sample-row">
                                 <i class="fas fa-times"></i>
