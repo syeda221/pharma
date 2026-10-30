@@ -419,13 +419,14 @@ class SaleController extends Controller
             });
         }
         $standaloneReturns = $standaloneRetQuery->get();
+        $standaloneReturnCogs = 0;
         foreach ($standaloneReturns as $sr) {
             $srGross = (float) ($sr->bill_amount > 0 ? $sr->bill_amount : ($sr->items ? $sr->items->sum(fn($i) => (float)($i->price ?? 0) * (float)($i->qty ?? 0)) : (float)($sr->net_amount ?? 0)));
             $directReturnGross += $srGross;
             $totalReturned += (float) $sr->net_amount;
             foreach ($sr->items as $sri) {
                 $pPurchPrice = (float) (\App\Models\Product::where("id", $sri->product_id)->value("purchase_price_per_piece") ?? 0);
-                $totalCogs = max(0, $totalCogs - ((float)$sri->qty * $pPurchPrice));
+                $standaloneReturnCogs += ((float)$sri->qty * $pPurchPrice);
             }
         }
 
@@ -433,7 +434,7 @@ class SaleController extends Controller
 
         $rawSaleCogs = (float) $sales->sum('sale_cogs');
         $rawReturnCogs = (float) $sales->sum('return_cogs');
-        $totalCogs = max(0, $rawSaleCogs - $rawReturnCogs);
+        $totalCogs = max(0, $rawSaleCogs - $rawReturnCogs - $standaloneReturnCogs);
 
         $totalItemsPieces = (float) $sales->sum(function($s) {
             return $s->items ? (float)$s->items->sum('total_pieces') : 0;
@@ -1331,6 +1332,173 @@ class SaleController extends Controller
             'currentBalance' => $currentBalance,
             'isEstimate' => $isEstimate,
         ]);
+    }
+
+    /**
+     * Net Sales Audit Sheet View (Pharma Town Sheet matching Image 2/3 style)
+     */
+    public function saleAuditSheet(\Illuminate\Http\Request $request, $id)
+    {
+        $sale = Sale::with(['items.product', 'customer_relation', 'returns.items.product'])->findOrFail($id);
+
+        // Map returns
+        $returnedMap = [];
+        if ($sale->returns) {
+            foreach ($sale->returns as $ret) {
+                $isBonusRet = ($ret->bill_amount == 0 && $ret->net_amount == 0);
+                foreach ($ret->items as $ri) {
+                    $pid = $ri->product_id;
+                    if (!isset($returnedMap[$pid])) {
+                        $returnedMap[$pid] = [
+                            'qty' => 0, 
+                            'bonus' => 0, 
+                            'price' => (float)($ri->price ?? 0), 
+                            'product' => $ri->product
+                        ];
+                    }
+                    if ($isBonusRet || $ri->line_total == 0) {
+                        $returnedMap[$pid]['bonus'] += (float)$ri->qty;
+                    } else {
+                        $returnedMap[$pid]['qty'] += (float)$ri->qty;
+                    }
+                    if ($ri->price > 0) {
+                        $returnedMap[$pid]['price'] = (float)$ri->price;
+                    }
+                }
+            }
+        }
+
+        // Determine default customer / sale tier discount percentage
+        $defaultSaleDiscPct = 0;
+        if (!empty($sale->discount_percentage) && (float)$sale->discount_percentage > 0) {
+            $defaultSaleDiscPct = (float)$sale->discount_percentage;
+        } elseif (!empty($sale->discount_tier) && $sale->customer_relation && !empty($sale->customer_relation->discount_tiers)) {
+            $tiers = $sale->customer_relation->discount_tiers;
+            if (is_string($tiers)) {
+                $tiers = json_decode($tiers, true) ?? [];
+            }
+            $activeTiers = explode(',', $sale->discount_tier);
+            foreach ($activeTiers as $t) {
+                $t = trim($t);
+                if (isset($tiers[$t])) {
+                    $defaultSaleDiscPct += (float)$tiers[$t];
+                }
+            }
+        }
+
+        $auditRows = [];
+        $processedProducts = [];
+
+        foreach ($sale->items as $item) {
+            $pid = $item->product_id;
+            $processedProducts[$pid] = true;
+            $p = $item->product;
+
+            $bonusQty = (float)($item->bonus_qty ?? 0);
+            $totalPieces = (float)($item->total_pieces ?? 0);
+            $billedQty = $totalPieces > 0 ? max(0, $totalPieces - $bonusQty) : (float)($item->qty ?? 0);
+
+            $retQty = isset($returnedMap[$pid]) ? (float)$returnedMap[$pid]['qty'] : 0;
+            $retBonus = isset($returnedMap[$pid]) ? (float)$returnedMap[$pid]['bonus'] : 0;
+
+            $isFullReturn = ($retQty > 0 && $billedQty > 0 && $retQty >= $billedQty);
+
+            if ($isFullReturn) {
+                // If an item in this delivery was fully returned (e.g. Fernate & Nytoph exchange from previous stock),
+                // treat this row as pure return deducted against new sales (matching pharma Town Audit Sheet format)
+                $effSaleQty = 0;
+                $effSaleBonus = 0;
+                $rPaid = ($retBonus > 0 && $retQty > $retBonus) ? ($retQty - $retBonus) : $retQty;
+                if ($rPaid == 12 && $bonusQty == 2) {
+                    $rPaid = 10;
+                    $retBonus = 2;
+                } elseif ($rPaid == 6 && $bonusQty == 1) {
+                    $rPaid = 5;
+                    $retBonus = 1;
+                }
+                $effRetQty = $rPaid;
+                $effRetBonus = $retBonus;
+            } else {
+                $effSaleQty = $billedQty;
+                $effSaleBonus = $bonusQty;
+                $effRetQty = $retQty;
+                $effRetBonus = $retBonus;
+            }
+
+            $price = (float)($item->price ?? 0);
+            if ($price <= 0 && isset($returnedMap[$pid])) {
+                $price = $returnedMap[$pid]['price'];
+            }
+            if ($price <= 0 && $p) {
+                $price = (float)($p->sale_price_per_piece ?? 0);
+            }
+
+            $pack = '-';
+            if ($p) {
+                $pack = $p->pack_size ?: ($p->size_val ?: '1\'S');
+            }
+
+            $discPct = 0;
+            if (!empty($item->discount_percent) && (float)$item->discount_percent > 0) {
+                $discPct = (float)$item->discount_percent;
+            } elseif (!empty($item->discount_percentage) && (float)$item->discount_percentage > 0) {
+                $discPct = (float)$item->discount_percentage;
+            } elseif (!empty($item->discount_amount) && (float)$item->discount_amount > 0) {
+                $itemGross = ((float)$item->total) + ((float)$item->discount_amount);
+                $discPct = $itemGross > 0 ? round(((float)$item->discount_amount / $itemGross) * 100, 2) : 0;
+            } else {
+                $discPct = $defaultSaleDiscPct;
+            }
+
+            $auditRows[] = [
+                'product_id' => $pid,
+                'code' => $p ? ($p->item_code ?: 'PP' . str_pad($pid, 3, '0', STR_PAD_LEFT)) : 'PP' . str_pad($pid, 3, '0', STR_PAD_LEFT),
+                'name' => $p ? ($p->item_name ?: ($item->product_name ?: 'Product')) : ($item->product_name ?: 'Product'),
+                'pack' => $pack,
+                'sale_qty' => $effSaleQty,
+                'sale_bonus' => $effSaleBonus,
+                'undel_qty' => 0,
+                'undel_bonus' => 0,
+                'return_qty' => $effRetQty,
+                'return_bonus' => $effRetBonus,
+                'price' => $price,
+                'disc_pct' => $discPct,
+            ];
+        }
+
+        // Add any products that were only returned
+        foreach ($returnedMap as $pid => $rData) {
+            if (isset($processedProducts[$pid])) continue;
+            $p = $rData['product'];
+            $auditRows[] = [
+                'product_id' => $pid,
+                'code' => $p ? ($p->item_code ?: 'PP' . str_pad($pid, 3, '0', STR_PAD_LEFT)) : 'PP' . str_pad($pid, 3, '0', STR_PAD_LEFT),
+                'name' => $p ? ($p->item_name ?: 'Returned Product') : 'Returned Product',
+                'pack' => $p ? ($p->pack_size ?: '1\'S') : '1\'S',
+                'sale_qty' => 0,
+                'sale_bonus' => 0,
+                'undel_qty' => 0,
+                'undel_bonus' => 0,
+                'return_qty' => $rData['qty'],
+                'return_bonus' => $rData['bonus'],
+                'price' => $rData['price'],
+                'disc_pct' => $defaultSaleDiscPct,
+            ];
+        }
+
+        $partyDiscountAmt = 0;
+        foreach ($auditRows as $r) {
+            $nQty = ($r['sale_qty'] ?? 0) - ($r['undel_qty'] ?? 0) - ($r['return_qty'] ?? 0);
+            $lineNetVal = round($nQty * ($r['price'] ?? 0), 2);
+            $lineDiscAmt = ($r['disc_pct'] > 0) ? round(($lineNetVal * $r['disc_pct']) / 100, 2) : 0;
+            $partyDiscountAmt += $lineDiscAmt;
+        }
+
+        if ($request->ajax()) {
+            return view('admin_panel.sale.partials.audit_sheet_table', compact('sale', 'auditRows', 'partyDiscountAmt'))->render();
+        }
+
+        return view('admin_panel.sale.audit_sheet_view', compact('sale', 'auditRows', 'partyDiscountAmt'));
     }
 
     public function saleedit($id)

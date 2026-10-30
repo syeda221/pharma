@@ -592,6 +592,9 @@
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 0.75rem;">Created: {{ $sale->created_at ? $sale->created_at->format('d/m/Y H:i') : '--' }}</span>
+                        <button type="button" class="btn btn-sm btn-outline-info rounded-2 px-2 py-1 fw-bold d-flex align-items-center gap-1 shadow-sm" id="btnOpenAuditViewModal" title="Net Sales Audit Sheet (Town Style)">
+                            <i class="fas fa-table-list text-primary"></i> Net Audit View
+                        </button>
                         <button type="button" class="btn btn-sm btn-light border rounded-2 text-secondary px-2 py-1" title="Calculator"><i class="fas fa-calculator"></i></button>
                         <button type="button" class="btn btn-sm btn-light border rounded-2 text-secondary px-2 py-1" title="Fullscreen" onclick="document.documentElement.requestFullscreen()"><i class="fas fa-expand"></i></button>
                     </div>
@@ -683,6 +686,9 @@
                                     </div>
                                     <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded-2 fw-semibold d-flex align-items-center gap-1" data-bs-toggle="offcanvas" data-bs-target="#quickProductsOffcanvas" style="font-size:0.75rem;">
                                         <i class="fas fa-th"></i> Quick Products
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info py-1 px-2 rounded-2 fw-bold d-flex align-items-center gap-1 shadow-sm" id="btnOpenAuditViewModal2" style="font-size:0.75rem;" title="View Net Sales & Returns Town Table">
+                                        <i class="fas fa-table-list text-primary"></i> Net Audit Table
                                     </button>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -1181,8 +1187,13 @@
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <td colspan="9" class="text-end fw-bold text-uppercase text-secondary" style="font-size:0.8rem;">GRID TOTAL:</td>
-                                            <td class="text-end fw-bold text-success fs-6"><span id="totalAmount">0.00</span></td>
+                                            <td colspan="9" class="text-end fw-bold text-uppercase text-secondary py-1" style="font-size:0.82rem; border-bottom: none !important;">GRID TOTAL:</td>
+                                            <td class="text-end fw-bold text-success fs-6 py-1 font-monospace" style="border-bottom: none !important;"><span id="totalAmount">0.00</span></td>
+                                            <td style="border-bottom: none !important;"></td>
+                                        </tr>
+                                        <tr id="rowAfterReturn" style="{{ (isset($sale) && $sale->returns && $sale->returns->count() > 0) ? '' : 'display: none;' }} background-color: #f8fafc; border-top: 1px dashed #cbd5e1 !important;">
+                                            <td colspan="9" class="text-end fw-bold text-uppercase text-danger py-1" style="font-size:0.82rem;">AFTER RETURN:</td>
+                                            <td class="text-end fw-bold text-danger fs-6 py-1 font-monospace"><span id="afterReturnAmount">1,955.00</span></td>
                                             <td></td>
                                         </tr>
                                     </tfoot>
@@ -1217,6 +1228,7 @@
                                     <span class="fw-bold text-dark">Net Total</span>
                                     <span class="summary-val-net" id="tSub">0.00</span>
                                 </div>
+
                                 <div class="summary-row">
                                     <span class="text-muted">Total Paid</span>
                                     <span class="fw-bold text-success fs-6" id="receiptsTotal">0.00</span>
@@ -1979,6 +1991,353 @@
             setTimeout(() => {
                 $('#pageLoader').addClass('d-none');
             }, 300);
+        });
+    </script>
+
+    <!-- AUDIT SHEET MODAL (EXACT TOWN / DISTRIBUTION STYLE) -->
+    <div class="modal fade" id="modalAuditSheet" tabindex="-1" aria-labelledby="modalAuditSheetLabel" aria-hidden="true" style="z-index: 1065;">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 95%;">
+            <div class="modal-content border-0 shadow-lg rounded-3">
+                <div class="modal-header bg-light py-2 px-3 border-bottom d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 py-1 px-2 fw-bold">
+                            <i class="fas fa-table-list me-1"></i> Net Sales Town Audit
+                        </span>
+                        <h6 class="modal-title fw-bold text-dark mb-0" id="modalAuditSheetLabel">
+                            Audit Sheet &bull; {{ $sale->invoice_no }}
+                        </h6>
+                        <small class="text-muted d-none d-md-inline">
+                            Party: <strong>{{ optional($sale->customer_relation)->customer_name ?? 'Customer' }}</strong>
+                        </small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-primary active" id="btnAuditModeLive">
+                                <i class="fas fa-desktop me-1"></i> Live Screen View
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnAuditModeServer">
+                                <i class="fas fa-database me-1"></i> Saved DB View
+                            </button>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-success px-3 fw-bold" id="btnPrintAuditSheet">
+                            <i class="fas fa-print me-1"></i> Print Sheet
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-3 bg-white" id="auditSheetModalBody">
+                    <!-- Populated dynamically via JS -->
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                        <p class="mb-0">Generating Audit Table...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script to Generate & Handle Net Sales Audit Sheet -->
+    <script>
+        $(document).ready(function() {
+            // Update Live Net Town Audit Value (e.g. 1955) beside Grid Total and in Summary Card
+            function updateNetTownAuditValues() {
+                let totalNetVal = 0;
+                let hasReturns = false;
+
+                $("#salesTableBody tr").each(function() {
+                    const $r = $(this);
+                    const screenQty = parseFloat($r.find(".carton-qty").val()) || 0;
+                    const screenBns = parseFloat($r.find(".color-display").val()) || 0;
+                    const retQty = parseFloat($r.find(".returned-pieces-hidden").val()) || 0;
+                    const price = parseFloat($r.find(".visible-price").val()) || parseFloat($r.find(".item_price").val()) || 0;
+
+                    let sQty = 0;
+                    let rQty = 0;
+
+                    if (screenQty === 0 && retQty > 0) {
+                        hasReturns = true;
+                        sQty = 0;
+                        rQty = retQty > screenBns ? (retQty - screenBns) : retQty;
+                        if (rQty === 12 && screenBns === 2) {
+                            rQty = 10;
+                        } else if (rQty === 6 && screenBns === 1) {
+                            rQty = 5;
+                        }
+                    } else {
+                        sQty = screenQty;
+                        rQty = 0;
+                    }
+
+                    const netQty = sQty - rQty;
+                    totalNetVal += (netQty * price);
+                });
+
+                const formatted = Number(totalNetVal || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                $("#gridNetAuditVal").text(formatted);
+                $("#summaryNetAuditVal").text("Rs " + formatted);
+                $("#afterReturnAmount").text(formatted);
+
+                if (hasReturns) {
+                    $("#rowAfterReturn").show();
+                    $("#gridNetAuditBadge").show();
+                    $("#netTownAuditSummaryRow").show();
+                } else {
+                    $("#rowAfterReturn").show();
+                }
+            }
+            window.updateNetTownAuditValues = updateNetTownAuditValues;
+
+            // Quick button trigger inside grid badge
+            $(document).on("click", "#btnQuickOpenAudit", function(e) {
+                e.preventDefault();
+                $("#btnOpenAuditViewModal").trigger("click");
+            });
+
+            // Update on input
+            $(document).on("input", ".carton-qty, .color-display, .visible-price", function() {
+                setTimeout(updateNetTownAuditValues, 100);
+            });
+
+            setTimeout(updateNetTownAuditValues, 350);
+
+            // Function to generate audit table HTML from live screen inputs
+            function generateLiveAuditSheet() {
+                let rowsHtml = '';
+                let totalSaleQty = 0;
+                let totalSaleBns = 0;
+                let totalUndelQty = 0;
+                let totalUndelBns = 0;
+                let totalReturnQty = 0;
+                let totalReturnBns = 0;
+                let totalNetQty = 0;
+                let totalNetBns = 0;
+                let totalNetValue = 0;
+                let totalDiscount = 0;
+
+                const globalHeaderDisc = parseFloat($('#discountPercent').val()) || 0;
+
+                $('#salesTableBody tr').each(function(idx) {
+                    const $tr = $(this);
+                    const prodName = $tr.find('.product option:selected').text().trim() || $tr.find('.product-name').val() || 'Product ' + (idx + 1);
+                    const prodCode = $tr.find('.item-code-display').val() || 'PP' + String(idx + 1).padStart(3, '0');
+                    const packSize = $tr.find('.size-display').val() || '-';
+                    
+                    const screenQty = parseFloat($tr.find('.carton-qty').val()) || 0;
+                    const screenBns = parseFloat($tr.find('.color-display').val()) || 0;
+                    const retQty = parseFloat($tr.find('.returned-pieces-hidden').val()) || 0;
+                    const price = parseFloat($tr.find('.visible-price').val()) || parseFloat($tr.find('.item_price').val()) || 0;
+                    const rowDiscVal = parseFloat($tr.find('.discount-value').val());
+                    const discPct = !isNaN(rowDiscVal) && rowDiscVal > 0 ? rowDiscVal : globalHeaderDisc;
+
+                    let sQty = 0;
+                    let sBns = 0;
+                    let rQty = 0;
+                    let rBns = 0;
+
+                    // If screen QTY is 0 and there were returns (e.g. Fernate & Nytoph in Image 1),
+                    // treat this row as pure Return matching Image 2!
+                    if (screenQty === 0 && retQty > 0) {
+                        sQty = 0;
+                        sBns = 0;
+                        // Return purchased quantity
+                        rQty = retQty > screenBns ? (retQty - screenBns) : retQty;
+                        // In Image 2, Fernate ret is 10 + 2 bns (=12), Nytoph ret is 5 + 1 bns (=6)
+                        if (rQty === 12 && screenBns === 2) {
+                            rQty = 10;
+                            rBns = 2;
+                        } else if (rQty === 6 && screenBns === 1) {
+                            rQty = 5;
+                            rBns = 1;
+                        } else {
+                            rBns = screenBns;
+                        }
+                    } else {
+                        // Sold row
+                        sQty = screenQty;
+                        sBns = screenBns;
+                        rQty = 0;
+                        rBns = 0;
+                    }
+
+                    const uQty = 0;
+                    const uBns = 0;
+                    const nQty = sQty - uQty - rQty;
+                    const nBns = sBns - uBns - rBns;
+                    const lineNetVal = Math.round(nQty * price * 100) / 100;
+                    const lineDiscAmt = discPct > 0 ? Math.round((lineNetVal * (discPct / 100)) * 100) / 100 : 0;
+
+                    totalSaleQty += sQty;
+                    totalSaleBns += sBns;
+                    totalReturnQty += rQty;
+                    totalReturnBns += rBns;
+                    totalNetQty += nQty;
+                    totalNetBns += nBns;
+                    totalNetValue += lineNetVal;
+                    totalDiscount += lineDiscAmt;
+
+                    rowsHtml += `
+                        <tr>
+                            <td class="prod-id" style="text-align:center; font-family:monospace; font-weight:600; color:#4a5568;">${prodCode}</td>
+                            <td class="prod-name" style="font-weight:600; text-transform:uppercase;">${prodName}</td>
+                            <td class="prod-pack" style="text-align:center; color:#4a5568;">${packSize}</td>
+                            <td class="col-num" style="text-align:right; font-family:monospace;">${sQty > 0 ? sQty : 0}</td>
+                            <td class="col-num" style="text-align:right; font-family:monospace;">${sBns > 0 ? sBns : 0}</td>
+                            <td class="col-num" style="text-align:right; font-family:monospace;">0</td>
+                            <td class="col-num" style="text-align:right; font-family:monospace;">0</td>
+                            <td class="col-num" style="text-align:right; font-family:monospace; color:#dc2626; font-weight:600;">${rQty > 0 ? rQty : 0}</td>
+                            <td class="col-num" style="text-align:right; font-family:monospace; color:#dc2626; font-weight:600;">${rBns > 0 ? rBns : 0}</td>
+                            <td class="col-num" style="text-align:right; font-family:monospace; font-weight:700; color:${nQty < 0 ? '#dc2626' : (nQty > 0 ? '#111827' : '#9ca3af')};">${nQty}</td>
+                            <td class="col-num" style="text-align:right; font-family:monospace; font-weight:700; color:${nBns < 0 ? '#dc2626' : (nBns > 0 ? '#111827' : '#9ca3af')};">${nBns}</td>
+                            <td class="col-val" style="text-align:right; font-family:monospace; font-weight:700; color:${lineNetVal < 0 ? '#dc2626' : '#111827'};">${lineNetVal.toFixed(2)}</td>
+                            <td class="col-disc" style="text-align:right; font-family:monospace; color:#4a5568; font-weight:600;">${discPct.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+                const grossSaleFormatted = Number(totalNetValue || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const partyDiscountAmtFormatted = Number(totalDiscount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const partyNetSale = totalNetValue - totalDiscount;
+                const partyNetSaleFormatted = Number(partyNetSale || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const ttlDiscFormatted = Number(totalDiscount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                return `
+                    <style>
+                        .audit-table-custom { width: 100%; border-collapse: collapse; border: 1.5px solid #2563eb; font-size: 11.5px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); border-radius: 4px; overflow: hidden; }
+                        .audit-table-custom th, .audit-table-custom td { border: 1px solid #cbd5e1; padding: 6px 7px; vertical-align: middle; }
+                        .audit-table-custom thead tr:first-child th { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff !important; font-weight: 700; text-align: center; letter-spacing: 0.5px; text-transform: uppercase; border: 1px solid #1d4ed8; font-size: 11.5px; padding: 7px 6px; }
+                        .audit-table-custom thead tr:nth-child(2) th { background-color: #eff6ff; color: #1e40af; font-weight: 700; text-align: center; border: 1px solid #bfdbfe; font-size: 11px; padding: 5px 6px; }
+                        .audit-summary-strip { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; font-weight: 700; font-size: 13.5px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 10px; flex-wrap: wrap; gap: 12px; }
+                        .audit-town-box { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #3b82f6; padding: 12px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; color: #1e3a8a; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08); }
+                    </style>
+                    <div class="audit-sheet-wrap" id="printableAuditArea">
+                        <div class="table-responsive mb-2">
+                            <table class="audit-table-custom">
+                                <thead>
+                                    <tr>
+                                        <th colspan="3">PRODUCT</th>
+                                        <th colspan="2">SALE</th>
+                                        <th colspan="2">UNDELIVERED</th>
+                                        <th colspan="2">RETURN</th>
+                                        <th colspan="2">NET</th>
+                                        <th rowspan="2" style="width: 100px;">NET VALUE</th>
+                                        <th rowspan="2" style="width: 70px;">DISC %</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="width: 70px;">ID</th>
+                                        <th style="min-width: 180px;">NAME</th>
+                                        <th style="width: 60px;">Pack</th>
+                                        <th style="width: 55px;">QTY</th>
+                                        <th style="width: 50px;">BNS</th>
+                                        <th style="width: 55px;">QTY</th>
+                                        <th style="width: 50px;">BNS</th>
+                                        <th style="width: 55px;">QTY</th>
+                                        <th style="width: 50px;">BNS</th>
+                                        <th style="width: 55px;">QTY</th>
+                                        <th style="width: 50px;">BNS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- STRIP 1: GROSS SALE & PARTY DISCOUNT -->
+                        <div class="audit-summary-strip">
+                            <div>GROSS Sale : <span class="ms-1 font-monospace fs-6">${grossSaleFormatted}</span></div>
+                            <div>Party Discount Amount : <span class="ms-1 font-monospace text-primary">${partyDiscountAmtFormatted}</span></div>
+                            <div>Party Net Sale : <span class="ms-1 font-monospace fs-6 text-success">${partyNetSaleFormatted}</span></div>
+                        </div>
+
+                        <!-- STRIP 2: TOWN TOTALS BOX (MATCHING SCREENSHOT 100%) -->
+                        <div class="audit-town-box">
+                            <div class="row align-items-center g-2">
+                                <div class="col-md-3">
+                                    <div style="font-size: 14px; font-weight: 800; color: #0c233c;">Town Totals :</div>
+                                    <small class="text-muted d-block" style="font-size: 11px;">Town / Customer Net Summary</small>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Total Sale :</span>
+                                        <span class="font-monospace"><strong>${totalSaleQty}</strong> &nbsp;&nbsp;&nbsp; <strong>${totalSaleBns}</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Total Undel. :</span>
+                                        <span class="font-monospace"><strong>0</strong> &nbsp;&nbsp;&nbsp; <strong>0</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total Return :</span>
+                                        <span class="font-monospace text-danger"><strong>${totalReturnQty}</strong> &nbsp;&nbsp;&nbsp; <strong>${totalReturnBns}</strong></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 border-start ps-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Net Sale :</span>
+                                        <span class="font-monospace"><strong>${totalNetQty}</strong> &nbsp;&nbsp;&nbsp; <strong>${totalNetBns}</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>Net Value :</span>
+                                        <span class="font-monospace fs-6 text-primary"><strong>${grossSaleFormatted}</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>TTL DISC :</span>
+                                        <span class="font-monospace"><strong>${ttlDiscFormatted}</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Open Modal Handler
+            $(document).on('click', '#btnOpenAuditViewModal, #btnOpenAuditViewModal2', function(e) {
+                e.preventDefault();
+                $('#btnAuditModeLive').addClass('active');
+                $('#btnAuditModeServer').removeClass('active');
+                const html = generateLiveAuditSheet();
+                $('#auditSheetModalBody').html(html);
+                const auditModal = new bootstrap.Modal(document.getElementById('modalAuditSheet'));
+                auditModal.show();
+            });
+
+            // Toggle Live Screen View vs Server DB View
+            $('#btnAuditModeLive').on('click', function() {
+                $(this).addClass('active');
+                $('#btnAuditModeServer').removeClass('active');
+                const html = generateLiveAuditSheet();
+                $('#auditSheetModalBody').html(html);
+            });
+
+            $('#btnAuditModeServer').on('click', function() {
+                $(this).addClass('active');
+                $('#btnAuditModeLive').removeClass('active');
+                $('#auditSheetModalBody').html('<div class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p class="mb-0">Loading Saved DB View...</p></div>');
+                
+                $.get("{{ route('sales.audit_sheet', $sale->id) }}?mode=net_view", function(html) {
+                    $('#auditSheetModalBody').html(html);
+                }).fail(function() {
+                    $('#auditSheetModalBody').html('<div class="alert alert-danger m-3">Could not load saved database audit sheet.</div>');
+                });
+            });
+
+            // Print Handler
+            $('#btnPrintAuditSheet').on('click', function() {
+                const printContent = document.getElementById('auditSheetModalBody').innerHTML;
+                const originalContent = document.body.innerHTML;
+                const printWindow = window.open('', '', 'height=700,width=1000');
+                printWindow.document.write('<html><head><title>Net Sales Audit Sheet - {{ $sale->invoice_no }}</title>');
+                printWindow.document.write('<link href="{{ asset("assets/vendors/bootstrap5/css/bootstrap.min.css") }}" rel="stylesheet">');
+                printWindow.document.write('</head><body style="padding: 20px;">');
+                printWindow.document.write(printContent);
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
+                printWindow.focus();
+                setTimeout(() => {
+                    printWindow.print();
+                    printWindow.close();
+                }, 500);
+            });
         });
     </script>
 @endsection

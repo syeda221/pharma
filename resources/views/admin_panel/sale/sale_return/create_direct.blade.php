@@ -317,41 +317,72 @@
                         </div>
                     </div>
 
-                    {{-- SECTION 4: SETTLEMENT & REFUND METHOD --}}
-                    <div class="p-3 mb-4 rounded-3 border" style="background-color: #ffffff;">
-                        <h6 class="fw-bold text-dark mb-3"><i class="fas fa-wallet text-primary me-2"></i> Settlement / Refund Method</h6>
-                        
-                        <div class="d-flex align-items-center gap-4 mb-3">
+                    {{-- SECTION 4: SETTLEMENT & CUSTOMER LEDGER ADJUSTMENT --}}
+                    <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc; border-color: #e2e8f0;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold text-dark mb-0"><i class="fas fa-wallet text-primary me-2"></i> Settlement &amp; Ledger Adjustment</h6>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-1 px-3 fw-bold" id="settlementStatusBadge">
+                                <i class="fas fa-check-circle me-1"></i> Khata Auto-Credit (Recommended)
+                            </span>
+                        </div>
+
+                        <!-- Waterfall Explanation Box -->
+                        <div class="p-3 rounded-3 bg-white border mb-3">
+                            <div class="row align-items-center text-center text-md-start g-2">
+                                <div class="col-md-4">
+                                    <small class="text-muted text-uppercase fw-bold" style="font-size: 11px;">Current Customer Balance</small>
+                                    <div class="fs-5 fw-bold text-dark font-monospace" id="settleCurrBal">Rs 0.00</div>
+                                </div>
+                                <div class="col-md-1 text-center text-muted fs-4 d-none d-md-block">&minus;</div>
+                                <div class="col-md-3">
+                                    <small class="text-muted text-uppercase fw-bold" style="font-size: 11px;">Return Amount (Credit)</small>
+                                    <div class="fs-5 fw-bold text-success font-monospace" id="settleRetCredit">Rs 0.00</div>
+                                </div>
+                                <div class="col-md-1 text-center text-muted fs-4 d-none d-md-block">=</div>
+                                <div class="col-md-3">
+                                    <small class="text-muted text-uppercase fw-bold" style="font-size: 11px;">Remaining Payable Debt</small>
+                                    <div class="fs-5 fw-bold text-primary font-monospace" id="settleNewBal">Rs 0.00</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mode Options -->
+                        <div class="d-flex align-items-center gap-4 mb-2">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="refund_mode" id="modeLedger" value="ledger" checked>
-                                <label class="form-check-label fw-bold" for="modeLedger">
-                                    <i class="fas fa-book text-primary me-1"></i> Adjust into Customer Account / Ledger (Default)
-                                    <small class="d-block text-muted fw-normal">Deducts from customer's payable debt via Credit Note Journal Voucher</small>
+                                <label class="form-check-label fw-bold text-dark" for="modeLedger">
+                                    <i class="fas fa-book text-success me-1"></i> 100% Khata Auto-Credit (Recommended)
+                                    <small class="d-block text-muted fw-normal">Deducts full return amount from customer's khata debt via Credit Note (Journal Voucher).</small>
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="refund_mode" id="modeCash" value="cash">
-                                <label class="form-check-label fw-bold" for="modeCash">
-                                    <i class="fas fa-money-bill-wave text-success me-1"></i> Issue Immediate Cash / Bank Refund
-                                    <small class="d-block text-muted fw-normal">Physically pay cash back to customer from Cash in Hand or Bank</small>
+                                <label class="form-check-label fw-bold text-dark" for="modeCash">
+                                    <i class="fas fa-money-bill-wave text-warning me-1"></i> Counter Cash Payout
+                                    <small class="d-block text-muted fw-normal">Physically hand out cash from drawer (only if you gave cash back to customer).</small>
                                 </label>
                             </div>
                         </div>
 
-                        <!-- Cash / Bank Account Selector (Shown only when Cash Refund chosen) -->
-                        <div id="cashRefundRow" class="row g-3 d-none pt-2 border-top">
-                            <div class="col-md-4">
-                                <label class="form-label"><i class="fas fa-university text-primary me-1"></i> Payment Account</label>
-                                <select name="payment_account_id[]" id="refundAccountId" class="form-select">
+                        <!-- Cash / Bank Account Selector (Shown ONLY when Counter Cash chosen) -->
+                        <div id="cashRefundRow" class="row g-3 d-none pt-3 border-top mt-2">
+                            <div class="col-12">
+                                <div class="alert alert-warning py-2 px-3 small mb-0 border-0">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> <strong>Note:</strong> Paying cash directly to the customer creates a Cash Payout Voucher. The customer's ledger debt will <u>not</u> reduce because you gave them cash in hand.
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label"><i class="fas fa-university text-primary me-1"></i> Cash/Bank Payout Account <span class="text-danger">*</span></label>
+                                <select name="payment_account_id[]" id="refundAccountId" class="form-select" disabled>
                                     <option value="">-- Select Cash/Bank Account --</option>
                                     @foreach($accounts as $acc)
                                         <option value="{{ $acc->id }}">{{ $acc->title }} ({{ $acc->account_number ?? 'Acc:'.$acc->id }})</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label"><i class="fas fa-coins text-success me-1"></i> Refund Cash Paid</label>
-                                <input type="number" step="0.01" name="payment_amount[]" id="refundCashAmount" class="form-control font-monospace" placeholder="0.00">
+                            <div class="col-md-4">
+                                <label class="form-label"><i class="fas fa-coins text-warning me-1"></i> Cash Amount Handed to Customer</label>
+                                <input type="number" step="0.01" name="payment_amount[]" id="refundCashAmount" class="form-control font-monospace" placeholder="0.00" disabled>
                             </div>
                         </div>
                     </div>
@@ -430,6 +461,7 @@
                 $('#customerTiersBox').removeClass('d-none');
 
                 recalcAllRows();
+                updateGrandTotals();
             });
 
             // Tier Pill Toggle Handlers
@@ -670,6 +702,11 @@
                 $('#kpiNewBalance').text('Rs ' + fmt(newBalance));
                 $('#kpiBalDetail').text(`Bal: ${fmt(currentCustomerBalance)} - Ret: ${fmt(totalNet)}`);
 
+                // Waterfall Settlement Box in Section 4
+                $('#settleCurrBal').text('Rs ' + fmt(currentCustomerBalance));
+                $('#settleRetCredit').text('Rs ' + fmt(totalNet));
+                $('#settleNewBal').text('Rs ' + fmt(newBalance));
+
                 // Auto update cash refund amount if cash mode selected
                 if ($('#modeCash').is(':checked')) {
                     $('#refundCashAmount').val(totalNet.toFixed(2));
@@ -680,12 +717,16 @@
             $('input[name="refund_mode"]').on('change', function() {
                 if ($(this).val() === 'cash') {
                     $('#cashRefundRow').removeClass('d-none');
+                    $('#refundAccountId').prop('disabled', false);
+                    $('#refundCashAmount').prop('disabled', false);
                     let net = parseFloat($('#kpiNetRefund').text().replace(/[^0-9.-]+/g, "") || 0);
                     $('#refundCashAmount').val(net.toFixed(2));
+                    $('#settlementStatusBadge').removeClass('text-success border-success').addClass('text-warning border-warning').html('<i class="fas fa-coins me-1"></i> Cash Payout Selected');
                 } else {
                     $('#cashRefundRow').addClass('d-none');
-                    $('#refundAccountId').val('');
-                    $('#refundCashAmount').val('');
+                    $('#refundAccountId').val('').prop('disabled', true);
+                    $('#refundCashAmount').val('').prop('disabled', true);
+                    $('#settlementStatusBadge').removeClass('text-warning border-warning').addClass('text-success border-success').html('<i class="fas fa-check-circle me-1"></i> Khata Auto-Credit (Recommended)');
                 }
             });
 

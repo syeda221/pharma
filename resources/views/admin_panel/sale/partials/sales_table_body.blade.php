@@ -311,6 +311,11 @@
                             </a>
                         </li>
                         <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-primary fw-semibold" href="{{ route('sales.audit_sheet', $sale->id) }}" target="_blank">
+                                <i class="fas fa-table-list text-primary fa-fw"></i> Audit Sheet View (Town Table)
+                            </a>
+                        </li>
+                        <li>
                             <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.invoice', ['id' => $sale->id, 'type' => 'estimate']) }}" target="_blank">
                                 <i class="fas fa-calculator text-secondary fa-fw"></i> View Estimate
                             </a>

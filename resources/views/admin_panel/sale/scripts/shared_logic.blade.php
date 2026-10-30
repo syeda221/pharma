@@ -514,6 +514,9 @@
         $('#tPrev').text(prev.toFixed(2));
         $('#tPayable').text(payable.toFixed(2));
         $('#totalAmount').text(tGross.toFixed(2));
+        if (typeof window.updateNetTownAuditValues === 'function') {
+            window.updateNetTownAuditValues();
+        }
         $('#walkinNetTotal').text(currentInvoiceTotal.toFixed(2));
         $('#bottomPaymentsTotal').text(receipts.toFixed(2));
         $('#receiptsTotalBadge').text(receipts.toFixed(2));
@@ -544,6 +547,9 @@
         $('#discountAmount').val(orderDisc.toFixed(2));
         $('#totalBalance').val(currentInvoiceTotal.toFixed(2));
         $('input[name="cash"]').val(receipts.toFixed(2));
+        if (typeof window.updateNetTownAuditValues === 'function') {
+            window.updateNetTownAuditValues();
+        }
 
         // Update Premium Horizontal Card Values
         // 1. Customer Name

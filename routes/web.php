@@ -371,6 +371,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/sales/bulk-discount/apply', [SaleController::class, 'applyBulkDiscount'])->middleware('permission:sales.edit')->name('sale.bulk_discount.apply');
 
     Route::get('/sales/{id}/invoice', [SaleController::class, 'saleinvoice'])->middleware('permission:sales.view')->name('sales.invoice');
+    Route::get('/sales/{id}/audit-sheet', [SaleController::class, 'saleAuditSheet'])->middleware('permission:sales.view')->name('sales.audit_sheet');
     Route::get('/sales/{id}/edit', [SaleController::class, 'saleedit'])->middleware('permission:sales.edit')->name('sales.edit');
     Route::put('/sales/{id}', [SaleController::class, 'updatesale'])->middleware('permission:sales.edit')->name('sales.update');
     Route::delete('/sales/{id}', [SaleController::class, 'destroy'])->middleware('permission:sales.delete')->name('sales.destroy');
