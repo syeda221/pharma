@@ -791,24 +791,24 @@
                                     <div class="filter-toolbar-row">
                                         {{-- Quick Filter --}}
                                         <div style="width: 105px; flex-shrink: 0;">
-                                            <select id="quick_filter" class="form-select text-center" title="Quick Filter">
-                                                <option value="custom">Range</option>
-                                                <option value="sep2026">Sep 2026 (Audit)</option>
-                                                <option value="daily">Today</option>
-                                                <option value="weekly">Week</option>
-                                                <option value="monthly">Month</option>
-                                                <option value="yearly">Year</option>
+                                            <select id="quick_filter" name="quick_filter" class="form-select text-center" title="Quick Filter">
+                                                <option value="custom" {{ request('quick_filter') == 'custom' ? 'selected' : '' }}>Range</option>
+                                                <option value="sep2026" {{ request('quick_filter') == 'sep2026' ? 'selected' : '' }}>Sep 2026 (Audit)</option>
+                                                <option value="daily" {{ request('quick_filter') == 'daily' ? 'selected' : '' }}>Today</option>
+                                                <option value="weekly" {{ request('quick_filter') == 'weekly' ? 'selected' : '' }}>Week</option>
+                                                <option value="monthly" {{ request('quick_filter') == 'monthly' ? 'selected' : '' }}>Month</option>
+                                                <option value="yearly" {{ request('quick_filter') == 'yearly' ? 'selected' : '' }}>Year</option>
                                             </select>
                                         </div>
 
-                                        {{-- From Date (exact width for 10-char date like 06/10/2026) --}}
+                                        {{-- From Date --}}
                                         <div style="width: 95px; flex-shrink: 0;">
-                                            <input type="text" class="form-control datepicker-custom bg-white text-center" name="from_date" id="filter_from_date" placeholder="From Date">
+                                            <input type="text" class="form-control datepicker-custom bg-white text-center" name="from_date" id="filter_from_date" value="{{ request('from_date') }}" placeholder="From Date">
                                         </div>
 
                                         {{-- To Date --}}
                                         <div style="width: 95px; flex-shrink: 0;">
-                                            <input type="text" class="form-control datepicker-custom bg-white text-center" name="to_date" id="filter_to_date" placeholder="To Date">
+                                            <input type="text" class="form-control datepicker-custom bg-white text-center" name="to_date" id="filter_to_date" value="{{ request('to_date') }}" placeholder="To Date">
                                         </div>
 
                                         {{-- Inv / Bill# --}}
@@ -818,7 +818,7 @@
 
                                         {{-- M.Bill Ref --}}
                                         <div style="width: 85px; flex-shrink: 0;">
-                                            <input type="text" class="form-control text-center" name="reference" id="filter_reference" placeholder="M.Bill">
+                                            <input type="text" class="form-control text-center" name="reference" id="filter_reference" value="{{ request('reference') }}" placeholder="M.Bill">
                                         </div>
 
                                         {{-- Customer (flexible to fill remaining space) --}}
@@ -854,7 +854,7 @@
                                             <select class="form-select text-center" name="zone_id" id="filter_zone_id" title="Zone">
                                                 <option value="">All Zones</option>
                                                 @foreach($zones as $z)
-                                                    <option value="{{ $z->id }}">{{ $z->zone }}</option>
+                                                    <option value="{{ $z->id }}" {{ request('zone_id') == $z->id ? 'selected' : '' }}>{{ $z->zone }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -968,7 +968,7 @@
             let currentStatus = '{{ request("status") ?? "all" }}';
 
             // Core AJAX Filter Function
-            function applySalesFilter() {
+            function applySalesFilter(extraParams = {}) {
                 const $btn = $('#btnSearch');
                 const origHtml = $btn.html();
                 $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Searching...');
@@ -997,6 +997,27 @@
                 let statusVal = currentStatus;
                 if (statusVal && statusVal !== 'all') {
                     formData += '&status=' + encodeURIComponent(statusVal);
+                }
+                if (extraParams && extraParams.reset) {
+                    formData += '&reset=1';
+                }
+
+                // Sync to localStorage
+                if (!extraParams || !extraParams.reset) {
+                    try {
+                        let filterState = {
+                            from_date: $('#filter_from_date').val(),
+                            to_date: $('#filter_to_date').val(),
+                            bill_no: $('#filter_bill_no').val(),
+                            reference: $('#filter_reference').val(),
+                            customer_id: $('#filter_customer_id').val(),
+                            customer_type: $('#filter_customer_type').val(),
+                            zone_id: $('#filter_zone_id').val(),
+                            quick_filter: $('#quick_filter').val(),
+                            status: currentStatus
+                        };
+                        localStorage.setItem('pharma_sales_filter', JSON.stringify(filterState));
+                    } catch(e) {}
                 }
 
                 $.ajax({
@@ -1313,8 +1334,15 @@
                     window.history.replaceState({}, '', newUrl);
                 }
 
-                // 6. Trigger AJAX to fetch complete unfiltered data
-                applySalesFilter();
+                try { localStorage.removeItem('pharma_sales_filter'); } catch(e) {}
+
+                // Reset status to all
+                currentStatus = 'all';
+                $('.status-filter-btn').removeClass('btn-secondary btn-success btn-warning btn-info btn-danger btn-purple text-white text-dark').addClass('btn-outline-secondary');
+                $('.status-filter-btn[data-status="all"]').removeClass('btn-outline-secondary').addClass('btn-secondary');
+
+                // 6. Trigger AJAX with reset=1 to permanently clear preferences from DB & Session
+                applySalesFilter({ reset: 1 });
             });
 
             // Confirm Booking Action

@@ -20,6 +20,118 @@ class SaleController extends Controller
 {
     public function index(Request $request)
     {
+        // ========================================================
+        // PERSISTENT SALES FILTER PREFERENCES (DB + Cookie + Session)
+        // Survives re-login, Edit Sale redirect, Add Sale redirect
+        // ========================================================
+        $userId = auth()->id();
+        $prefKey = $userId ? "sale_filter_prefs_user_{$userId}" : null;
+
+        if ($request->has('reset') || $request->has('clear_filter')) {
+            // User explicitly reset/cleared filters
+            session()->forget('sale_filter_prefs');
+            \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('sales_filter_prefs'));
+            if ($prefKey) {
+                try {
+                    \Illuminate\Support\Facades\DB::table('settings')->where('key', $prefKey)->delete();
+                } catch (\Exception $e) {}
+            }
+            // Strip filter parameters from current request
+            $request->request->remove('from_date');
+            $request->request->remove('to_date');
+            $request->request->remove('customer_id');
+            $request->request->remove('customer_type');
+            $request->request->remove('zone_id');
+            $request->request->remove('bill_no');
+            $request->request->remove('invoice_no');
+            $request->request->remove('reference');
+            $request->request->remove('status');
+            $request->request->remove('quick_filter');
+            $request->query->remove('from_date');
+            $request->query->remove('to_date');
+            $request->query->remove('customer_id');
+            $request->query->remove('customer_type');
+            $request->query->remove('zone_id');
+            $request->query->remove('bill_no');
+            $request->query->remove('invoice_no');
+            $request->query->remove('reference');
+            $request->query->remove('status');
+            $request->query->remove('quick_filter');
+        } else {
+            $filterFields = ['from_date', 'to_date', 'customer_id', 'customer_type', 'zone_id', 'bill_no', 'invoice_no', 'reference', 'status', 'quick_filter'];
+
+            $isExplicitFilterAction = $request->ajax() || $request->hasAny(['from_date', 'to_date', 'customer_id', 'customer_type', 'zone_id', 'bill_no', 'reference', 'quick_filter']);
+
+            if ($isExplicitFilterAction) {
+                // User actively applied/changed a filter: save to Session, Cookie (1 yr) & DB settings
+                $activePrefs = [];
+                foreach ($filterFields as $f) {
+                    if ($request->filled($f) && $request->input($f) !== 'all') {
+                        $activePrefs[$f] = $request->input($f);
+                    }
+                }
+
+                if (!empty($activePrefs)) {
+                    session(['sale_filter_prefs' => $activePrefs]);
+                    \Illuminate\Support\Facades\Cookie::queue('sales_filter_prefs', json_encode($activePrefs), 60 * 24 * 365);
+                    if ($prefKey) {
+                        try {
+                            \Illuminate\Support\Facades\DB::table('settings')->updateOrInsert(
+                                ['key' => $prefKey],
+                                [
+                                    'value' => json_encode($activePrefs),
+                                    'type' => 'json',
+                                    'group' => 'user_preference',
+                                    'label' => 'Sales Filter Preferences',
+                                    'description' => 'Persistent filters for Sales Management screen',
+                                    'updated_at' => now(),
+                                ]
+                            );
+                        } catch (\Exception $e) {}
+                    }
+                } else {
+                    // All filters cleared in form
+                    session()->forget('sale_filter_prefs');
+                    \Illuminate\Support\Facades\Cookie::queue(\Illuminate\Support\Facades\Cookie::forget('sales_filter_prefs'));
+                    if ($prefKey) {
+                        try {
+                            \Illuminate\Support\Facades\DB::table('settings')->where('key', $prefKey)->delete();
+                        } catch (\Exception $e) {}
+                    }
+                }
+            } else {
+                // Plain navigation (visiting /sales directly or redirected after Add Sale, Edit Sale, or fresh login)
+                // Load saved preferences: Session -> Cookie -> DB
+                $savedPrefs = session('sale_filter_prefs');
+
+                if (empty($savedPrefs) && $request->hasCookie('sales_filter_prefs')) {
+                    $cVal = $request->cookie('sales_filter_prefs');
+                    $decoded = is_string($cVal) ? json_decode($cVal, true) : null;
+                    if (is_array($decoded) && !empty($decoded)) {
+                        $savedPrefs = $decoded;
+                    }
+                }
+
+                if (empty($savedPrefs) && $prefKey) {
+                    try {
+                        $dbVal = \Illuminate\Support\Facades\DB::table('settings')->where('key', $prefKey)->value('value');
+                        if ($dbVal) {
+                            $decoded = is_string($dbVal) ? json_decode($dbVal, true) : null;
+                            if (is_array($decoded) && !empty($decoded)) {
+                                $savedPrefs = $decoded;
+                            }
+                        }
+                    } catch (\Exception $e) {}
+                }
+
+                if (!empty($savedPrefs) && is_array($savedPrefs)) {
+                    session(['sale_filter_prefs' => $savedPrefs]);
+                    \Illuminate\Support\Facades\Cookie::queue('sales_filter_prefs', json_encode($savedPrefs), 60 * 24 * 365);
+                    $request->merge($savedPrefs);
+                }
+            }
+        }
+
         $query = Sale::with(['customer_relation', 'items.product', 'returns.items'])
             ->whereIn('sale_status', ['draft', 'booked', 'posted', 'returned']);
 
