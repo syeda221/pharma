@@ -190,35 +190,42 @@
     /* Row 1: Waterfall KPI Mini Cards Grid */
     .waterfall-kpi-grid {
         display: grid;
-        grid-template-columns: repeat(8, minmax(0, 1fr));
-        gap: 8px;
+        grid-template-columns: repeat(9, minmax(0, 1fr));
+        gap: 6px;
         margin-bottom: 12px;
     }
-    @media (max-width: 1399px) {
+    @media (max-width: 1400px) {
         .waterfall-kpi-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(9, minmax(0, 1fr));
+            gap: 5px;
+        }
+    }
+    @media (max-width: 1199px) {
+        .waterfall-kpi-grid {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 6px;
         }
     }
     @media (max-width: 768px) {
         .waterfall-kpi-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
     }
     @media (max-width: 480px) {
         .waterfall-kpi-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
     .kpi-mini-card {
-        border-radius: 12px;
+        border-radius: 11px;
         border: 1px solid;
-        padding: 8px 10px;
+        padding: 7px 8px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         min-width: 0;
-        min-height: 68px;
+        min-height: 64px;
         transition: transform 0.15s ease, box-shadow 0.15s ease;
         box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
@@ -227,9 +234,9 @@
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
     .kpi-mini-label {
-        font-size: 10px;
+        font-size: 9.5px;
         font-weight: 800;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.2px;
         text-transform: uppercase;
         white-space: nowrap;
         overflow: hidden;
@@ -237,10 +244,10 @@
         margin-bottom: 2px;
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
     }
     .kpi-mini-val {
-        font-size: 14.5px;
+        font-size: clamp(12.5px, 0.95vw, 14px);
         font-weight: 800;
         line-height: 1.25;
         white-space: nowrap;
@@ -249,7 +256,7 @@
         font-variant-numeric: tabular-nums;
     }
     .kpi-mini-sub {
-        font-size: 9.5px;
+        font-size: 9px;
         font-weight: 600;
         margin-top: 2px;
         white-space: nowrap;
@@ -932,11 +939,11 @@
                     <div class="kpi-mini-sub" style="color: #7c3aed;" id="cardWosAmountSub">0 Pcs (At Cost)</div>
                 </div>
 
-                {{-- Hidden Gross Profit element for JS safety --}}
-                <div id="cardGrossProfitBox" style="display: none !important;">
-                    <span id="cardGrossProfitLabel">Gross Profit</span>
-                    <span id="cardGrossProfit">Rs 0</span>
-                    <span id="cardGrossProfitSub">Revenue - COGS - Bonus</span>
+                {{-- 9. Gross Profit --}}
+                <div class="kpi-mini-card" style="background: #f0fdf4; border-color: #86efac;" id="cardGrossProfitBox">
+                    <div class="kpi-mini-label text-success" id="cardGrossProfitLabel"><i class="fas fa-arrow-trend-up"></i>Gross Profit</div>
+                    <div class="kpi-mini-val text-success" id="cardGrossProfit">Rs 0</div>
+                    <div class="kpi-mini-sub text-success" id="cardGrossProfitSub">Revenue - COGS - Bonus</div>
                 </div>
             </div>
 
