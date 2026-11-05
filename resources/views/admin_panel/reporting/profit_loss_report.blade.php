@@ -62,11 +62,18 @@
         text-transform: uppercase;
         letter-spacing: 0.4px;
         margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .stat-pill .stat-val {
         font-size: .92rem;
         font-weight: 800;
         line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-variant-numeric: tabular-nums;
     }
     .stat-pill .stat-sub {
         font-size: .60rem;
@@ -89,6 +96,7 @@
         justify-content: center;
         transition: transform 0.15s ease, box-shadow 0.15s ease;
         height: 100%;
+        min-width: 0;
     }
     .overview-card:hover {
         transform: translateY(-1px);
@@ -105,11 +113,18 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .overview-card .ov-val {
         font-size: .95rem;
         font-weight: 800;
         line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-variant-numeric: tabular-nums;
     }
     .overview-card .ov-sub {
         font-size: .62rem;
@@ -125,25 +140,25 @@
         display: inline-flex;
         align-items: center;
         background: #f1f5f9;
-        border: 1px solid #cbd5e1;
+        border: 1px solid #e2e8f0;
         border-radius: 20px;
         padding: 2px;
         box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
     }
     .btn-expense-mode {
-        border: none;
+        border: 1px solid transparent;
         outline: none;
         background: transparent;
         color: #64748b;
         font-size: .68rem;
         font-weight: 700;
-        padding: 3px 10px;
+        padding: 4px 10px;
         border-radius: 16px;
         cursor: pointer;
         transition: all 0.18s ease;
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
         white-space: nowrap;
         user-select: none;
     }
@@ -151,14 +166,343 @@
         color: #1e293b;
     }
     .btn-expense-mode.active-with {
-        background: #ffffff;
-        color: #dc2626 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        background: #ffe4e6;
+        color: #e11d48 !important;
+        border-color: #fecdd3;
+        box-shadow: 0 1px 2px rgba(225, 29, 72, 0.08);
     }
     .btn-expense-mode.active-without {
-        background: #ffffff;
+        background: #dcfce7;
         color: #059669 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        border-color: #bbf7d0;
+        box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08);
+    }
+
+    /* Executive & Modern Equity Ledger Styling */
+    .equity-main-card {
+        border-radius: 14px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        margin-bottom: 12px;
+    }
+
+    /* Row 1: Waterfall KPI Mini Cards Grid */
+    .waterfall-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    @media (max-width: 1399px) {
+        .waterfall-kpi-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 768px) {
+        .waterfall-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 480px) {
+        .waterfall-kpi-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .kpi-mini-card {
+        border-radius: 12px;
+        border: 1px solid;
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-width: 0;
+        min-height: 68px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .kpi-mini-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .kpi-mini-label {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 2px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .kpi-mini-val {
+        font-size: 14.5px;
+        font-weight: 800;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-variant-numeric: tabular-nums;
+    }
+    .kpi-mini-sub {
+        font-size: 9.5px;
+        font-weight: 600;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Row 2: Executive Summary Cards Grid */
+    .executive-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+    @media (max-width: 1199px) {
+        .executive-cards-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 576px) {
+        .executive-cards-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .executive-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 16px !important;
+        border: 1px solid;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 112px;
+        min-width: 0;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    }
+    .executive-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    .executive-watermark {
+        position: absolute;
+        right: 12px;
+        bottom: 6px;
+        font-size: 60px;
+        opacity: 0.11;
+        line-height: 1;
+        pointer-events: none;
+        z-index: 1;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .executive-card:hover .executive-watermark {
+        opacity: 0.18;
+        transform: scale(1.05);
+    }
+    .executive-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        z-index: 2;
+        margin-bottom: 6px;
+    }
+    .executive-icon-bubble {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        flex-shrink: 0;
+    }
+    .executive-action-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 1px solid rgba(0,0,0,0.06);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+    .executive-card-body {
+        position: relative;
+        z-index: 2;
+    }
+    .executive-card-label {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .executive-card-val {
+        font-size: clamp(18px, 1.4vw, 22px);
+        font-weight: 800;
+        line-height: 1.25;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-variant-numeric: tabular-nums;
+    }
+    .executive-card-sub {
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .executive-card-expenses {
+        background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+        border-color: #fecdd3;
+    }
+    .executive-card-netprofit {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border-color: #bae6fd;
+    }
+    .executive-card-partner1 {
+        background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+        border-color: #e9d5ff;
+    }
+    .executive-card-partner2 {
+        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+        border-color: #fed7aa;
+    }
+
+    /* Row 3: Discounts Breakdown Grid */
+    .discounts-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+    }
+    @media (max-width: 1199px) {
+        .discounts-cards-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 768px) {
+        .discounts-cards-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 480px) {
+        .discounts-cards-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .discount-tier-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 14px;
+        border: 1px solid;
+        padding: 12px 14px;
+        min-height: 96px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .discount-tier-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(0,0,0,0.05);
+    }
+    .discount-watermark {
+        position: absolute;
+        right: 8px;
+        bottom: 4px;
+        font-size: 50px;
+        opacity: 0.12;
+        line-height: 1;
+        pointer-events: none;
+        z-index: 1;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .discount-tier-card:hover .discount-watermark {
+        opacity: 0.20;
+        transform: scale(1.05);
+    }
+    .discount-tier-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        z-index: 2;
+        margin-bottom: 4px;
+    }
+    .discount-tier-label {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .discount-tier-val {
+        font-size: clamp(16px, 1.25vw, 19px);
+        font-weight: 800;
+        line-height: 1.25;
+        position: relative;
+        z-index: 2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-variant-numeric: tabular-nums;
+    }
+    .discount-tier-sub {
+        font-size: 10px;
+        font-weight: 600;
+        position: relative;
+        z-index: 2;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .discount-tier-total {
+        background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+        border-color: #fecdd3;
+    }
+    .discount-tier-medical {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-color: #bbf7d0;
+    }
+    .discount-tier-dist {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border-color: #bfdbfe;
+    }
+    .discount-tier-doctor {
+        background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+        border-color: #e9d5ff;
+    }
+    .discount-tier-other {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-color: #fde68a;
     }
 
     /* Mobile Cards Styling */
@@ -501,20 +845,20 @@
 
     {{-- SECTION 1: FINANCIAL PERFORMANCE & MARGINS --}}
     @can('profit.loss.cards.view')
-    <div class="card border-0 shadow-sm mb-2 no-print" style="border-radius: 10px; background: #ffffff;">
-        <div class="card-body p-2">
-            <div class="d-flex align-items-center justify-content-between mb-1.5 px-1 flex-wrap gap-2">
+    <div class="card border-0 shadow-sm mb-2 no-print equity-main-card">
+        <div class="card-body p-2.5 p-md-3">
+            <div class="d-flex align-items-center justify-content-between mb-2 px-1 flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="fw-bold text-dark" style="font-size: .76rem; letter-spacing: -0.1px;">
+                    <span class="fw-bold text-dark" style="font-size: .82rem; letter-spacing: -0.1px;">
                         <i class="fas fa-chart-line text-primary me-1.5"></i>Financial Performance
                     </span>
-                    <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
-                        Margin: <strong class="text-success" id="cardProfitMarginBadge">0.0%</strong>
+                    <span class="badge border px-2.5 py-1" style="background: #ecfdf5; color: #059669; border-color: #a7f3d0 !important; border-radius: 20px; font-size: 11px; font-weight: 700;">
+                        Margin: <strong id="cardProfitMarginBadge">0.0%</strong>
                     </span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="text-muted small d-none d-lg-inline" style="font-size: 11px;">
-                        <i class="fas fa-coins text-warning me-1"></i>Revenue, Cost & Profit
+                    <span class="text-muted small d-none d-lg-inline fw-semibold" style="font-size: 11px;">
+                        <i class="fas fa-trophy text-warning me-1"></i>Revenue, Cost &amp; Profit
                     </span>
                     {{-- Toggle: With Expenses vs Without Expenses --}}
                     <div class="expense-toggle-group" id="expenseToggleGroup" title="Toggle expenses deduction from Profit & Equity Share">
@@ -531,120 +875,154 @@
             </div>
 
             {{-- ROW 1: 8 Waterfall Operational KPI Cards (Matches Sale Screen Sequence) --}}
-            <div class="summary-pill-bar mb-2">
+            <div class="waterfall-kpi-grid">
                 {{-- 1. Gross Sales (TP) --}}
-                <div class="stat-pill" style="background: #f8fafc; border-color: #cbd5e1;">
-                    <div class="stat-label text-secondary"><i class="fas fa-file-invoice-dollar me-1"></i>Gross Sales (TP)</div>
-                    <div class="stat-val text-dark" id="cardRawGross">Rs 0</div>
-                    <div class="stat-sub text-muted" id="cardRawGrossSub">Billed Trade Price</div>
+                <div class="kpi-mini-card" style="background: #eff6ff; border-color: #bfdbfe;">
+                    <div class="kpi-mini-label" style="color: #2563eb;"><i class="fas fa-chart-column"></i>Gross Sales (TP)</div>
+                    <div class="kpi-mini-val text-dark" id="cardRawGross">Rs 0</div>
+                    <div class="kpi-mini-sub text-muted" id="cardRawGrossSub">Billed Trade Price</div>
                 </div>
 
                 {{-- 2. Sales Return --}}
-                <div class="stat-pill" style="background: #fef2f2; border-color: #fca5a5;">
-                    <div class="stat-label text-danger"><i class="fas fa-rotate-left me-1"></i>Sales Return</div>
-                    <div class="stat-val text-danger" id="cardSalesReturn">-Rs 0</div>
-                    <div class="stat-sub text-danger opacity-75" id="cardSalesReturnSub">Returns Deducted</div>
+                <div class="kpi-mini-card" style="background: #fff1f2; border-color: #fecdd3;">
+                    <div class="kpi-mini-label" style="color: #e11d48;"><i class="fas fa-rotate-left"></i>Sales Return</div>
+                    <div class="kpi-mini-val" style="color: #e11d48;" id="cardSalesReturn">-Rs 0</div>
+                    <div class="kpi-mini-sub" style="color: #f43f5e;" id="cardSalesReturnSub">Returns Deducted</div>
                 </div>
 
                 {{-- 3. Sale After Return (Audit Net) --}}
-                <div class="stat-pill" style="background: #eff6ff; border-color: #93c5fd;">
-                    <div class="stat-label text-primary"><i class="fas fa-balance-scale me-1"></i>Sale After Return</div>
-                    <div class="stat-val text-primary" id="cardAuditNet">Rs 0</div>
-                    <div class="stat-sub text-primary opacity-75" id="cardAuditNetSub">Audit Net · Gross - Return</div>
+                <div class="kpi-mini-card" style="background: #f0f9ff; border-color: #bae6fd;">
+                    <div class="kpi-mini-label" style="color: #0284c7;"><i class="fas fa-arrow-rotate-left"></i>Sale After Return</div>
+                    <div class="kpi-mini-val" style="color: #0369a1;" id="cardAuditNet">Rs 0</div>
+                    <div class="kpi-mini-sub" style="color: #0284c7;" id="cardAuditNetSub">Audit Ref · Gross - Return</div>
                 </div>
 
                 {{-- 4. Total Discount --}}
-                <div class="stat-pill" style="background: #fff1f2; border-color: #fecdd3;">
-                    <div class="stat-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</div>
-                    <div class="stat-val text-danger" id="cardTotalDiscountTop">-Rs 0</div>
-                    <div class="stat-sub text-danger opacity-75" id="cardTotalDiscountTopSub">All Deductions</div>
+                <div class="kpi-mini-card" style="background: #fff1f2; border-color: #fecdd3;">
+                    <div class="kpi-mini-label" style="color: #e11d48;"><i class="fas fa-percent"></i>Total Discount</div>
+                    <div class="kpi-mini-val" style="color: #e11d48;" id="cardTotalDiscountTop">-Rs 0</div>
+                    <div class="kpi-mini-sub" style="color: #f43f5e;" id="cardTotalDiscountTopSub">All Deductions</div>
                 </div>
 
                 {{-- 5. Net Revenue (Realized) --}}
-                <div class="stat-pill" style="background: #ecfdf5; border-color: #a7f3d0;">
-                    <div class="stat-label text-success"><i class="fas fa-receipt me-1"></i>Net Revenue</div>
-                    <div class="stat-val text-success" id="cardNetRevenue">Rs 0</div>
-                    <div class="stat-sub text-success opacity-75" id="cardNetRevenueSub">Realized (Net - Return)</div>
+                <div class="kpi-mini-card" style="background: #f0fdf4; border-color: #bbf7d0;">
+                    <div class="kpi-mini-label" style="color: #059669;"><i class="fas fa-chart-line"></i>Net Revenue</div>
+                    <div class="kpi-mini-val" style="color: #059669;" id="cardNetRevenue">Rs 0</div>
+                    <div class="kpi-mini-sub" style="color: #059669;" id="cardNetRevenueSub">Realized (Net. Return)</div>
                 </div>
 
                 {{-- 6. Total COGS --}}
-                <div class="stat-pill" style="background: #fffbeb; border-color: #fde68a;">
-                    <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-boxes-stacked me-1"></i>Total COGS</div>
-                    <div class="stat-val" style="color: #b45309;" id="cardCOGS">Rs 0</div>
-                    <div class="stat-sub" style="color: #d97706;">Product Cost</div>
+                <div class="kpi-mini-card" style="background: #fffbeb; border-color: #fde68a;">
+                    <div class="kpi-mini-label" style="color: #d97706;"><i class="fas fa-boxes-stacked"></i>Total COGS</div>
+                    <div class="kpi-mini-val" style="color: #b45309;" id="cardCOGS">Rs 0</div>
+                    <div class="kpi-mini-sub" style="color: #d97706;">Product Cost</div>
                 </div>
 
                 {{-- 7. Bonus Amount --}}
-                <div class="stat-pill" style="background: #fffbeb; border-color: #f59e0b;">
-                    <div class="stat-label" style="color: #d97706 !important;"><i class="fas fa-gift me-1"></i>Bonus Amount</div>
-                    <div class="stat-val" style="color: #b45309;" id="cardBonusAmount">Rs 0</div>
-                    <div class="stat-sub" style="color: #d97706;" id="cardBonusAmountSub">At Base Price</div>
+                <div class="kpi-mini-card" style="background: #fff7ed; border-color: #fed7aa;">
+                    <div class="kpi-mini-label" style="color: #ea580c;"><i class="fas fa-gift"></i>Bonus Amount</div>
+                    <div class="kpi-mini-val" style="color: #c2410c;" id="cardBonusAmount">Rs 0</div>
+                    <div class="kpi-mini-sub" style="color: #ea580c;" id="cardBonusAmountSub">At Base Price</div>
                 </div>
 
-                {{-- 7b. WOS (Worth of Samples) --}}
-                <div class="stat-pill" style="background: #faf5ff; border-color: #ddd6fe;" id="cardWosBox">
-                    <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-vial me-1"></i>WOS (Samples)</div>
-                    <div class="stat-val" style="color: #6d28d9;" id="cardWosAmount">Rs 0</div>
-                    <div class="stat-sub opacity-75" style="color: #7c3aed;" id="cardWosAmountSub">0 Pcs (At Cost)</div>
+                {{-- 8. WOS (Worth of Samples) --}}
+                <div class="kpi-mini-card" style="background: #faf5ff; border-color: #e9d5ff;" id="cardWosBox">
+                    <div class="kpi-mini-label" style="color: #7c3aed;"><i class="fas fa-arrow-trend-up"></i>WOS (Samples)</div>
+                    <div class="kpi-mini-val" style="color: #6d28d9;" id="cardWosAmount">Rs 0</div>
+                    <div class="kpi-mini-sub" style="color: #7c3aed;" id="cardWosAmountSub">0 Pcs (At Cost)</div>
                 </div>
 
-                {{-- 8. Gross Profit --}}
-                <div class="stat-pill" style="background: #f0fdf4; border-color: #86efac;" id="cardGrossProfitBox">
-                    <div class="stat-label text-success" id="cardGrossProfitLabel"><i class="fas fa-arrow-trend-up me-1"></i>Gross Profit</div>
-                    <div class="stat-val text-success" id="cardGrossProfit">Rs 0</div>
-                    <div class="stat-sub text-success" id="cardGrossProfitSub">Revenue - COGS - Bonus</div>
+                {{-- Hidden Gross Profit element for JS safety --}}
+                <div id="cardGrossProfitBox" style="display: none !important;">
+                    <span id="cardGrossProfitLabel">Gross Profit</span>
+                    <span id="cardGrossProfit">Rs 0</span>
+                    <span id="cardGrossProfitSub">Revenue - COGS - Bonus</span>
                 </div>
             </div>
 
-            {{-- ROW 2: Bottom Line & Partner Equity Distribution Strip (Eliminates horizontal scrolling) --}}
-            <div class="row g-2 pt-2 border-top align-items-stretch">
+            {{-- ROW 2: 4 Executive Summary Cards --}}
+            <div class="executive-cards-grid pt-1 border-top" style="border-color: #f1f5f9 !important;">
                 {{-- 9. Total Expenses --}}
-                <div class="col-6 col-md-3">
-                    <div class="stat-pill h-100 d-flex flex-column justify-content-center" style="background: #fef2f2; border-color: #fca5a5;" id="cardExpensesBox">
-                        <div class="stat-label text-danger mb-1" id="cardExpensesLabel" style="font-size: .68rem;"><i class="fas fa-arrow-trend-down me-1"></i>Expenses</div>
-                        <div class="stat-val text-danger fw-bold" id="cardExpenses" style="font-size: 1.08rem;">Rs 0</div>
-                        <div class="stat-sub text-danger opacity-75 mt-0.5" id="cardExpensesSub">Operating Costs</div>
+                <div class="executive-card executive-card-expenses" id="cardExpensesBox">
+                    <i class="fas fa-sack-dollar executive-watermark" style="color: #e11d48;"></i>
+                    <div class="executive-card-top">
+                        <div class="executive-icon-bubble" style="background: #fee2e2; color: #dc2626;">
+                            <i class="fas fa-sack-dollar"></i>
+                        </div>
+                        <div class="executive-action-btn" style="color: #f43f5e;">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="executive-card-body">
+                        <div class="executive-card-label" id="cardExpensesLabel" style="color: #e11d48;">EXPENSES</div>
+                        <div class="executive-card-val" id="cardExpenses" style="color: #dc2626;">Rs 0</div>
+                        <div class="executive-card-sub" id="cardExpensesSub" style="color: #f43f5e;">Operating Costs</div>
                     </div>
                 </div>
 
                 {{-- 10. Net Profit / Loss --}}
-                <div class="col-6 col-md-3">
-                    <div class="stat-pill h-100 d-flex flex-column justify-content-center" style="background: #f0f9ff; border-color: #bae6fd;" id="cardNetProfitBox">
-                        <div class="stat-label text-primary mb-1" id="cardNetProfitLabel" style="font-size: .68rem;"><i class="fas fa-chart-line me-1"></i>Net Profit / Loss</div>
-                        <div class="stat-val text-primary fw-bold" id="cardNetProfit" style="font-size: 1.08rem;">Rs 0</div>
-                        <div class="stat-sub text-primary opacity-75 mt-0.5" id="cardNetProfitSub">Bottom Line</div>
+                <div class="executive-card executive-card-netprofit" id="cardNetProfitBox">
+                    <i class="fas fa-chart-column executive-watermark" style="color: #0284c7;"></i>
+                    <div class="executive-card-top">
+                        <div class="executive-icon-bubble" style="background: #dbeafe; color: #0284c7;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="executive-action-btn" style="color: #0284c7;">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="executive-card-body">
+                        <div class="executive-card-label" id="cardNetProfitLabel" style="color: #0284c7;">NET PROFIT / LOSS</div>
+                        <div class="executive-card-val" id="cardNetProfit" style="color: #0284c7;">Rs 0</div>
+                        <div class="executive-card-sub" id="cardNetProfitSub" style="color: #0284c7;">Bottom Line</div>
                     </div>
                 </div>
 
                 {{-- 11. Partner 1 Equity Share --}}
-                <div class="col-6 col-md-3">
-                    <div class="stat-pill h-100 d-flex flex-column justify-content-center" style="background: #faf5ff; border-color: #d8b4fe;" id="cardPartner1Box">
-                        <div class="stat-label d-flex align-items-center justify-content-center gap-1 mb-1" style="color: #7c3aed; font-size: .68rem;">
-                            <i class="fas fa-user-tie"></i>
-                            <span class="fw-bold">Partner 1</span>
-                            <span class="d-inline-flex align-items-center bg-white px-1.5 py-0.5 rounded border shadow-2xs" style="border-color: #d8b4fe !important; height: 19px;">
-                                <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 32px; font-size: 11px; outline: none; color: #7c3aed; background: transparent;" title="Click to adjust %">
+                <div class="executive-card executive-card-partner1" id="cardPartner1Box">
+                    <i class="fas fa-users executive-watermark" style="color: #7c3aed;"></i>
+                    <div class="executive-card-top">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="executive-icon-bubble" style="background: #ede9fe; color: #7c3aed;">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <span class="executive-card-label" style="color: #7c3aed;">PARTNER</span>
+                            <span class="d-inline-flex align-items-center bg-white px-2 py-0.5 rounded-pill border shadow-2xs" style="border-color: #d8b4fe !important; height: 22px;">
+                                <input type="number" class="partner1-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 26px; font-size: 11px; outline: none; color: #7c3aed; background: transparent;" title="Click to adjust %">
                                 <span style="font-size: 10px; font-weight: 700; color: #7c3aed;">%</span>
                             </span>
                         </div>
-                        <div class="stat-val fw-bold" style="color: #7c3aed; font-size: 1.08rem;" id="cardPartner1Profit">Rs 0</div>
-                        <div class="stat-sub mt-0.5" style="color: #7c3aed;" id="cardPartner1ProfitSub">Equity Share</div>
+                        <div class="executive-action-btn" style="color: #7c3aed;">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="executive-card-body">
+                        <div class="executive-card-val" id="cardPartner1Profit" style="color: #7c3aed;">Rs 0</div>
+                        <div class="executive-card-sub" id="cardPartner1ProfitSub" style="color: #7c3aed;">Equity Share</div>
                     </div>
                 </div>
 
                 {{-- 12. Partner 2 Equity Share --}}
-                <div class="col-6 col-md-3">
-                    <div class="stat-pill h-100 d-flex flex-column justify-content-center" style="background: #fff7ed; border-color: #fed7aa;" id="cardPartner2Box">
-                        <div class="stat-label d-flex align-items-center justify-content-center gap-1 mb-1" style="color: #ea580c; font-size: .68rem;">
-                            <i class="fas fa-user-tie"></i>
-                            <span class="fw-bold">Partner 2</span>
-                            <span class="d-inline-flex align-items-center bg-white px-1.5 py-0.5 rounded border shadow-2xs" style="border-color: #fed7aa !important; height: 19px;">
-                                <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 32px; font-size: 11px; outline: none; color: #ea580c; background: transparent;" title="Click to adjust %">
+                <div class="executive-card executive-card-partner2" id="cardPartner2Box">
+                    <i class="fas fa-handshake executive-watermark" style="color: #ea580c;"></i>
+                    <div class="executive-card-top">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="executive-icon-bubble" style="background: #ffedd5; color: #ea580c;">
+                                <i class="fas fa-handshake"></i>
+                            </div>
+                            <span class="executive-card-label" style="color: #ea580c;">PARTNER</span>
+                            <span class="d-inline-flex align-items-center bg-white px-2 py-0.5 rounded-pill border shadow-2xs" style="border-color: #fed7aa !important; height: 22px;">
+                                <input type="number" class="partner2-pct-input border-0 text-center fw-bold p-0" value="50" min="0" max="100" step="any" style="width: 26px; font-size: 11px; outline: none; color: #ea580c; background: transparent;" title="Click to adjust %">
                                 <span style="font-size: 10px; font-weight: 700; color: #ea580c;">%</span>
                             </span>
                         </div>
-                        <div class="stat-val fw-bold" style="color: #ea580c; font-size: 1.08rem;" id="cardPartner2Profit">Rs 0</div>
-                        <div class="stat-sub mt-0.5" style="color: #ea580c;" id="cardPartner2ProfitSub">Equity Share</div>
+                        <div class="executive-action-btn" style="color: #ea580c;">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    <div class="executive-card-body">
+                        <div class="executive-card-val" id="cardPartner2Profit" style="color: #ea580c;">Rs 0</div>
+                        <div class="executive-card-sub" id="cardPartner2ProfitSub" style="color: #ea580c;">Equity Share</div>
                     </div>
                 </div>
             </div>
@@ -654,76 +1032,72 @@
 
     {{-- SECTION 2: DISCOUNTS & TIER SUBSIDIES BREAKDOWN --}}
     @can('profit.loss.discounts.view')
-    <div class="card border-0 shadow-sm mb-2 no-print" style="border-radius: 10px; background: #ffffff;">
-        <div class="card-body p-2">
-            <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fw-bold text-dark" style="font-size: .76rem; letter-spacing: -0.1px;">
-                        <i class="fas fa-percent text-danger me-1.5"></i>Discounts & Tier Subsidies Breakdown
+    <div class="card border-0 shadow-sm mb-2 no-print equity-main-card">
+        <div class="card-body p-2.5 p-md-3">
+            <div class="d-flex align-items-center justify-content-between mb-2 px-1 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-bold text-dark" style="font-size: .82rem; letter-spacing: -0.1px;">
+                        <i class="fas fa-percent text-danger me-1.5"></i>Discounts &amp; Tier Subsidies Breakdown
                     </span>
-                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5" style="font-size: 10px;">
+                    <span class="badge border px-2.5 py-1" style="background: #ffe4e6; color: #e11d48; border-color: #fecdd3 !important; border-radius: 20px; font-size: 11px; font-weight: 700;">
                         Total Discounts: <strong id="cardTotalDiscountHeader">Rs 0</strong>
                     </span>
                 </div>
-                <span class="text-muted small d-none d-md-inline" style="font-size: 11px;">
-                    <i class="fas fa-filter text-primary me-1"></i>Recalculates per Zone / Customer filter
+                <span class="text-primary small d-none d-md-inline fw-semibold" style="font-size: 11px;">
+                    <i class="fas fa-filter text-primary me-1"></i>Recalculates
                 </span>
             </div>
 
-            <div class="row g-2">
-                {{-- Total Discount --}}
-                <div class="col-6 col-md">
-                    <div class="overview-card" style="background: #fef2f2; border-color: #fca5a5;">
-                        <div class="ov-header">
-                            <span class="ov-label text-danger"><i class="fas fa-tags me-1"></i>Total Discount</span>
-                        </div>
-                        <div class="ov-val text-danger" id="cardTotalDiscount">Rs 0</div>
-                        <div class="ov-sub text-danger opacity-75" id="cardTotalDiscountSub">All Deductions</div>
+            <div class="discounts-cards-grid">
+                {{-- 1. Total Discount --}}
+                <div class="discount-tier-card discount-tier-total">
+                    <i class="fas fa-tags discount-watermark" style="color: #e11d48;"></i>
+                    <div class="discount-tier-header">
+                        <span class="discount-tier-label" style="color: #e11d48;"><i class="fas fa-tags"></i> TOTAL DISCOUNT</span>
+                        <i class="fas fa-chevron-right" style="color: #f43f5e; font-size: 11px; opacity: 0.7;"></i>
                     </div>
+                    <div class="discount-tier-val" style="color: #e11d48;" id="cardTotalDiscount">Rs 0</div>
+                    <div class="discount-tier-sub" style="color: #e11d48;" id="cardTotalDiscountSub">All Deductions</div>
                 </div>
 
-                {{-- Medical Store Discount --}}
-                <div class="col-6 col-md">
-                    <div class="overview-card" style="background: #ecfdf5; border-color: #a7f3d0;">
-                        <div class="ov-header">
-                            <span class="ov-label text-success"><i class="fas fa-prescription-bottle-medical me-1"></i>Medical Store</span>
-                        </div>
-                        <div class="ov-val text-success" id="cardMedicalDiscount">Rs 0</div>
-                        <div class="ov-sub text-success opacity-75">Pharmacy Tier Subsidies</div>
+                {{-- 2. Medical Store Discount --}}
+                <div class="discount-tier-card discount-tier-medical">
+                    <i class="fas fa-capsules discount-watermark" style="color: #059669;"></i>
+                    <div class="discount-tier-header">
+                        <span class="discount-tier-label" style="color: #059669;"><i class="fas fa-capsules"></i> MEDICAL STORE</span>
                     </div>
+                    <div class="discount-tier-val" style="color: #059669;" id="cardMedicalDiscount">Rs 0</div>
+                    <div class="discount-tier-sub" style="color: #059669;">Pharmacy Tier Subsidies</div>
                 </div>
 
-                {{-- Distribution Discount --}}
-                <div class="col-6 col-md">
-                    <div class="overview-card" style="background: #eff6ff; border-color: #bfdbfe;">
-                        <div class="ov-header">
-                            <span class="ov-label text-primary"><i class="fas fa-truck-fast me-1"></i>Distribution</span>
-                        </div>
-                        <div class="ov-val text-primary" id="cardDistDiscount">Rs 0</div>
-                        <div class="ov-sub text-primary opacity-75">Wholesale Tier Subsidies</div>
+                {{-- 3. Distribution Discount --}}
+                <div class="discount-tier-card discount-tier-dist">
+                    <i class="fas fa-truck-fast discount-watermark" style="color: #2563eb;"></i>
+                    <div class="discount-tier-header">
+                        <span class="discount-tier-label" style="color: #2563eb;"><i class="fas fa-truck-fast"></i> DISTRIBUTION</span>
                     </div>
+                    <div class="discount-tier-val" style="color: #2563eb;" id="cardDistDiscount">Rs 0</div>
+                    <div class="discount-tier-sub" style="color: #2563eb;">Wholesale Tier Subsidies</div>
                 </div>
 
-                {{-- Doctor Discount --}}
-                <div class="col-6 col-md">
-                    <div class="overview-card" style="background: #faf5ff; border-color: #e9d5ff;">
-                        <div class="ov-header">
-                            <span class="ov-label" style="color: #7c3aed;"><i class="fas fa-user-doctor me-1"></i>Doctor / Clinic</span>
-                        </div>
-                        <div class="ov-val" style="color: #7c3aed;" id="cardDoctorDiscount">Rs 0</div>
-                        <div class="ov-sub" style="color: #7c3aed; opacity: 0.75;">Practitioner Concessions</div>
+                {{-- 4. Doctor Discount --}}
+                <div class="discount-tier-card discount-tier-doctor">
+                    <i class="fas fa-user-doctor discount-watermark" style="color: #7c3aed;"></i>
+                    <div class="discount-tier-header">
+                        <span class="discount-tier-label" style="color: #7c3aed;"><i class="fas fa-user-doctor"></i> DOCTOR / CLINIC</span>
                     </div>
+                    <div class="discount-tier-val" style="color: #7c3aed;" id="cardDoctorDiscount">Rs 0</div>
+                    <div class="discount-tier-sub" style="color: #7c3aed;">Practitioner Concessions</div>
                 </div>
 
-                {{-- Other / Extra Discount --}}
-                <div class="col-6 col-md">
-                    <div class="overview-card" style="background: #fffbeb; border-color: #fde68a;">
-                        <div class="ov-header">
-                            <span class="ov-label" style="color: #b45309;"><i class="fas fa-file-invoice-dollar me-1"></i>Extra / Other</span>
-                        </div>
-                        <div class="ov-val" style="color: #b45309;" id="cardOtherDiscount">Rs 0</div>
-                        <div class="ov-sub" style="color: #b45309; opacity: 0.75;">Invoice & Manual Extra</div>
+                {{-- 5. Other / Extra Discount --}}
+                <div class="discount-tier-card discount-tier-other">
+                    <i class="fas fa-gift discount-watermark" style="color: #b45309;"></i>
+                    <div class="discount-tier-header">
+                        <span class="discount-tier-label" style="color: #b45309;"><i class="fas fa-gift"></i> EXTRA / OTHER</span>
                     </div>
+                    <div class="discount-tier-val" style="color: #b45309;" id="cardOtherDiscount">Rs 0</div>
+                    <div class="discount-tier-sub" style="color: #b45309;">Invoice &amp; Manual</div>
                 </div>
             </div>
         </div>
