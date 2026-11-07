@@ -522,6 +522,9 @@ Route::middleware('auth')->group(function () {
     Route::get('report/product-sale-customer-wise', [ReportingController::class, 'product_sale_customer_wise_report'])->middleware('permission:sale.report.view')->name('report.product_sale_customer_wise');
     Route::get('report/product-sale-customer-wise/fetch', [ReportingController::class, 'fetchProductSaleCustomerWise'])->middleware('permission:sale.report.view')->name('report.product_sale_customer_wise.fetch');
 
+    Route::get('report/product-movement', [ReportingController::class, 'product_movement_report'])->middleware('permission:sale.report.view')->name('report.product_movement');
+    Route::match(['get', 'post'], 'report/product-movement/fetch', [ReportingController::class, 'fetchProductMovement'])->middleware('permission:sale.report.view')->name('report.product_movement.fetch');
+
     Route::get('report/customer/ledger', [ReportingController::class, 'customer_ledger_report'])->middleware('permission:customer.ledger.view')->name('report.customer.ledger');
     Route::get('report/customer-ledger/fetch', [ReportingController::class, 'fetch_customer_ledger'])->middleware('permission:customer.ledger.view')->name('report.customer.ledger.fetch');
 

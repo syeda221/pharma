@@ -4083,4 +4083,368 @@ class ReportingController extends Controller
             'customers' => array_values($grouped)
         ]);
     }
+
+    /**
+     * Product Movement (Sales, Bonus, & Returns) Report View
+     */
+    public function product_movement_report(Request $request)
+    {
+        $customers  = \App\Models\Customer::orderBy('customer_name')->get();
+        $products   = \App\Models\Product::orderBy('item_name')->get();
+        $categories = \App\Models\Category::orderBy('name')->get();
+        $brands     = \App\Models\Brand::orderBy('name')->get();
+        $zones      = \App\Models\Zone::orderBy('zone')->get();
+
+        return view('admin_panel.reporting.product_movement_report', compact('customers', 'products', 'categories', 'brands', 'zones'));
+    }
+
+    /**
+     * Fetch Product Movement (Sales, Bonus, Returns & Net Realized) Data
+     */
+    public function fetchProductMovement(Request $request)
+    {
+        $fromDate   = $request->from_date;
+        $toDate     = $request->to_date;
+        $returnMode = $request->input('return_mode', 'sale_date'); // 'sale_date' (Audit Mode) or 'transaction_date' (Accounts Mode)
+
+        // Normalize filters into arrays for Multi-Select support
+        $customerIds = is_array($request->customer_id) ? $request->customer_id : ($request->customer_id && $request->customer_id !== 'all' ? [$request->customer_id] : []);
+        $productIds  = is_array($request->product_id) ? $request->product_id : ($request->product_id && $request->product_id !== 'all' ? [$request->product_id] : []);
+        $categoryIds = is_array($request->category_id) ? $request->category_id : ($request->category_id && $request->category_id !== 'all' ? [$request->category_id] : []);
+        $brandIds    = is_array($request->brand_id) ? $request->brand_id : ($request->brand_id && $request->brand_id !== 'all' ? [$request->brand_id] : []);
+        $zoneIds     = is_array($request->zone_id) ? $request->zone_id : ($request->zone_id && $request->zone_id !== 'all' ? [$request->zone_id] : []);
+
+        $customerIds = array_filter($customerIds, fn($v) => $v !== 'all' && !empty($v));
+        $productIds  = array_filter($productIds, fn($v) => $v !== 'all' && !empty($v));
+        $categoryIds = array_filter($categoryIds, fn($v) => $v !== 'all' && !empty($v));
+        $brandIds    = array_filter($brandIds, fn($v) => $v !== 'all' && !empty($v));
+        $zoneIds     = array_filter($zoneIds, fn($v) => $v !== 'all' && !empty($v));
+
+        // 1. Query Sales Items
+        $salesQuery = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->leftJoin('customers', 'sales.customer_id', '=', 'customers.id')
+            ->leftJoin('products', 'sale_items.product_id', '=', 'products.id')
+            ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->whereIn('sales.sale_status', ['posted', 'completed', 'booked'])
+            ->select(
+                'sale_items.product_id',
+                DB::raw("COALESCE(products.item_code, 'MANUAL') as item_code"),
+                DB::raw("COALESCE(sale_items.product_name, products.item_name) as product_name"),
+                DB::raw("COALESCE(brands.name, '-') as brand_name"),
+                DB::raw("COALESCE(categories.name, '-') as category_name"),
+                DB::raw("COALESCE(products.pieces_per_box, 0) as pieces_per_box"),
+                DB::raw("SUM(sale_items.qty) as sold_qty"),
+                DB::raw("SUM(COALESCE(sale_items.bonus_qty, 0)) as bonus_qty"),
+                DB::raw("SUM(sale_items.total_pieces) as total_dispatched"),
+                DB::raw("SUM(sale_items.qty * COALESCE(sale_items.price, 0)) as gross_amount"),
+                DB::raw("SUM(COALESCE(sale_items.discount_amount, 0)) as discount_amount"),
+                DB::raw("SUM(sale_items.total) as net_amount"),
+                DB::raw("COUNT(DISTINCT sales.id) as invoice_count")
+            );
+
+        if ($fromDate) {
+            $salesQuery->whereDate('sales.created_at', '>=', $fromDate);
+        }
+        if ($toDate) {
+            $salesQuery->whereDate('sales.created_at', '<=', $toDate);
+        }
+        if (!empty($zoneIds)) {
+            $salesQuery->whereIn('customers.zone', $zoneIds);
+        }
+        if (!empty($customerIds)) {
+            $salesQuery->whereIn('sales.customer_id', $customerIds);
+        }
+        if (!empty($productIds)) {
+            $salesQuery->whereIn('sale_items.product_id', $productIds);
+        }
+        if (!empty($categoryIds)) {
+            $salesQuery->whereIn('products.category_id', $categoryIds);
+        }
+        if (!empty($brandIds)) {
+            $salesQuery->whereIn('products.brand_id', $brandIds);
+        }
+
+        $salesData = $salesQuery->groupBy(
+            'sale_items.product_id',
+            'products.item_code',
+            'sale_items.product_name',
+            'products.item_name',
+            'brands.name',
+            'categories.name',
+            'products.pieces_per_box'
+        )->get();
+
+        // 2. Query Return Items
+        $returnQuery = DB::table('sale_return_items')
+            ->join('sale_returns', 'sale_return_items.sale_return_id', '=', 'sale_returns.id')
+            ->leftJoin('sales', 'sale_returns.sale_id', '=', 'sales.id')
+            ->leftJoin('customers', 'sale_returns.customer_id', '=', 'customers.id')
+            ->leftJoin('products', 'sale_return_items.product_id', '=', 'products.id')
+            ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->whereIn('sale_returns.status', ['approved', 'posted', 'completed'])
+            ->select(
+                'sale_return_items.product_id',
+                DB::raw("COALESCE(products.item_code, 'MANUAL') as item_code"),
+                DB::raw("COALESCE(sale_return_items.product_name, products.item_name) as product_name"),
+                DB::raw("COALESCE(brands.name, '-') as brand_name"),
+                DB::raw("COALESCE(categories.name, '-') as category_name"),
+                DB::raw("COALESCE(products.pieces_per_box, 0) as pieces_per_box"),
+                DB::raw("SUM(COALESCE(sale_return_items.qty, 0)) as return_sold_qty"),
+                DB::raw("SUM(COALESCE(sale_return_items.bonus_qty, 0)) as return_bonus_qty"),
+                DB::raw("SUM(COALESCE(sale_return_items.qty, 0) + COALESCE(sale_return_items.bonus_qty, 0)) as total_return_qty"),
+                DB::raw("SUM(sale_return_items.qty * COALESCE(sale_return_items.price, 0)) as return_gross_amount"),
+                DB::raw("SUM(COALESCE(sale_return_items.item_discount, 0)) as return_discount_amount"),
+                DB::raw("SUM(sale_return_items.line_total) as return_net_amount"),
+                DB::raw("COUNT(DISTINCT sale_returns.id) as return_invoice_count")
+            );
+
+        if ($returnMode === 'sale_date') {
+            if ($fromDate && $toDate) {
+                $returnQuery->where(function($q) use ($fromDate, $toDate) {
+                    $q->where(function($sq) use ($fromDate, $toDate) {
+                        $sq->whereNotNull('sale_returns.sale_id')
+                           ->whereBetween(DB::raw('DATE(sales.created_at)'), [$fromDate, $toDate]);
+                    })->orWhere(function($sq) use ($fromDate, $toDate) {
+                        $sq->whereNull('sale_returns.sale_id')
+                           ->whereBetween(DB::raw('COALESCE(sale_returns.return_date, DATE(sale_returns.created_at))'), [$fromDate, $toDate]);
+                    });
+                });
+            } elseif ($fromDate) {
+                $returnQuery->where(function($q) use ($fromDate) {
+                    $q->where(function($sq) use ($fromDate) {
+                        $sq->whereNotNull('sale_returns.sale_id')->whereDate('sales.created_at', '>=', $fromDate);
+                    })->orWhere(function($sq) use ($fromDate) {
+                        $sq->whereNull('sale_returns.sale_id')->where(DB::raw('COALESCE(sale_returns.return_date, DATE(sale_returns.created_at))'), '>=', $fromDate);
+                    });
+                });
+            } elseif ($toDate) {
+                $returnQuery->where(function($q) use ($toDate) {
+                    $q->where(function($sq) use ($toDate) {
+                        $sq->whereNotNull('sale_returns.sale_id')->whereDate('sales.created_at', '<=', $toDate);
+                    })->orWhere(function($sq) use ($toDate) {
+                        $sq->whereNull('sale_returns.sale_id')->where(DB::raw('COALESCE(sale_returns.return_date, DATE(sale_returns.created_at))'), '<=', $toDate);
+                    });
+                });
+            }
+        } else {
+            if ($fromDate) {
+                $returnQuery->where(DB::raw('COALESCE(sale_returns.return_date, DATE(sale_returns.created_at))'), '>=', $fromDate);
+            }
+            if ($toDate) {
+                $returnQuery->where(DB::raw('COALESCE(sale_returns.return_date, DATE(sale_returns.created_at))'), '<=', $toDate);
+            }
+        }
+
+        if (!empty($zoneIds)) {
+            $returnQuery->whereIn('customers.zone', $zoneIds);
+        }
+        if (!empty($customerIds)) {
+            $returnQuery->whereIn('sale_returns.customer_id', $customerIds);
+        }
+        if (!empty($productIds)) {
+            $returnQuery->whereIn('sale_return_items.product_id', $productIds);
+        }
+        if (!empty($categoryIds)) {
+            $returnQuery->whereIn('products.category_id', $categoryIds);
+        }
+        if (!empty($brandIds)) {
+            $returnQuery->whereIn('products.brand_id', $brandIds);
+        }
+
+        $returnsData = $returnQuery->groupBy(
+            'sale_return_items.product_id',
+            'products.item_code',
+            'sale_return_items.product_name',
+            'products.item_name',
+            'brands.name',
+            'categories.name',
+            'products.pieces_per_box'
+        )->get();
+
+        // 3. Merge Sales & Returns
+        $returnsMap = [];
+        foreach ($returnsData as $r) {
+            $pId = $r->product_id ?: ('MANUAL_' . $r->product_name);
+            $returnsMap[$pId] = $r;
+        }
+
+        $productsResult = [];
+        $processedReturnKeys = [];
+
+        $grandSold = 0;
+        $grandBonus = 0;
+        $grandDispatched = 0;
+        $grandRetSold = 0;
+        $grandRetBonus = 0;
+        $grandRetTotal = 0;
+        $grandNetSold = 0;
+        $grandNetBonus = 0;
+        $grandNetDelivered = 0;
+        $grandGross = 0;
+        $grandDiscount = 0;
+        $grandRetAmount = 0;
+        $grandNetRevenue = 0;
+        $grandInvoices = 0;
+
+        foreach ($salesData as $s) {
+            $pId = $s->product_id ?: ('MANUAL_' . $s->product_name);
+            $r = $returnsMap[$pId] ?? null;
+            $processedReturnKeys[$pId] = true;
+
+            $soldQty = (float) $s->sold_qty;
+            $bonusQty = (float) $s->bonus_qty;
+            $dispatchedQty = (float) $s->total_dispatched;
+
+            $retSold = $r ? (float) $r->return_sold_qty : 0;
+            $retBonus = $r ? (float) $r->return_bonus_qty : 0;
+            $retTotal = $r ? (float) $r->total_return_qty : 0;
+
+            $netSold = $soldQty - $retSold;
+            $netBonus = $bonusQty - $retBonus;
+            $netDelivered = $netSold + $netBonus;
+
+            $grossAmt = (float) $s->gross_amount;
+            $discAmt = (float) $s->discount_amount;
+            $retAmt = $r ? (float) $r->return_net_amount : 0;
+            $netRev = max(0, $grossAmt - $discAmt - $retAmt);
+
+            $ppb = (int) ($s->pieces_per_box ?? 0);
+            if ($ppb > 0) {
+                $ctn = floor($netDelivered / $ppb);
+                $loose = $netDelivered % $ppb;
+                $cartonDisplay = $ctn > 0 ? ($loose > 0 ? "{$ctn} Ctn . {$loose} Pcs" : "{$ctn} Cartons") : "{$loose} Pcs";
+            } else {
+                $cartonDisplay = "{$netDelivered} Pcs";
+            }
+
+            $bonusRatio = $soldQty > 0 ? round(($bonusQty / $soldQty) * 100, 1) : 0;
+            $returnRatio = $dispatchedQty > 0 ? round(($retTotal / $dispatchedQty) * 100, 1) : 0;
+            $avgPrice = $soldQty > 0 ? round($grossAmt / $soldQty, 2) : 0;
+
+            $productsResult[] = [
+                'product_id'        => $s->product_id,
+                'item_code'         => $s->item_code,
+                'product_name'      => $s->product_name,
+                'brand_name'        => $s->brand_name,
+                'category_name'     => $s->category_name,
+                'pieces_per_box'    => $ppb,
+                'sold_qty'          => $soldQty,
+                'bonus_qty'         => $bonusQty,
+                'total_dispatched'  => $dispatchedQty,
+                'return_sold_qty'   => $retSold,
+                'return_bonus_qty'  => $retBonus,
+                'total_return_qty'  => $retTotal,
+                'net_sold_qty'      => $netSold,
+                'net_bonus_qty'     => $netBonus,
+                'net_delivered_qty' => $netDelivered,
+                'carton_display'    => $cartonDisplay,
+                'bonus_ratio'       => $bonusRatio,
+                'return_ratio'      => $returnRatio,
+                'avg_price'         => $avgPrice,
+                'gross_amount'      => $grossAmt,
+                'discount_amount'   => $discAmt,
+                'return_amount'     => $retAmt,
+                'net_revenue'       => $netRev,
+                'invoice_count'     => (int) $s->invoice_count,
+            ];
+
+            $grandSold += $soldQty;
+            $grandBonus += $bonusQty;
+            $grandDispatched += $dispatchedQty;
+            $grandRetSold += $retSold;
+            $grandRetBonus += $retBonus;
+            $grandRetTotal += $retTotal;
+            $grandNetSold += $netSold;
+            $grandNetBonus += $netBonus;
+            $grandNetDelivered += $netDelivered;
+            $grandGross += $grossAmt;
+            $grandDiscount += $discAmt;
+            $grandRetAmount += $retAmt;
+            $grandNetRevenue += $netRev;
+            $grandInvoices += (int) $s->invoice_count;
+        }
+
+        // Include returns with zero sales in period
+        foreach ($returnsMap as $pId => $r) {
+            if (isset($processedReturnKeys[$pId])) continue;
+
+            $retSold = (float) $r->return_sold_qty;
+            $retBonus = (float) $r->return_bonus_qty;
+            $retTotal = (float) $r->total_return_qty;
+            $retAmt = (float) $r->return_net_amount;
+
+            $netSold = -$retSold;
+            $netBonus = -$retBonus;
+            $netDelivered = -$retTotal;
+
+            $ppb = (int) ($r->pieces_per_box ?? 0);
+            $cartonDisplay = "{$netDelivered} Pcs";
+
+            $productsResult[] = [
+                'product_id'        => $r->product_id,
+                'item_code'         => $r->item_code,
+                'product_name'      => $r->product_name,
+                'brand_name'        => $r->brand_name,
+                'category_name'     => $r->category_name,
+                'pieces_per_box'    => $ppb,
+                'sold_qty'          => 0,
+                'bonus_qty'         => 0,
+                'total_dispatched'  => 0,
+                'return_sold_qty'   => $retSold,
+                'return_bonus_qty'  => $retBonus,
+                'total_return_qty'  => $retTotal,
+                'net_sold_qty'      => $netSold,
+                'net_bonus_qty'     => $netBonus,
+                'net_delivered_qty' => $netDelivered,
+                'carton_display'    => $cartonDisplay,
+                'bonus_ratio'       => 0,
+                'return_ratio'      => 100,
+                'avg_price'         => 0,
+                'gross_amount'      => 0,
+                'discount_amount'   => 0,
+                'return_amount'     => $retAmt,
+                'net_revenue'       => -$retAmt,
+                'invoice_count'     => 0,
+            ];
+
+            $grandRetSold += $retSold;
+            $grandRetBonus += $retBonus;
+            $grandRetTotal += $retTotal;
+            $grandNetSold += $netSold;
+            $grandNetBonus += $netBonus;
+            $grandNetDelivered += $netDelivered;
+            $grandRetAmount += $retAmt;
+            $grandNetRevenue -= $retAmt;
+        }
+
+        // Sort products alphabetically by name
+        usort($productsResult, fn($a, $b) => strcmp($a['product_name'], $b['product_name']));
+
+        $summary = [
+            'total_products'           => count($productsResult),
+            'total_invoices'           => $grandInvoices,
+            'total_sold_qty'           => number_format($grandSold, 2),
+            'total_bonus_qty'          => number_format($grandBonus, 2),
+            'total_dispatched_qty'     => number_format($grandDispatched, 2),
+            'total_return_sold_qty'    => number_format($grandRetSold, 2),
+            'total_return_bonus_qty'   => number_format($grandRetBonus, 2),
+            'total_return_qty'         => number_format($grandRetTotal, 2),
+            'net_sold_qty'             => number_format($grandNetSold, 2),
+            'net_bonus_qty'            => number_format($grandNetBonus, 2),
+            'net_delivered_qty'        => number_format($grandNetDelivered, 2),
+            'grand_gross_amount'       => 'Rs ' . number_format($grandGross, 2),
+            'grand_discount_amount'    => 'Rs ' . number_format($grandDiscount, 2),
+            'grand_return_amount'      => 'Rs ' . number_format($grandRetAmount, 2),
+            'grand_net_revenue'        => 'Rs ' . number_format($grandNetRevenue, 2),
+        ];
+
+        return response()->json([
+            'success'  => true,
+            'summary'  => $summary,
+            'products' => $productsResult
+        ]);
+    }
 }

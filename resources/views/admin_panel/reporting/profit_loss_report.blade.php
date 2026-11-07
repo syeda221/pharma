@@ -1124,9 +1124,14 @@
                         <span id="cardSalesCount">0 Sales</span> &bull; <span id="cardProductsCount">0 Products</span>
                     </span>
                 </div>
-                <span class="text-muted small d-none d-md-inline" style="font-size: 11px;">
-                    <i class="fas fa-cubes text-secondary me-1"></i>Carton, Loose & Net Delivered Units
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small d-none d-md-inline" style="font-size: 11px;">
+                        <i class="fas fa-cubes text-secondary me-1"></i>Carton, Loose & Net Delivered Units
+                    </span>
+                    <a href="{{ route('report.product_movement') }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2 fw-semibold" style="font-size: 11px; border-radius: 6px;">
+                        <i class="fa-solid fa-boxes-packing me-1"></i> Detailed Product Movement
+                    </a>
+                </div>
             </div>
 
             <div class="row g-2">
