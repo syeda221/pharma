@@ -313,7 +313,13 @@ class SaleController extends Controller
                     $saleBonus += $bQty;
                     $saleBonusAmount += ($bQty * $basePrice);
 
-                    $soldPieces = max(0, (float)($item->total_pieces ?? $item->qty) - $bQty);
+                    $rawTotal = (float)($item->total_pieces ?? 0);
+                    $rawBilled = (float)($item->qty ?? 0);
+                    if ($rawTotal >= ($rawBilled + $bQty) && $rawTotal > 0) {
+                        $soldPieces = $rawTotal - $bQty;
+                    } else {
+                        $soldPieces = $rawBilled > 0 ? $rawBilled : max(0, $rawTotal - $bQty);
+                    }
                     $saleCogs += ($soldPieces * $basePrice);
                 }
             }
@@ -361,6 +367,10 @@ class SaleController extends Controller
             $sale->effective_cogs = ($sale->sale_status === 'returned' || $sale->sale_status == 1) ? 0 : max(0, $saleCogs - $returnCogs);
 
             $origQty = $sale->items && $sale->items->count() > 0 ? (float) $sale->items->sum('total_pieces') : ($sale->total_items > 0 ? (float) $sale->total_items : (float) $sale->qty);
+            $sumBilled = $sale->items ? (float) $sale->items->sum('qty') : 0;
+            if ($origQty < ($saleBonus + $sumBilled) && $sumBilled > 0) {
+                $origQty = $sumBilled + $saleBonus;
+            }
             $effTotalPieces = max(0, $origQty - $returnedQty);
             $sale->effective_qty = $effTotalPieces;
 
@@ -2180,11 +2190,12 @@ class SaleController extends Controller
                         $totalPieces = $grossBilledPieces + $bonusQty;
                     } else {
                         // Total Physical Pieces for Inventory (Billed Pieces + Bonus)
+                        $calculatedTotal = $billedPieces + $bonusQty;
                         $reqTotal = (float) ($request->total_pieces[$index] ?? 0);
-                        if ($reqTotal > 0) {
+                        if ($reqTotal >= $calculatedTotal && $reqTotal > 0) {
                             $totalPieces = $reqTotal;
                         } else {
-                            $totalPieces = $billedPieces + $bonusQty;
+                            $totalPieces = $calculatedTotal;
                         }
                     }
                     
@@ -2876,7 +2887,17 @@ class SaleController extends Controller
                 $stock->quantity = round($stock->total_pieces / ($ppb > 0 ? $ppb : 1), 2);
                 $stock->save();
 
-                $bonusInfo = ((float)($item->bonus_qty ?? 0) > 0) ? ' (Sold: ' . ($item->qty) . ', Bonus: ' . ($item->bonus_qty) . ')' : '';
+                $itemBonus = (float)($item->bonus_qty ?? 0);
+                if ($itemBonus <= 0 && !empty($item->color)) {
+                    try {
+                        $b64 = base64_decode($item->color, true);
+                        $vData = ($b64 !== false) ? json_decode($b64, true) : json_decode($item->color, true);
+                        if (is_array($vData) && !empty($vData['bonus']) && is_numeric($vData['bonus'])) {
+                            $itemBonus = (float)$vData['bonus'];
+                        }
+                    } catch (\Exception $e) {}
+                }
+                $bonusInfo = ($itemBonus > 0) ? ' (Sold: ' . ($item->qty) . ', Bonus: ' . $itemBonus . ')' : '';
                 // Movement
                 if ($effectiveQtyToDeduct > 0) {
                     DB::table('stock_movements')->insert([

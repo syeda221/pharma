@@ -856,16 +856,14 @@
                                                     if ($ppb <= 0) $ppb = 1;
 
                                                     // Calculate actual Billed Pieces (excluding free bonus pieces)
+                                                    $itemQtyPieces = ($sizeMode === 'by_cartons' && $ppb > 1) ? (float)($item->qty ?? 0) * $ppb : (float)($item->qty ?? 0);
                                                     $totalPhysicalPieces = (float)($item->total_pieces ?? 0);
-                                                    $billedPieces = max(0, $totalPhysicalPieces - $bonusPieces);
 
-                                                    // Fallback if total_pieces was not set or equaled bonus
-                                                    if ($billedPieces <= 0 && (float)($item->qty ?? 0) > 0) {
-                                                        if ($sizeMode === 'by_cartons' && $ppb > 1) {
-                                                            $billedPieces = (float)$item->qty * $ppb;
-                                                        } else {
-                                                            $billedPieces = (float)$item->qty;
-                                                        }
+                                                    if ($itemQtyPieces > 0) {
+                                                        $billedPieces = $itemQtyPieces;
+                                                        $totalPhysicalPieces = max($totalPhysicalPieces, $billedPieces + $bonusPieces);
+                                                    } else {
+                                                        $billedPieces = max(0, $totalPhysicalPieces - $bonusPieces);
                                                     }
 
                                                     // If legacy return item had total qty without explicit bonus split:
