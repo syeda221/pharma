@@ -647,11 +647,21 @@
                     </div>
 
                     {{-- 2. Product Qty / Bonus --}}
+                    @php
+                        $retPieces = (float)($stats['total_return_pieces'] ?? 0);
+                        $netSoldPcs = (float)($stats['net_sold_qty'] ?? $stats['total_qty'] ?? 0);
+                    @endphp
                     <div class="col-6 col-md-6">
                         <div class="stat-pill h-100" style="background: #faf5ff; border-color: #d8b4fe;">
                             <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-cubes me-1"></i>Product Qty / Bonus</div>
                             <div class="stat-val" style="color: #7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
-                            <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;">Sold / Bonus Units</div>
+                            <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;" id="statTotalQtySub">
+                                @if($retPieces > 0)
+                                    Sold / Bonus &middot; Net: {{ number_format($netSoldPcs) }} Pcs
+                                @else
+                                    Sold / Bonus Units
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1091,6 +1101,13 @@
 
                             $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
                             $('#statTotalQty').text(fmt(soldQtyVal) + ' / ' + fmt(bonusQtyVal) + ' Pcs');
+                            let netSoldVal = parseFloat(response.stats.net_sold_qty !== undefined ? response.stats.net_sold_qty : soldQtyVal);
+                            let retPcsVal = parseFloat(response.stats.total_return_pieces || 0);
+                            if (retPcsVal > 0) {
+                                $('#statTotalQtySub').html('Sold / Bonus &middot; Net: ' + fmt(netSoldVal) + ' Pcs').attr('title', 'Gross Sold: ' + fmt(soldQtyVal) + ' | Bonus: ' + fmt(bonusQtyVal) + ' | Returns: ' + fmt(retPcsVal) + ' | Net: ' + fmt(netSoldVal));
+                            } else {
+                                $('#statTotalQtySub').text('Sold / Bonus Units').removeAttr('title');
+                            }
 
                             // Row 2 Discount Cards
                             let totDisc   = parseFloat(response.stats.total_discount || 0);

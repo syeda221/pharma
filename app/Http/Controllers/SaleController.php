@@ -534,12 +534,26 @@ class SaleController extends Controller
             $zCustIds = \App\Models\Customer::where("zone", $request->zone_id)->pluck("id")->toArray();
             $standaloneRetQuery->whereIn("customer_id", $zCustIds);
         }
+        if ($request->filled("customer_type") && $request->customer_type !== "all") {
+            $cTypeCustIds = \App\Models\Customer::where("customer_type", $request->customer_type)->pluck("id")->toArray();
+            $standaloneRetQuery->whereIn("customer_id", $cTypeCustIds);
+        }
         $startDate = $request->start_date ? $request->start_date : ($request->from_date ? $parseDate($request->from_date) : null);
         $endDate = $request->end_date ? $request->end_date : ($request->to_date ? $parseDate($request->to_date) : null);
         if ($startDate && $endDate) {
             $standaloneRetQuery->where(function($q) use ($startDate, $endDate) {
                 $q->whereBetween("return_date", [$startDate, $endDate])
                   ->orWhereBetween("created_at", [$startDate . " 00:00:00", $endDate . " 23:59:59"]);
+            });
+        } elseif ($startDate) {
+            $standaloneRetQuery->where(function($q) use ($startDate) {
+                $q->where("return_date", ">=", $startDate)
+                  ->orWhere("created_at", ">=", $startDate . " 00:00:00");
+            });
+        } elseif ($endDate) {
+            $standaloneRetQuery->where(function($q) use ($endDate) {
+                $q->where("return_date", "<=", $endDate)
+                  ->orWhere("created_at", "<=", $endDate . " 23:59:59");
             });
         }
         $standaloneReturns = $standaloneRetQuery->get();
@@ -568,12 +582,33 @@ class SaleController extends Controller
             ->join('sale_returns as sr', 'sr.id', '=', 'sri.sale_return_id');
         if ($request->customer_id && $request->customer_id !== 'all') {
             $allReturnQuery->where('sr.customer_id', $request->customer_id);
+        } elseif ($request->filled('zone_id') && $request->zone_id !== 'all') {
+            $zCustIds = \App\Models\Customer::where('zone', $request->zone_id)->pluck('id')->toArray();
+            $allReturnQuery->whereIn('sr.customer_id', $zCustIds);
+        }
+        if ($request->filled('customer_type') && $request->customer_type !== 'all') {
+            $cTypeCustIds = \App\Models\Customer::where('customer_type', $request->customer_type)->pluck('id')->toArray();
+            $allReturnQuery->whereIn('sr.customer_id', $cTypeCustIds);
         }
         if ($startDate && $endDate) {
-            $allReturnQuery->whereBetween('sr.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            $allReturnQuery->where(function($q) use ($startDate, $endDate) {
+                $q->whereBetween('sr.return_date', [$startDate, $endDate])
+                  ->orWhereBetween('sr.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            });
+        } elseif ($startDate) {
+            $allReturnQuery->where(function($q) use ($startDate) {
+                $q->where('sr.return_date', '>=', $startDate)
+                  ->orWhere('sr.created_at', '>=', $startDate . ' 00:00:00');
+            });
+        } elseif ($endDate) {
+            $allReturnQuery->where(function($q) use ($endDate) {
+                $q->where('sr.return_date', '<=', $endDate)
+                  ->orWhere('sr.created_at', '<=', $endDate . ' 23:59:59');
+            });
         }
         $totalReturnPieces = (float) $allReturnQuery->sum('sri.qty');
-        $effectiveSoldPieces = max(0, $totalItemsPieces - $totalBonusPieces - $totalReturnPieces);
+        $grossSoldPieces = max(0, $totalItemsPieces - $totalBonusPieces);
+        $effectiveSoldPieces = max(0, $grossSoldPieces - $totalReturnPieces);
 
         $rawDiscount = (float) $sales->sum(function($s) {
             $inlineVal = $s->items ? (float) $s->items->sum('discount_amount') : 0;
@@ -587,7 +622,10 @@ class SaleController extends Controller
 
         $stats = [
             'total_count' => $sales->count(),
-            'total_qty' => $effectiveSoldPieces > 0 ? $effectiveSoldPieces : (float) $sales->sum('effective_sold_qty'),
+            'total_qty' => $grossSoldPieces > 0 ? $grossSoldPieces : (float) $sales->sum('effective_sold_qty'),
+            'gross_sold_qty' => $grossSoldPieces,
+            'net_sold_qty' => $effectiveSoldPieces,
+            'total_return_pieces' => $totalReturnPieces,
             'total_bonus_qty' => $totalBonusPieces,
             'total_bonus_amount' => (float) $sales->sum('effective_bonus_amount'),
             'total_all_qty' => (float) $sales->sum('effective_qty'),
