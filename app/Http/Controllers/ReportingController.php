@@ -1971,11 +1971,13 @@ class ReportingController extends Controller
             $overviewRetQuery->where('sri.product_id', $productId);
         }
 
-        $overviewReturns = $overviewRetQuery->select('sri.qty', 'sri.boxes', 'sri.loose_pieces', 'sri.line_total', 'sri.price', 'sr.bill_amount')->get();
+        $overviewReturns = $overviewRetQuery->select('sri.qty', 'sri.bonus_qty', 'sri.boxes', 'sri.loose_pieces', 'sri.line_total', 'sri.price', 'sr.bill_amount')->get();
         $totalReturnPieces = (float) $overviewReturns->sum('qty');
+        $totalReturnBonus  = (float) $overviewReturns->sum('bonus_qty');
         $totalReturnBoxes  = (int) $overviewReturns->sum('boxes');
         $totalReturnLoose  = (int) $overviewReturns->sum('loose_pieces');
         $totalReturnAmount = (float) $overviewReturns->sum('line_total');
+        $netBonusQty       = max(0, $totalBonusQty - $totalReturnBonus);
         $totalReturnTP     = (float) $overviewReturns->sum(function($r) {
             return (float)($r->qty ?? 0) * (float)($r->price ?? 0);
         });
@@ -2072,6 +2074,8 @@ class ReportingController extends Controller
                 'cogs' => round($totalCogs, 2),
                 'bonus_amount' => round($totalBonusAmount, 2),
                 'bonus_qty' => round($totalBonusQty, 2),
+                'return_bonus_qty' => round($totalReturnBonus, 2),
+                'net_bonus_qty' => round($netBonusQty, 2),
                 'wos_amount' => round($totalWosAmount, 2),
                 'total_sample_pieces' => round($totalSamplePieces, 2),
                 'gross_profit' => round($adjustedGrossProfit, 2),

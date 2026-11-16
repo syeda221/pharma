@@ -631,10 +631,10 @@
                     </div>
                 </div>
 
-                {{-- LINE 2: Operational Volume (Invoice, Product Qty/Bonus) --}}
+                {{-- LINE 2: Operational Volume (Invoice, Product Qty/Bonus, After Return Qty/Bonus) --}}
                 <div class="row g-2 mb-2 align-items-stretch">
                     {{-- 1. Invoice --}}
-                    <div class="col-6 col-md-6">
+                    <div class="col-12 col-md-4">
                         <div class="stat-pill h-100" style="background: #ffffff; border-color: #cbd5e1;">
                             <div class="stat-label text-secondary"><i class="fas fa-file-invoice me-1 text-info"></i>Invoice</div>
                             <div class="stat-val text-dark" id="statTotalCount">{{ number_format($stats['total_count'] ?? 0) }}</div>
@@ -647,19 +647,30 @@
                     </div>
 
                     {{-- 2. Product Qty / Bonus --}}
-                    @php
-                        $retPieces = (float)($stats['total_return_pieces'] ?? 0);
-                        $netSoldPcs = (float)($stats['net_sold_qty'] ?? $stats['total_qty'] ?? 0);
-                    @endphp
-                    <div class="col-6 col-md-6">
+                    <div class="col-12 col-md-4">
                         <div class="stat-pill h-100" style="background: #faf5ff; border-color: #d8b4fe;">
                             <div class="stat-label" style="color: #7c3aed;"><i class="fas fa-cubes me-1"></i>Product Qty / Bonus</div>
-                            <div class="stat-val" style="color: #7c3aed;" id="statTotalQty">{{ number_format($stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
-                            <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;" id="statTotalQtySub">
-                                @if($retPieces > 0)
-                                    Sold / Bonus &middot; Net: {{ number_format($netSoldPcs) }} Pcs
+                            <div class="stat-val" style="color: #7c3aed;" id="statTotalQty">{{ number_format($stats['gross_sold_qty'] ?? $stats['total_qty'] ?? 0) }} / {{ number_format($stats['total_bonus_qty'] ?? 0) }} Pcs</div>
+                            <div class="stat-sub" style="color: #7c3aed; opacity: 0.85;" id="statTotalQtySub">Gross Sold / Bonus Units</div>
+                        </div>
+                    </div>
+
+                    {{-- 3. After Return Qty / Bonus (Net) --}}
+                    @php
+                        $retPieces = (float)($stats['total_return_pieces'] ?? 0);
+                        $retBonusPieces = (float)($stats['total_return_bonus_pieces'] ?? 0);
+                        $netSoldPcs = (float)($stats['net_sold_qty'] ?? $stats['total_qty'] ?? 0);
+                        $netBonusPcs = (float)($stats['net_bonus_qty'] ?? $stats['total_bonus_qty'] ?? 0);
+                    @endphp
+                    <div class="col-12 col-md-4">
+                        <div class="stat-pill h-100" style="background: #ecfdf5; border-color: #a7f3d0;">
+                            <div class="stat-label text-success"><i class="fas fa-boxes-packing me-1"></i>After Return Qty / Bonus</div>
+                            <div class="stat-val text-success" id="statAfterReturnQty">{{ number_format($netSoldPcs) }} / {{ number_format($netBonusPcs) }} Pcs</div>
+                            <div class="stat-sub text-success opacity-75" id="statAfterReturnQtySub">
+                                @if($retPieces > 0 || $retBonusPieces > 0)
+                                    Net Delivered &middot; -{{ number_format($retPieces) }} Ret @if($retBonusPieces > 0) (-{{ number_format($retBonusPieces) }} B) @endif
                                 @else
-                                    Sold / Bonus Units
+                                    Net Delivered Units
                                 @endif
                             </div>
                         </div>
@@ -1102,11 +1113,19 @@
                             $('#statTotalCount').text(Number(response.stats.total_count || 0).toLocaleString());
                             $('#statTotalQty').text(fmt(soldQtyVal) + ' / ' + fmt(bonusQtyVal) + ' Pcs');
                             let netSoldVal = parseFloat(response.stats.net_sold_qty !== undefined ? response.stats.net_sold_qty : soldQtyVal);
+                            let netBonusVal = parseFloat(response.stats.net_bonus_qty !== undefined ? response.stats.net_bonus_qty : bonusQtyVal);
                             let retPcsVal = parseFloat(response.stats.total_return_pieces || 0);
-                            if (retPcsVal > 0) {
-                                $('#statTotalQtySub').html('Sold / Bonus &middot; Net: ' + fmt(netSoldVal) + ' Pcs').attr('title', 'Gross Sold: ' + fmt(soldQtyVal) + ' | Bonus: ' + fmt(bonusQtyVal) + ' | Returns: ' + fmt(retPcsVal) + ' | Net: ' + fmt(netSoldVal));
+                            let retBonusVal = parseFloat(response.stats.total_return_bonus_pieces || 0);
+
+                            $('#statAfterReturnQty').text(fmt(netSoldVal) + ' / ' + fmt(netBonusVal) + ' Pcs');
+                            if (retPcsVal > 0 || retBonusVal > 0) {
+                                let retSubText = 'Net Delivered · -' + fmt(retPcsVal) + ' Ret';
+                                if (retBonusVal > 0) {
+                                    retSubText += ' (-' + fmt(retBonusVal) + ' B)';
+                                }
+                                $('#statAfterReturnQtySub').html(retSubText).attr('title', 'Gross Sold: ' + fmt(soldQtyVal) + ' | Gross Bonus: ' + fmt(bonusQtyVal) + ' | Returns: ' + fmt(retPcsVal) + ' | Net Delivered: ' + fmt(netSoldVal));
                             } else {
-                                $('#statTotalQtySub').text('Sold / Bonus Units').removeAttr('title');
+                                $('#statAfterReturnQtySub').text('Net Delivered Units').removeAttr('title');
                             }
 
                             // Row 2 Discount Cards

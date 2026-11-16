@@ -1161,9 +1161,9 @@
                 <div class="col-6 col-md-3">
                     <div class="overview-card" style="background: #f0fdf4; border-color: #86efac;">
                         <div class="ov-header">
-                            <span class="ov-label text-success"><i class="fas fa-truck-ramp-box me-1"></i>Net Delivered</span>
+                            <span class="ov-label text-success"><i class="fas fa-truck-ramp-box me-1"></i>Net Delivered / Bonus</span>
                         </div>
-                        <div class="ov-val text-success" id="cardNetQty">0 Pcs</div>
+                        <div class="ov-val text-success" id="cardNetQty">0 Pcs / 0 Pcs</div>
                         <div class="ov-sub text-success" id="cardNetPieces">0 Net Delivered Pieces</div>
                     </div>
                 </div>
@@ -1706,7 +1706,9 @@ $(document).ready(function() {
         $('#cardSoldPieces').text(fmt(s.total_sold_pieces || 0) + ' Total Pieces Sold');
         $('#cardReturnQty').text(s.return_qty_display || '0 Pcs');
         $('#cardReturnAmount').text('Rs ' + fmt(s.return_amount || 0) + ' Total Value');
-        $('#cardNetQty').text(s.net_qty_display || '0 Pcs');
+        let netBonusQtyPieces = parseFloat(s.net_bonus_qty !== undefined ? s.net_bonus_qty : (s.bonus_qty || 0));
+        let netDisplay = s.net_qty_display || '0 Pcs';
+        $('#cardNetQty').html(netDisplay + ' / <span style="color: #b45309;">' + fmt(netBonusQtyPieces) + ' Pcs</span>');
         $('#cardNetPieces').text(fmt(s.net_sold_pieces || 0) + ' Net Delivered Pieces');
         $('#cardSalesCount').text((s.sales_count || 0) + ' Sales');
         $('#cardProductsCount').text((s.products_count || data.products.length || 0) + ' Products');

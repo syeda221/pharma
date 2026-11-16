@@ -607,8 +607,10 @@ class SaleController extends Controller
             });
         }
         $totalReturnPieces = (float) $allReturnQuery->sum('sri.qty');
+        $totalReturnBonusPieces = (float) $allReturnQuery->sum('sri.bonus_qty');
         $grossSoldPieces = max(0, $totalItemsPieces - $totalBonusPieces);
         $effectiveSoldPieces = max(0, $grossSoldPieces - $totalReturnPieces);
+        $netBonusPieces = max(0, $totalBonusPieces - $totalReturnBonusPieces);
 
         $rawDiscount = (float) $sales->sum(function($s) {
             $inlineVal = $s->items ? (float) $s->items->sum('discount_amount') : 0;
@@ -626,7 +628,9 @@ class SaleController extends Controller
             'gross_sold_qty' => $grossSoldPieces,
             'net_sold_qty' => $effectiveSoldPieces,
             'total_return_pieces' => $totalReturnPieces,
+            'total_return_bonus_pieces' => $totalReturnBonusPieces,
             'total_bonus_qty' => $totalBonusPieces,
+            'net_bonus_qty' => $netBonusPieces,
             'total_bonus_amount' => (float) $sales->sum('effective_bonus_amount'),
             'total_all_qty' => (float) $sales->sum('effective_qty'),
             'raw_gross' => $rawGross,
