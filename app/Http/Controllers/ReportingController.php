@@ -1992,15 +1992,16 @@ class ReportingController extends Controller
             $overviewRetQuery->where('sri.product_id', $productId);
         }
 
-        $overviewReturns = $overviewRetQuery->select('sri.qty', 'sri.bonus_qty', 'sri.boxes', 'sri.loose_pieces', 'sri.line_total', 'sri.price', 'sr.bill_amount')->get();
+        $overviewReturns = $overviewRetQuery->select('sr.id as return_id', 'sri.qty', 'sri.bonus_qty', 'sri.boxes', 'sri.loose_pieces', 'sri.line_total', 'sri.price', 'sr.bill_amount')->get();
         $totalReturnPieces = (float) $overviewReturns->sum('qty');
         $totalReturnBonus  = (float) $overviewReturns->sum('bonus_qty');
         $totalReturnBoxes  = (int) $overviewReturns->sum('boxes');
         $totalReturnLoose  = (int) $overviewReturns->sum('loose_pieces');
         $totalReturnAmount = (float) $overviewReturns->sum('line_total');
         $netBonusQty       = max(0, $totalBonusQty - $totalReturnBonus);
-        $totalReturnTP     = (float) $overviewReturns->sum(function($r) {
-            return (float)($r->qty ?? 0) * (float)($r->price ?? 0);
+        $totalReturnTP     = (float) $overviewReturns->groupBy('return_id')->sum(function($items) {
+            $first = $items->first();
+            return (float) ($first->bill_amount > 0 ? $first->bill_amount : $items->sum(fn($i) => (float)($i->qty ?? 0) * (float)($i->price ?? 0)));
         });
 
         $grandTotalDiscount = $totalItemDiscounts + $totalExtraDiscounts;
