@@ -995,8 +995,11 @@ class ReportingController extends Controller
                     ->where('sri.product_id', $product->id);
                 
                 if ($start && $end) {
-                    $returnQuery->where(function($q) use ($start, $end) {
-                        $q->whereBetween('sr.created_at', [$start, $end])
+                    $startDate = substr($start, 0, 10);
+                    $endDate = substr($end, 0, 10);
+                    $returnQuery->where(function($q) use ($start, $end, $startDate, $endDate) {
+                        $q->whereBetween('sr.return_date', [$startDate, $endDate])
+                          ->orWhereBetween('sr.created_at', [$start, $end])
                           ->orWhereExists(function($sq) use ($start, $end) {
                               $sq->select(DB::raw(1))
                                  ->from('sales as s')
@@ -1251,8 +1254,11 @@ class ReportingController extends Controller
                     ->where('sri.product_id', $product->id);
                 
                 if ($start && $end) {
-                    $returnQuery->where(function($q) use ($start, $end) {
-                        $q->whereBetween('sr.created_at', [$start, $end])
+                    $startDate = substr($start, 0, 10);
+                    $endDate = substr($end, 0, 10);
+                    $returnQuery->where(function($q) use ($start, $end, $startDate, $endDate) {
+                        $q->whereBetween('sr.return_date', [$startDate, $endDate])
+                          ->orWhereBetween('sr.created_at', [$start, $end])
                           ->orWhereExists(function($sq) use ($start, $end) {
                               $sq->select(DB::raw(1))
                                  ->from('sales as s')
@@ -1427,7 +1433,12 @@ class ReportingController extends Controller
                     ->where('sale_return_items.product_name', $mName);
 
                 if ($start && $end) {
-                    $manualRetQuery->whereBetween('sale_returns.created_at', [$start, $end]);
+                    $startDate = substr($start, 0, 10);
+                    $endDate = substr($end, 0, 10);
+                    $manualRetQuery->where(function($q) use ($start, $end, $startDate, $endDate) {
+                        $q->whereBetween('sale_returns.return_date', [$startDate, $endDate])
+                          ->orWhereBetween('sale_returns.created_at', [$start, $end]);
+                    });
                 }
                 if ($customerId && $customerId !== 'all') {
                     $manualRetQuery->where('sale_returns.customer_id', $customerId);
@@ -1630,7 +1641,12 @@ class ReportingController extends Controller
                 ->where('sale_returns.customer_id', $customer->id);
 
             if ($start && $end) {
-                $custRetQuery->whereBetween('sale_returns.created_at', [$start, $end]);
+                $startDate = substr($start, 0, 10);
+                $endDate = substr($end, 0, 10);
+                $custRetQuery->where(function($q) use ($start, $end, $startDate, $endDate) {
+                    $q->whereBetween('sale_returns.return_date', [$startDate, $endDate])
+                      ->orWhereBetween('sale_returns.created_at', [$start, $end]);
+                });
             }
             if ($productId && $productId !== 'all') {
                 $custRetQuery->where('sale_return_items.product_id', $productId);
@@ -1960,7 +1976,12 @@ class ReportingController extends Controller
             ->join('sale_returns as sr', 'sr.id', '=', 'sri.sale_return_id');
 
         if ($start && $end) {
-            $overviewRetQuery->whereBetween('sr.created_at', [$start, $end]);
+            $startDate = substr($start, 0, 10);
+            $endDate = substr($end, 0, 10);
+            $overviewRetQuery->where(function($q) use ($start, $end, $startDate, $endDate) {
+                $q->whereBetween('sr.return_date', [$startDate, $endDate])
+                  ->orWhereBetween('sr.created_at', [$start, $end]);
+            });
         }
         if ($customerId && $customerId !== 'all') {
             $overviewRetQuery->where('sr.customer_id', $customerId);
@@ -2001,9 +2022,10 @@ class ReportingController extends Controller
             ? ($totalSoldLoose > 0 ? "{$totalSoldBoxes} Ctn . {$totalSoldLoose} Pcs" : "{$totalSoldBoxes} Cartons")
             : "{$totalSoldPieces} Pcs";
 
+        $returnBonusStr = $totalReturnBonus > 0 ? " (-{$totalReturnBonus} B)" : "";
         $returnQtyDisplay = ($totalSoldBoxes > 0 && $totalReturnBoxes > 0)
-            ? ($totalReturnLoose > 0 ? "{$totalReturnBoxes} Ctn . {$totalReturnLoose} Pcs" : "{$totalReturnBoxes} Cartons")
-            : "{$totalReturnPieces} Pcs";
+            ? ($totalReturnLoose > 0 ? "{$totalReturnBoxes} Ctn . {$totalReturnLoose} Pcs{$returnBonusStr}" : "{$totalReturnBoxes} Cartons{$returnBonusStr}")
+            : "{$totalReturnPieces} Pcs{$returnBonusStr}";
 
         $finalNetBoxes = max(0, $totalSoldBoxes - $totalReturnBoxes);
         $finalNetLoose = $totalSoldLoose - $totalReturnLoose;

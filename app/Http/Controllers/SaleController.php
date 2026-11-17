@@ -526,8 +526,14 @@ class SaleController extends Controller
             }
         }
         
-        // Include standalone direct returns (where sale_id IS NULL)
-        $standaloneRetQuery = \App\Models\SaleReturn::whereNull("sale_id")->with(["items.product", "customer"]);
+        // Include standalone direct returns and cross-month returns (where sale_id IS NULL or sale_id is from another period)
+        $activeSaleIds = $sales->pluck("id")->filter()->toArray();
+        $standaloneRetQuery = \App\Models\SaleReturn::where(function($q) use ($activeSaleIds) {
+            $q->whereNull("sale_id");
+            if (!empty($activeSaleIds)) {
+                $q->orWhereNotIn("sale_id", $activeSaleIds);
+            }
+        })->with(["items.product", "customer"]);
         if ($request->customer_id && $request->customer_id !== "all") {
             $standaloneRetQuery->where("customer_id", $request->customer_id);
         } elseif ($request->filled("zone_id") && $request->zone_id !== "all") {
