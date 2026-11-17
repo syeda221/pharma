@@ -1989,6 +1989,9 @@ class ReportingController extends Controller
         $finalReturnAmount = $totalDirectReturnNet > 0 ? $totalDirectReturnNet : $totalReturnAmount;
         $finalReturnGross  = $totalDirectReturnGross > 0 ? $totalDirectReturnGross : ($totalReturnTP > 0 ? $totalReturnTP : max(0, $totalGrossRevenue - $totalEffectiveGross));
 
+        $auditNet = max(0, $totalGrossRevenue - $finalReturnGross);
+        $totalEffectiveGross = $auditNet;
+
         // Align finalNetRevenue with exact waterfall: raw_gross - raw_total_discount - return_amount
         $finalNetRevenue = max(0, $totalGrossRevenue - $rawTotalDiscounts - $finalReturnAmount);
         $finalNetPieces = max(0, $totalSoldPieces - $totalReturnPieces);

@@ -901,7 +901,7 @@
                 <div class="kpi-mini-card" style="background: #f0f9ff; border-color: #bae6fd;">
                     <div class="kpi-mini-label" style="color: #0284c7;"><i class="fas fa-arrow-rotate-left"></i>Sale After Return</div>
                     <div class="kpi-mini-val" style="color: #0369a1;" id="cardAuditNet">Rs 0</div>
-                    <div class="kpi-mini-sub" style="color: #0284c7;" id="cardAuditNetSub">Audit Ref · Gross - Return</div>
+                    <div class="kpi-mini-sub" style="color: #0284c7;" id="cardAuditNetSub">Audit Net · Gross - Return</div>
                 </div>
 
                 {{-- 4. Total Discount --}}
@@ -1478,10 +1478,11 @@ $(document).ready(function() {
         let rawGrossVal   = parseFloat(s.raw_gross_revenue || 0);
         let rawDiscVal    = parseFloat(s.raw_total_discount !== undefined ? s.raw_total_discount : (s.total_discount || 0));
         let invoicedNet   = parseFloat(s.invoiced_net !== undefined ? s.invoiced_net : (rawGrossVal - rawDiscVal));
-        let effGrossVal   = parseFloat(s.effective_gross || s.gross_revenue || 0);
-        let returnGrossVal= parseFloat(s.return_gross || (rawGrossVal - effGrossVal) || 0);
+        let returnGrossVal= parseFloat(s.return_gross !== undefined ? s.return_gross : 0);
         let retNetVal     = parseFloat(s.return_amount || 0);
-        let auditNetVal   = parseFloat(s.audit_net !== undefined ? s.audit_net : (effGrossVal > 0 ? effGrossVal : Math.max(0, rawGrossVal - (returnGrossVal > 0 ? returnGrossVal : retNetVal))));
+        let returnDeductVal = returnGrossVal > 0 ? returnGrossVal : retNetVal;
+        let effGrossVal   = parseFloat(s.effective_gross !== undefined ? s.effective_gross : (s.gross_revenue || Math.max(0, rawGrossVal - returnDeductVal)));
+        let auditNetVal   = parseFloat(s.audit_net !== undefined ? s.audit_net : Math.max(0, rawGrossVal - returnDeductVal));
         let discVal       = parseFloat(s.total_discount || 0);
         let netRevVal     = parseFloat(s.net_revenue || 0);
         let cogsVal       = parseFloat(s.cogs || 0);
