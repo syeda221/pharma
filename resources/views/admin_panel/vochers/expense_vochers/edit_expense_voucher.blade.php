@@ -445,7 +445,7 @@
 
                         {{-- Hidden Template for new row categories --}}
                         <template id="categoryOptionsTemplate">
-                            <option value="" disabled selected>-- Select Category --</option>
+                            <option value=""></option>
                             @foreach ($expenseCategories as $cat)
                                 <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                             @endforeach
@@ -470,14 +470,14 @@
                                                 <td>
                                                     <div class="d-flex align-items-center gap-1">
                                                         <select name="row_account_id[]" class="cell-input rowAccountCategory" required>
-                                                            <option value="" disabled>-- Select Category --</option>
+                                                            <option value=""></option>
                                                             @foreach ($expenseCategories as $cat)
                                                                 <option value="{{ $cat->id }}" {{ (string)$cat->id === (string)$row['category_id'] ? 'selected' : '' }}>
                                                                     {{ $cat->name }}
                                                                 </option>
                                                             @endforeach
                                                         </select>
-                                                        <a href="javascript:void(0)" data-toggle="modal" data-target="#newExpenseCategoryModal" class="btn-mini-add" title="Quick Add Category">
+                                                        <a href="javascript:void(0)" data-toggle="modal" data-target="#newExpenseCategoryModal" data-bs-toggle="modal" data-bs-target="#newExpenseCategoryModal" class="btn-mini-add" title="Quick Add Category">
                                                             <i class="bi bi-plus-lg"></i>
                                                         </a>
                                                     </div>
@@ -585,7 +585,7 @@
                 $elem.select2({
                     placeholder: "-- Select Category --",
                     allowClear: true,
-                    width: 'resolve'
+                    width: '100%'
                 });
             }
 
@@ -698,7 +698,7 @@
                             <select name="row_account_id[]" class="cell-input rowAccountCategory" required>
                                 ${optionsHtml}
                             </select>
-                            <a href="javascript:void(0)" data-toggle="modal" data-target="#newExpenseCategoryModal" class="btn-mini-add" title="Quick Add Category">
+                            <a href="javascript:void(0)" data-toggle="modal" data-target="#newExpenseCategoryModal" data-bs-toggle="modal" data-bs-target="#newExpenseCategoryModal" class="btn-mini-add" title="Quick Add Category">
                                 <i class="bi bi-plus-lg"></i>
                             </a>
                         </div>

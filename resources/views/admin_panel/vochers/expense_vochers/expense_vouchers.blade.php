@@ -434,6 +434,14 @@
                             <span class="text-muted text-lowercase font-normal" style="font-size: 0.72rem; font-weight: normal;">Press Enter in amount to add line</span>
                         </div>
 
+                        {{-- Hidden Template for new row categories --}}
+                        <template id="categoryOptionsTemplate">
+                            <option value=""></option>
+                            @foreach ($expenseCategories as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </template>
+
                         <div class="excel-table-container">
                             <div class="table-responsive">
                                 <table class="excel-table" id="voucherTable">
@@ -452,12 +460,12 @@
                                             <td>
                                                 <div class="d-flex align-items-center gap-1">
                                                     <select name="row_account_id[]" class="cell-input rowAccountCategory" required>
-                                                        <option value="" disabled selected>-- Select Category --</option>
+                                                        <option value=""></option>
                                                         @foreach ($expenseCategories as $cat)
                                                             <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                                         @endforeach
                                                     </select>
-                                                    <a href="javascript:void(0)" data-toggle="modal" data-target="#newExpenseCategoryModal" class="btn-mini-add" title="Quick Add Category">
+                                                    <a href="javascript:void(0)" data-toggle="modal" data-target="#newExpenseCategoryModal" data-bs-toggle="modal" data-bs-target="#newExpenseCategoryModal" class="btn-mini-add" title="Quick Add Category">
                                                         <i class="bi bi-plus-lg"></i>
                                                     </a>
                                                 </div>
@@ -564,7 +572,7 @@
                 $elem.select2({
                     placeholder: "-- Select Category --",
                     allowClear: true,
-                    width: 'resolve'
+                    width: '100%'
                 });
             }
 
@@ -672,7 +680,7 @@
 
             // Add Row
             $('#addNewRow').on('click', function() {
-                let optionsHtml = $('.rowAccountCategory').first().html();
+                let optionsHtml = $('#categoryOptionsTemplate').html();
                 let $newRow = $(`
                 <tr>
                     <td class="row-number">1</td>
@@ -681,7 +689,7 @@
                             <select name="row_account_id[]" class="cell-input rowAccountCategory" required>
                                 ${optionsHtml}
                             </select>
-                            <a href="javascript:void(0)" data-toggle="modal" data-target="#newExpenseCategoryModal" class="btn-mini-add" title="Quick Add Category">
+                            <a href="javascript:void(0)" data-toggle="modal" data-target="#newExpenseCategoryModal" data-bs-toggle="modal" data-bs-target="#newExpenseCategoryModal" class="btn-mini-add" title="Quick Add Category">
                                 <i class="bi bi-plus-lg"></i>
                             </a>
                         </div>
@@ -700,7 +708,6 @@
                 `);
                 $('#voucherTable tbody').append($newRow);
                 let $catSelect = $newRow.find('.rowAccountCategory');
-                $catSelect.val('');
                 initCategorySelect2($catSelect);
                 updateRowIndices();
             });
@@ -747,6 +754,7 @@
                                     $(this).val(newCat.id).trigger('change');
                                 }
                             });
+                            $('#categoryOptionsTemplate').append(new Option(newCat.name, newCat.id, false, false));
                         } else {
                             Swal.fire('Error', response.message || 'Failed to create Category.', 'error');
                         }
