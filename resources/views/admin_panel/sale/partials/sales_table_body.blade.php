@@ -106,12 +106,21 @@
                             </a>
                         </li>
                         @can('sales.delete')
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger fw-bold" href="{{ route('sale.return.destroy', $sale->return_id) }}" onclick="return confirm('Are you sure you want to delete this Direct Return?');">
-                                    <i class="fas fa-trash-alt fa-fw"></i> Delete Return
-                                </a>
-                            </li>
+                            @if(\App\Services\PeriodLockService::isDateLocked($sale->return_date ?? $sale->created_at))
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <span class="dropdown-item d-flex align-items-center gap-2 py-2 text-muted disabled">
+                                        <i class="fas fa-lock fa-fw"></i> Delete (Locked Period)
+                                    </span>
+                                </li>
+                            @else
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger fw-bold" href="{{ route('sale.return.destroy', $sale->return_id) }}" onclick="return confirm('Are you sure you want to delete this Direct Return?');">
+                                        <i class="fas fa-trash-alt fa-fw"></i> Delete Return
+                                    </a>
+                                </li>
+                            @endif
                         @endcan
                     </ul>
                 </div>
@@ -480,7 +489,12 @@
         <td class="text-nowrap small text-muted text-center" style="font-size: 11px;">
             {{ $sale->created_at->format('d/m/Y') }}
         </td>
-        <td class="text-center text-nowrap">{!! $statusBadge !!}</td>
+        <td class="text-center text-nowrap">
+            {!! $statusBadge !!}
+            @if(\App\Services\PeriodLockService::isDateLocked($sale->created_at))
+                <span class="badge bg-secondary text-white ms-1" title="Period Closed / Locked"><i class="fas fa-lock"></i> Locked</span>
+            @endif
+        </td>
         <td class="text-center text-nowrap px-1">
             <div class="dropdown">
                 <button class="btn btn-premium-action dropdown-toggle" type="button" data-toggle="dropdown" data-display="static" aria-expanded="false">
@@ -488,16 +502,24 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right border-0 shadow-lg rounded-3">
                     @can('sales.edit')
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.edit', $sale->id) }}">
-                                <i class="fas fa-edit text-primary fa-fw"></i> Edit (Simple)
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('pos.index') }}?edit_id={{ $sale->id }}">
-                                <i class="fas fa-cash-register text-success fa-fw"></i> Edit (POS Sale)
-                            </a>
-                        </li>
+                        @if(\App\Services\PeriodLockService::isDateLocked($sale->created_at))
+                            <li>
+                                <span class="dropdown-item d-flex align-items-center gap-2 py-2 text-muted disabled">
+                                    <i class="fas fa-lock text-muted fa-fw"></i> Edit (Locked Period)
+                                </span>
+                            </li>
+                        @else
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('sales.edit', $sale->id) }}">
+                                    <i class="fas fa-edit text-primary fa-fw"></i> Edit (Simple)
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('pos.index') }}?edit_id={{ $sale->id }}">
+                                    <i class="fas fa-cash-register text-success fa-fw"></i> Edit (POS Sale)
+                                </a>
+                            </li>
+                        @endif
                     @endcan
 
                     @if ($sale->sale_status === 'draft' || $sale->sale_status === 'booked')
@@ -560,14 +582,23 @@
                     @endif
 
                     @can('sales.delete')
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <button type="button"
-                                class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger fw-bold"
-                                onclick="confirmDeleteSale({{ $sale->id }}, '{{ $sale->invoice_no }}', '{{ $sale->sale_status }}')">
-                                <i class="fas fa-trash-alt fa-fw"></i> Delete Sale
-                            </button>
-                        </li>
+                        @if(\App\Services\PeriodLockService::isDateLocked($sale->created_at))
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <span class="dropdown-item d-flex align-items-center gap-2 py-2 text-muted disabled">
+                                    <i class="fas fa-lock text-muted fa-fw"></i> Delete (Locked Period)
+                                </span>
+                            </li>
+                        @else
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button type="button"
+                                    class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger fw-bold"
+                                    onclick="confirmDeleteSale({{ $sale->id }}, '{{ $sale->invoice_no }}', '{{ $sale->sale_status }}')">
+                                    <i class="fas fa-trash-alt fa-fw"></i> Delete Sale
+                                </button>
+                            </li>
+                        @endif
                     @endcan
 
                 </ul>
