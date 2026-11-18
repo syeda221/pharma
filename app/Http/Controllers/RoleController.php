@@ -13,7 +13,21 @@ class RoleController extends Controller
 {
     public function index()
     {
+        // Ensure Doctor Fund permissions exist in database
+        foreach (['doctor.funds.view', 'doctor.funds.create', 'doctor.funds.delete'] as $permName) {
+            Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+        }
+
+        $superAdminRoles = Role::whereIn('name', ['Super Admin', 'superAdmin', 'admin', 'superadmin'])->get();
+        foreach ($superAdminRoles as $sar) {
+            $sar->givePermissionTo(['doctor.funds.view', 'doctor.funds.create', 'doctor.funds.delete']);
+        }
+
         $currentUser = auth()->user();
+        if ($currentUser) {
+            $currentUser->givePermissionTo(['doctor.funds.view', 'doctor.funds.create', 'doctor.funds.delete']);
+        }
+
         if ($currentUser && $currentUser->isSuperAdmin()) {
             $roles = Role::orderBy('name', "ASC")->get();
             $allPermissions = Permission::orderBy('name', "ASC")->get();
