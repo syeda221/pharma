@@ -135,10 +135,16 @@
                                                             class="btn btn-sm btn-primary">
                                                             <i class="fa fa-eye"></i> View
                                                         </a>
+                                                        @if(\App\Services\PeriodLockService::isDateLocked($return->return_date ?? $return->created_at))
+                                                            <button type="button" class="btn btn-sm btn-secondary" disabled title="Period Closed / Locked">
+                                                                <i class="fa fa-lock"></i> Locked
+                                                            </button>
+                                                        @else
                                                         <button type="button" class="btn btn-sm btn-danger"
                                                             onclick="confirmDeleteReturn('{{ $return->id }}', '{{ $return->return_invoice }}')">
                                                             <i class="fa fa-trash"></i> Delete
                                                         </button>
+                                                        @endif
                                                     </div>
                                                 </td>
                                             </tr>

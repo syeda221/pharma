@@ -962,6 +962,8 @@
                                                                 Sales</a></li>
                                                         <li><a href="{{ route('sale.return.index') }}"><i class="fas fa-undo-alt"></i>
                                                                 Sale Returns</a></li>
+                                                        <li><a href="{{ route('period-closing.index') }}"><i class="fas fa-lock"></i>
+                                                                Monthly Sales Closing</a></li>
                                                     @endcan
                                                     @can('sales.create')
                                                         <li><a href="{{ route('pos.index') }}"><i class="fas fa-cash-register"></i>
@@ -1111,6 +1113,8 @@
                                         @can('profit.loss.report.view')
                                             <li><a href="{{ route('report.profit_loss') }}"><i class="fa-solid fa-chart-line"></i>
                                                     Equity Ledger</a></li>
+                                            <li><a href="{{ route('period-closing.index') }}"><i class="fa-solid fa-calendar-check"></i>
+                                                    Monthly Sales Closing (Lock)</a></li>
                                         @endcan
                                         
                                         @can('recovery.report.view')

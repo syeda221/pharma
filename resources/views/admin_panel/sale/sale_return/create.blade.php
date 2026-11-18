@@ -297,7 +297,12 @@
                         <div class="col-md-4">
                             <label class="form-label">Return Date <span class="text-danger">*</span></label>
                             <input type="date" name="return_date" class="form-control" value="{{ date('Y-m-d') }}"
-                                required>
+                                @if(!empty($minReturnDate)) min="{{ $minReturnDate }}" @endif required>
+                            @if(!empty($minReturnDate))
+                                <small class="text-muted d-block mt-1" style="font-size: 11px;">
+                                    <i class="fas fa-lock text-danger me-1"></i>Dates on or before {{ \Carbon\Carbon::parse($minReturnDate)->subDay()->format('d M Y') }} are closed &amp; locked.
+                                </small>
+                            @endif
                         </div>
                         <div class="col-md-8">
                             <label class="form-label">Return Reason / Notes</label>

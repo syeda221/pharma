@@ -240,7 +240,13 @@
                         <!-- Return Date -->
                         <div class="col-md-2">
                             <label class="form-label"><i class="fas fa-calendar-alt text-primary me-1"></i> Return Date <span class="text-danger">*</span></label>
-                            <input type="date" name="return_date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                            <input type="date" name="return_date" class="form-control" value="{{ date('Y-m-d') }}"
+                                @if(!empty($minReturnDate)) min="{{ $minReturnDate }}" @endif required>
+                            @if(!empty($minReturnDate))
+                                <small class="text-muted d-block mt-1" style="font-size: 10px;">
+                                    <i class="fas fa-lock text-danger me-1"></i>Dates on or before {{ \Carbon\Carbon::parse($minReturnDate)->subDay()->format('d M Y') }} are locked.
+                                </small>
+                            @endif
                         </div>
 
                         <!-- Return Reason / Remarks -->
