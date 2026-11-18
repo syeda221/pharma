@@ -38,6 +38,11 @@ class Sale extends Model
         return empty($this->customer_id) || !empty($this->walkin_name);
     }
 
+    public function getIsLockedAttribute()
+    {
+        return \App\Services\PeriodLockService::isDateLocked($this->created_at);
+    }
+
     public static function generateInvoiceNo($prefix = null)
     {
         return \App\Models\InvoiceSeries::generateNextNo($prefix);

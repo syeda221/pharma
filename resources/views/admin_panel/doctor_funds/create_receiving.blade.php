@@ -336,9 +336,12 @@
                         <div class="col-md-4">
                             <label class="rv-label">Doctor (Customer)</label>
                             <select name="customer_id" id="customer_id" class="rv-input select2">
-                                <option value="">-- Select Zone First --</option>
+                                <option value="">-- Select Doctor (Or Select Zone First) --</option>
+                                @foreach($doctors as $doc)
+                                    <option value="{{ $doc->id }}" data-zone="{{ $doc->zone }}">{{ $doc->customer_name }}</option>
+                                @endforeach
                             </select>
-                            <small class="text-muted" style="font-size: 11px;">Select doctor to view their outstanding balance and credit recovery.</small>
+                            <small class="text-muted" style="font-size: 11px;">Select doctor directly or filter by zone.</small>
                         </div>
 
                         {{-- Prominent Customer Outstanding Balance Badge --}}
@@ -472,15 +475,48 @@
             });
         }
 
+        var allDoctorsList = @json($doctors->map(fn($d) => ['id' => $d->id, 'name' => $d->customer_name, 'zone' => $d->zone]));
+
+        function restoreAllDoctorsDropdown(selectedDocId) {
+            var $doctorSelect = $('#customer_id');
+            $doctorSelect.empty().append('<option value="">-- Select Doctor (Or Select Zone First) --</option>');
+            $.each(allDoctorsList, function(idx, doc) {
+                var isSel = selectedDocId && doc.id == selectedDocId ? 'selected' : '';
+                $doctorSelect.append('<option value="' + doc.id + '" data-zone="' + (doc.zone || '') + '" ' + isSel + '>' + doc.name + '</option>');
+            });
+            if (typeof $.fn.select2 !== 'undefined') {
+                $doctorSelect.trigger('change.select2');
+            }
+        }
+
         // Zone selection -> Load Doctors & their Outstanding Balances
-        $('#zone_id').on('change', function() {
+        $('#zone_id').on('change', function(e, triggeredFrom) {
             var zoneId = $(this).val();
             var $doctorSelect = $('#customer_id');
-            $doctorSelect.html('<option value="">Loading doctors...</option>');
+            var currentDocId = $doctorSelect.val();
+
+            if (triggeredFrom === 'from_doctor') {
+                // Don't wipe doctor dropdown if zone change was triggered by doctor selection
+                if (zoneId) {
+                    $.ajax({
+                        url: "{{ url('/doctor-funds/doctors-by-zone') }}/" + zoneId,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(res) {
+                            if (res.zone_total_formatted) {
+                                $('#zoneBalanceInfo').html('<i class="bi bi-info-circle me-1"></i> Zone Total Outstanding: <strong>PKR ' + res.zone_total_formatted + '</strong>').show();
+                            }
+                        }
+                    });
+                }
+                return;
+            }
+
             doctorsMap = {};
             resetBalanceDisplay();
 
             if (zoneId) {
+                $doctorSelect.html('<option value="">Loading doctors for this zone...</option>');
                 $.ajax({
                     url: "{{ url('/doctor-funds/doctors-by-zone') }}/" + zoneId,
                     type: "GET",
@@ -490,7 +526,7 @@
                         if (res.doctors && res.doctors.length > 0) {
                             $.each(res.doctors, function(idx, doc) {
                                 doctorsMap[doc.id] = doc;
-                                $doctorSelect.append('<option value="' + doc.id + '">' + doc.text + '</option>');
+                                $doctorSelect.append('<option value="' + doc.id + '" data-zone="' + zoneId + '">' + doc.text + '</option>');
                             });
                         }
                         if (res.zone_total_formatted) {
@@ -499,7 +535,7 @@
                             $('#zoneBalanceInfo').hide();
                         }
                         if (typeof $.fn.select2 !== 'undefined') {
-                            $doctorSelect.trigger('change');
+                            $doctorSelect.trigger('change.select2');
                         }
                     },
                     error: function() {
@@ -507,27 +543,35 @@
                     }
                 });
             } else {
-                $doctorSelect.html('<option value="">-- Select Zone First --</option>');
+                restoreAllDoctorsDropdown(null);
                 $('#zoneBalanceInfo').hide();
             }
         });
 
-        // Doctor selection -> Show Outstanding Balance
+        // Doctor selection -> Auto select zone if needed & show Outstanding Balance
         $('#customer_id').on('change', function() {
             var docId = $(this).val();
-            if (docId && doctorsMap[docId]) {
-                var doc = doctorsMap[docId];
-                updateCustomerBalance(doc.balance, doc.balance_formatted, doc.customer_name, doc.raw_formatted, doc.already_received_formatted, doc.already_received);
-            } else if (docId) {
-                // Fetch individually if not in map
-                $.ajax({
-                    url: "{{ url('/doctor-funds/customer-balance') }}/" + docId,
-                    type: "GET",
-                    dataType: "json",
-                    success: function(res) {
-                        updateCustomerBalance(res.balance, res.balance_formatted, res.customer_name, res.raw_formatted, res.already_received_formatted, res.already_received);
-                    }
-                });
+            if (docId) {
+                var selectedOption = $(this).find(':selected');
+                var docZone = selectedOption.data('zone');
+                if (docZone && $('#zone_id').val() != docZone) {
+                    $('#zone_id').val(docZone).trigger('change', ['from_doctor']);
+                }
+
+                if (doctorsMap[docId]) {
+                    var doc = doctorsMap[docId];
+                    updateCustomerBalance(doc.balance, doc.balance_formatted, doc.customer_name, doc.raw_formatted, doc.already_received_formatted, doc.already_received);
+                } else {
+                    // Fetch individually if not in map
+                    $.ajax({
+                        url: "{{ url('/doctor-funds/customer-balance') }}/" + docId,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(res) {
+                            updateCustomerBalance(res.balance, res.balance_formatted, res.customer_name, res.raw_formatted, res.already_received_formatted, res.already_received);
+                        }
+                    });
+                }
             } else {
                 resetBalanceDisplay();
             }

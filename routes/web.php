@@ -438,6 +438,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/stock-closing/{id}/edit', [\App\Http\Controllers\MonthlyStockClosingController::class, 'edit'])->name('stock-closing.edit');
     Route::put('/stock-closing/{id}', [\App\Http\Controllers\MonthlyStockClosingController::class, 'update'])->name('stock-closing.update');
     Route::get('/stock-closing/{id}/print', [\App\Http\Controllers\MonthlyStockClosingController::class, 'printSheet'])->name('stock-closing.print');
+
+    // Fiscal / Monthly Sales Period Closing & Lock
+    Route::get('/period-closing', [\App\Http\Controllers\PeriodClosingController::class, 'index'])->name('period-closing.index');
+    Route::post('/period-closing/close', [\App\Http\Controllers\PeriodClosingController::class, 'closeMonth'])->name('period-closing.close');
+    Route::post('/period-closing/reopen', [\App\Http\Controllers\PeriodClosingController::class, 'reopenMonth'])->name('period-closing.reopen');
     // //////////
     Route::get('/get-stock/{product}', [StocksController::class, 'getStock'])
         ->name('get.stock');

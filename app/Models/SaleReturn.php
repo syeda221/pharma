@@ -57,4 +57,9 @@ class SaleReturn extends Model
     {
         return $this->hasMany(SaleReturnItem::class);
     }
+
+    public function getIsLockedAttribute()
+    {
+        return \App\Services\PeriodLockService::isDateLocked($this->return_date ?? $this->created_at);
+    }
 }

@@ -308,6 +308,9 @@ class POSController extends Controller
         $editSaleData = null;
         if ($editId) {
             $sale = \App\Models\Sale::with('items.product')->find($editId);
+            if ($sale && \App\Services\PeriodLockService::isDateLocked($sale->created_at)) {
+                return redirect()->route('pos.index')->with('error', 'Yeh invoice closed period (locked month) ki hai aur freeze hai. Isay POS mein edit nahi kiya ja sakta.');
+            }
             if ($sale) {
                 $items = [];
                 foreach ($sale->items as $item) {

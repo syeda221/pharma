@@ -322,7 +322,10 @@
                         <div class="col-md-4">
                             <label class="iv-label">Doctor (Customer) <span class="text-danger">*</span></label>
                             <select name="customer_id" id="inv_customer_id" class="iv-input select2" required>
-                                <option value="">-- Select Zone First --</option>
+                                <option value="">-- Select Doctor (Or Select Zone First) --</option>
+                                @foreach($doctors as $doc)
+                                    <option value="{{ $doc->id }}" data-zone="{{ $doc->zone }}">{{ $doc->customer_name }}</option>
+                                @endforeach
                             </select>
                         </div>
 
@@ -468,15 +471,34 @@
             });
         }
 
+        var allInvDoctorsList = @json($doctors->map(fn($d) => ['id' => $d->id, 'name' => $d->customer_name, 'zone' => $d->zone]));
+
+        function restoreAllInvDoctorsDropdown(selectedDocId) {
+            var $doctorSelect = $('#inv_customer_id');
+            $doctorSelect.empty().append('<option value="">-- Select Doctor (Or Select Zone First) --</option>');
+            $.each(allInvDoctorsList, function(idx, doc) {
+                var isSel = selectedDocId && doc.id == selectedDocId ? 'selected' : '';
+                $doctorSelect.append('<option value="' + doc.id + '" data-zone="' + (doc.zone || '') + '" ' + isSel + '>' + doc.name + '</option>');
+            });
+            if (typeof $.fn.select2 !== 'undefined') {
+                $doctorSelect.trigger('change.select2');
+            }
+        }
+
         // Dynamic Doctor filtering on Zone selection
-        $('#inv_zone_id').on('change', function() {
+        $('#inv_zone_id').on('change', function(e, triggeredFrom) {
             var zoneId = $(this).val();
             var $doctorSelect = $('#inv_customer_id');
-            $doctorSelect.html('<option value="">Loading doctors in zone...</option>');
+
+            if (triggeredFrom === 'from_doctor') {
+                return;
+            }
+
             invDoctorsMap = {};
             resetInvBalanceDisplay();
 
             if (zoneId) {
+                $doctorSelect.html('<option value="">Loading doctors in zone...</option>');
                 $.ajax({
                     url: "{{ url('/doctor-funds/doctors-by-zone') }}/" + zoneId,
                     type: "GET",
@@ -486,13 +508,13 @@
                         if (res.doctors && res.doctors.length > 0) {
                             $.each(res.doctors, function(idx, doc) {
                                 invDoctorsMap[doc.id] = doc;
-                                $doctorSelect.append('<option value="' + doc.id + '">' + doc.text + '</option>');
+                                $doctorSelect.append('<option value="' + doc.id + '" data-zone="' + zoneId + '">' + doc.text + '</option>');
                             });
                         } else {
                             $doctorSelect.html('<option value="">No doctors registered in this zone</option>');
                         }
                         if (typeof $.fn.select2 !== 'undefined') {
-                            $doctorSelect.trigger('change');
+                            $doctorSelect.trigger('change.select2');
                         }
                     },
                     error: function() {
@@ -500,25 +522,33 @@
                     }
                 });
             } else {
-                $doctorSelect.html('<option value="">-- Select Zone First --</option>');
+                restoreAllInvDoctorsDropdown(null);
             }
         });
 
-        // Doctor selection -> Show Balance
+        // Doctor selection -> Auto select zone if needed & show Balance
         $('#inv_customer_id').on('change', function() {
             var docId = $(this).val();
-            if (docId && invDoctorsMap[docId]) {
-                var doc = invDoctorsMap[docId];
-                updateInvDoctorBalance(doc.balance, doc.balance_formatted, doc.customer_name);
-            } else if (docId) {
-                $.ajax({
-                    url: "{{ url('/doctor-funds/customer-balance') }}/" + docId,
-                    type: "GET",
-                    dataType: "json",
-                    success: function(res) {
-                        updateInvDoctorBalance(res.balance, res.balance_formatted, res.customer_name);
-                    }
-                });
+            if (docId) {
+                var selectedOption = $(this).find(':selected');
+                var docZone = selectedOption.data('zone');
+                if (docZone && $('#inv_zone_id').val() != docZone) {
+                    $('#inv_zone_id').val(docZone).trigger('change', ['from_doctor']);
+                }
+
+                if (invDoctorsMap[docId]) {
+                    var doc = invDoctorsMap[docId];
+                    updateInvDoctorBalance(doc.balance, doc.balance_formatted, doc.customer_name);
+                } else {
+                    $.ajax({
+                        url: "{{ url('/doctor-funds/customer-balance') }}/" + docId,
+                        type: "GET",
+                        dataType: "json",
+                        success: function(res) {
+                            updateInvDoctorBalance(res.balance, res.balance_formatted, res.customer_name);
+                        }
+                    });
+                }
             } else {
                 resetInvBalanceDisplay();
             }

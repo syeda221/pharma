@@ -83,6 +83,9 @@
             {{-- 13. Status --}}
             <td class="text-center text-nowrap">
                 <span class="badge badge-danger border border-danger"><i class="fas fa-undo-alt me-1"></i>Direct Return</span>
+                @if(\App\Services\PeriodLockService::isDateLocked($sale->return_date ?? $sale->created_at))
+                    <span class="badge bg-secondary text-white ms-1" title="Period Closed / Locked"><i class="fas fa-lock"></i> Locked</span>
+                @endif
             </td>
 
             {{-- 14. Action --}}

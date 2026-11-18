@@ -1827,6 +1827,10 @@ class SaleController extends Controller
         // Eager load warehouseStocks to display live stock and returns.items to reflect returns in edit view
         $sale = Sale::with(['items.product.warehouseStocks', 'customer_relation', 'returns.items'])->findOrFail($id);
 
+        if (\App\Services\PeriodLockService::isDateLocked($sale->created_at)) {
+            return redirect()->route('sale.index')->with('error', 'Yeh invoice closed period (locked month) ki hai aur freeze hai. Isay edit nahi kiya ja sakta.');
+        }
+
         if (in_array($sale->sale_status, ['cancelled', 'returned'])) {
             return redirect()->route('sale.index')->with('error', 'Cannot edit a '.$sale->sale_status.' sale.');
         }
@@ -1910,6 +1914,11 @@ class SaleController extends Controller
     public function updatesale(Request $request, $id)
     {
         $sale = Sale::findOrFail($id);
+
+        if (\App\Services\PeriodLockService::isDateLocked($sale->created_at)) {
+            return redirect()->back()->with('error', 'Yeh invoice closed period (locked month) ki hai aur freeze hai. Isay update nahi kiya ja sakta.');
+        }
+
         if (in_array($sale->sale_status, ['cancelled', 'returned'])) {
             return redirect()->back()->with('error', 'Cannot edit a '.$sale->sale_status.' sale.');
         }
@@ -3211,6 +3220,10 @@ class SaleController extends Controller
     public function destroy($id)
     {
         $sale = Sale::with(['items.product', 'returns.items', 'customer_relation'])->findOrFail($id);
+
+        if (\App\Services\PeriodLockService::isDateLocked($sale->created_at)) {
+            return redirect()->back()->with('error', 'Yeh invoice closed period (locked month) ki hai aur freeze hai. Isay delete nahi kiya ja sakta.');
+        }
 
         DB::beginTransaction();
         try {

@@ -165,39 +165,34 @@
                                         </div>
                                     </div>
 
-                                    @if (isset($settings['doctor_funds']))
-                                        @foreach ($settings['doctor_funds'] as $setting)
-                                            <div class="form-group">
-                                                <label class="font-weight-bold text-dark">{{ $setting['label'] }}</label>
-                                                <div class="input-group" style="max-width: 650px;">
-                                                    <div class="input-group-prepend">
-                                                        <span class="input-group-text"><i class="fas fa-university text-muted"></i></span>
-                                                    </div>
-                                                    <input type="text" list="df_account_suggestions" name="settings[{{ $setting['key'] }}]"
-                                                        class="form-control" value="{{ $setting['value'] }}" {{ !$canEditSettings ? 'disabled' : '' }}
-                                                        placeholder="e.g. SHAHZAIB RANA or Meezan Doctor Fund">
-                                                </div>
-                                                <datalist id="df_account_suggestions">
-                                                    <option value="SHAHZAIB RANA">
-                                                    <option value="Doctor Promotion Fund Account">
-                                                    <option value="Meezan Bank - Doctor Fund">
-                                                    <option value="Cash in Hand">
-                                                    <option value="Bank Alfalah - Doctor Fund">
-                                                    <option value="Habib Bank Limited (HBL)">
-                                                </datalist>
-                                                @if ($setting['description'])
-                                                    <small class="form-text text-muted mt-2">
-                                                        <i class="fas fa-check-circle text-success mr-1"></i>
-                                                        {{ $setting['description'] }}. This account name will automatically pre-fill on all Receiving and Investment vouchers.
-                                                    </small>
-                                                @endif
+                                    @php
+                                        $dfRow = \App\Models\Setting::where('key', 'doctor_fund_account_name')->first();
+                                        $dfAccountVal = $dfRow ? $dfRow->value : 'SHAHZAIB RANA';
+                                    @endphp
+
+                                    <div class="form-group">
+                                        <label class="font-weight-bold text-dark">Doctor Fund Dedicated Account / Bank Name</label>
+                                        <div class="input-group" style="max-width: 650px;">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-university text-muted"></i></span>
                                             </div>
-                                        @endforeach
-                                    @else
-                                        <div class="alert alert-warning">
-                                            No Doctor Fund settings found.
+                                            <input type="text" list="df_account_suggestions" name="settings[doctor_fund_account_name]"
+                                                class="form-control" value="{{ $dfAccountVal }}" {{ !$canEditSettings ? 'disabled' : '' }}
+                                                placeholder="e.g. SHAHZAIB RANA or Meezan Doctor Fund">
                                         </div>
-                                    @endif
+                                        <datalist id="df_account_suggestions">
+                                            <option value="SHAHZAIB RANA">
+                                            <option value="Doctor Promotion Fund Account">
+                                            <option value="Meezan Bank - Doctor Fund">
+                                            <option value="Cash in Hand">
+                                            <option value="Bank Alfalah - Doctor Fund">
+                                            <option value="Habib Bank Limited (HBL)">
+                                        </datalist>
+                                        <small class="form-text text-muted mt-2 d-block">
+                                            <i class="fas fa-check-circle text-success mr-1"></i>
+                                            Dedicated account name used for Doctor Fund recoveries and investments. This account name will automatically pre-fill on all Receiving and Investment vouchers.
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
 

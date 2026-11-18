@@ -88,8 +88,11 @@ class SaleReturnController extends Controller
             $nextInvoice = "SR-" . str_pad($lastReturnId, 4, "0", STR_PAD_LEFT);
         } while (SaleReturn::where("return_invoice", $nextInvoice)->exists());
 
+        $latestLockedDate = \App\Services\PeriodLockService::getLatestClosedDate('sales');
+        $minReturnDate = $latestLockedDate ? \Carbon\Carbon::parse($latestLockedDate)->addDay()->format('Y-m-d') : null;
+
         return view("admin_panel.sale.sale_return.create_direct", compact(
-            "customers", "warehouses", "accounts", "products", "productOptions", "nextInvoice"
+            "customers", "warehouses", "accounts", "products", "productOptions", "nextInvoice", "minReturnDate"
         ));
     }
 
@@ -272,7 +275,10 @@ class SaleReturnController extends Controller
             $item->discount = $discountPerPiece;
         });
         
-        return view('admin_panel.sale.sale_return.create', compact('sale', 'accounts', 'returnedQtyMap'));
+        $latestLockedDate = \App\Services\PeriodLockService::getLatestClosedDate('sales');
+        $minReturnDate = $latestLockedDate ? \Carbon\Carbon::parse($latestLockedDate)->addDay()->format('Y-m-d') : null;
+
+        return view('admin_panel.sale.sale_return.create', compact('sale', 'accounts', 'returnedQtyMap', 'minReturnDate'));
     }
 
     /**
@@ -298,6 +304,11 @@ class SaleReturnController extends Controller
             'payment_account_id' => 'nullable|array',
             'payment_amount' => 'nullable|array',
         ]);
+
+        $returnDate = $validated['return_date'] ?? $request->input('return_date');
+        if (\App\Services\PeriodLockService::isDateLocked($returnDate)) {
+            return redirect()->back()->withInput()->with('error', 'Aap closed period (locked month) mein return create nahi kar sakte. Return date current open month ki select karein.');
+        }
 
         DB::beginTransaction();
 
@@ -732,6 +743,12 @@ class SaleReturnController extends Controller
 
         try {
             $return = SaleReturn::with(['items.product', 'sale'])->findOrFail($id);
+
+            if (\App\Services\PeriodLockService::isDateLocked($return->return_date ?? $return->created_at)) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Yeh return closed period (locked month) ki hai aur freeze hai. Isay delete nahi kiya ja sakta.');
+            }
+
             $customerId = $return->customer_id;
             $returnInvoice = $return->return_invoice;
             $saleId = $return->sale_id;
