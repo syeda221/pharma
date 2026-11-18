@@ -1066,7 +1066,7 @@
                         <li class="nav-item">
                             @canany(['item.stock.report.view', 'purchase.report.view', 'sale.report.view',
                                 'customer.ledger.view', 'vendor.ledger.view', 'inventory.onhand.view', 'profit.loss.report.view',
-                                'recovery.report.view', 'payable.report.view', 'parties.balance.report.view', 'aging.report.view', 'balance.sheet.report.view', 'executive.report.view'])
+                                'recovery.report.view', 'payable.report.view', 'parties.balance.report.view', 'aging.report.view', 'balance.sheet.report.view', 'executive.report.view', 'doctor.funds.view'])
                                 <a href="#" class="nav-link">
                                     <i class="menu_icon fas fa-clipboard-list"></i>
                                     <span class="menu-title">Reports</span>
@@ -1137,10 +1137,24 @@
                                             <li><a href="{{ route('report.balance_sheet') }}"><i class="fa-solid fa-scale-balanced"></i>
                                                     Balance Sheet</a></li>
                                         @endcan
+                                        @can('doctor.funds.view')
+                                            <li><a href="{{ route('doctor-funds.index') }}"><i class="fa-solid fa-hand-holding-dollar text-success"></i>
+                                                    Doctor Fund Ledger</a></li>
+                                        @endcan
                                     </ul>
                                 </div>
                             @endcanany
                         </li>
+
+                        <!-- Doctor Fund Ledger -->
+                        @can('doctor.funds.view')
+                        <li class="nav-item">
+                            <a href="{{ route('doctor-funds.index') }}" class="nav-link">
+                                <i class="menu_icon fas fa-hand-holding-dollar text-success"></i>
+                                <span class="menu-title">Doctor Fund</span>
+                            </a>
+                        </li>
+                        @endcan
                         
                         <!-- Cashbook / Checkbook -->
                         @can('checkbook.view')

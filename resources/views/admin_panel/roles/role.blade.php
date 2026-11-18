@@ -1098,7 +1098,8 @@
                     'profit.loss.report': 'fa-chart-pie',
                     'bulk.customer.payments': 'fa-hand-holding-usd',
                     'distributor.reports': 'fa-chart-line',
-                    'stock.closing': 'fa-clipboard-check'
+                    'stock.closing': 'fa-clipboard-check',
+                    'doctor.funds': 'fa-hand-holding-dollar'
                 };
 
                 allPermissions.forEach(function(p) {
@@ -1111,6 +1112,8 @@
                         module = 'distributor.reports';
                     } else if (p.name.startsWith('stock.closing')) {
                         module = 'stock.closing';
+                    } else if (p.name.startsWith('doctor.funds')) {
+                        module = 'doctor.funds';
                     } else {
                         // Group by everything before the last dot (the action)
                         var parts = p.name.split('.');
@@ -1206,6 +1209,9 @@
                         else if (p.name === 'stock.closing.create') displayName = 'Stock Closing: Perform Audit';
                         else if (p.name === 'stock.closing.edit') displayName = 'Stock Closing: Edit Adjustment';
                         else if (p.name === 'stock.closing.delete') displayName = 'Stock Closing: Delete Entry';
+                        else if (p.name === 'doctor.funds.view') displayName = 'Doctor Fund: View Ledger & Report';
+                        else if (p.name === 'doctor.funds.create') displayName = 'Doctor Fund: Create Vouchers';
+                        else if (p.name === 'doctor.funds.delete') displayName = 'Doctor Fund: Delete Voucher';
 
                         html += `
                             <div class="col-12 col-md-6 col-lg-4 col-xl-3 perm-item-wrapper" data-name="${p.name.toLowerCase()}">

@@ -622,3 +622,18 @@ require __DIR__.'/hr.php';
 // Distributor Reports
 Route::get('/distributor-reports', [App\Http\Controllers\DistributorReportController::class, 'index'])->middleware('auth')->name('distributor-reports.index');
 Route::get('/distributor-reports/create', [App\Http\Controllers\DistributorReportController::class, 'create'])->middleware('auth')->name('distributor-reports.create');
+
+
+// Doctor Investment & Zone Fund Ledger (Isolated Special Account)
+Route::prefix('doctor-funds')->middleware('auth')->name('doctor-funds.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\DoctorFundController::class, 'index'])->name('index')->middleware('permission:doctor.funds.view');
+    Route::get('/receiving/create', [\App\Http\Controllers\DoctorFundController::class, 'createReceiving'])->name('receiving.create')->middleware('permission:doctor.funds.create');
+    Route::post('/receiving', [\App\Http\Controllers\DoctorFundController::class, 'storeReceiving'])->name('receiving.store')->middleware('permission:doctor.funds.create');
+    Route::get('/investment/create', [\App\Http\Controllers\DoctorFundController::class, 'createInvestment'])->name('investment.create')->middleware('permission:doctor.funds.create');
+    Route::post('/investment', [\App\Http\Controllers\DoctorFundController::class, 'storeInvestment'])->name('investment.store')->middleware('permission:doctor.funds.create');
+    Route::get('/details/{id}', [\App\Http\Controllers\DoctorFundController::class, 'show'])->name('show')->middleware('permission:doctor.funds.view');
+    Route::delete('/{id}', [\App\Http\Controllers\DoctorFundController::class, 'destroy'])->name('destroy')->middleware('permission:doctor.funds.delete');
+    Route::get('/doctors-by-zone/{zoneId}', [\App\Http\Controllers\DoctorFundController::class, 'getDoctorsByZone'])->name('doctors.by.zone');
+    Route::get('/customer-balance/{customerId}', [\App\Http\Controllers\DoctorFundController::class, 'getCustomerBalance'])->name('customer.balance');
+    Route::post('/settings', [\App\Http\Controllers\DoctorFundController::class, 'saveSettings'])->name('settings.save');
+});

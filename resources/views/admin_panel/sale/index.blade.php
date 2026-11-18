@@ -666,11 +666,17 @@
                         <div class="stat-pill h-100" style="background: #ecfdf5; border-color: #a7f3d0;">
                             <div class="stat-label text-success"><i class="fas fa-boxes-packing me-1"></i>After Return Qty / Bonus</div>
                             <div class="stat-val text-success" id="statAfterReturnQty">{{ number_format($netSoldPcs) }} / {{ number_format($netBonusPcs) }} Pcs</div>
-                            <div class="stat-sub text-success opacity-75" id="statAfterReturnQtySub">
+                            <div id="statAfterReturnQtySub">
                                 @if($retPieces > 0 || $retBonusPieces > 0)
-                                    Net Delivered &middot; -{{ number_format($retPieces) }} Ret @if($retBonusPieces > 0) (-{{ number_format($retBonusPieces) }} B) @endif
+                                    <span style="font-size:.72rem; font-weight:700; color:#dc2626;">
+                                        -{{ number_format($retPieces) }} Ret
+                                        @if($retBonusPieces > 0)
+                                            <span style="color:#9333ea;">/ -{{ number_format($retBonusPieces) }} B</span>
+                                        @endif
+                                    </span>
+                                    <div class="stat-sub text-success opacity-75" style="margin-top:1px;">Net Delivered</div>
                                 @else
-                                    Net Delivered Units
+                                    <div class="stat-sub text-success opacity-75">Net Delivered Units</div>
                                 @endif
                             </div>
                         </div>
@@ -1119,13 +1125,14 @@
 
                             $('#statAfterReturnQty').text(fmt(netSoldVal) + ' / ' + fmt(netBonusVal) + ' Pcs');
                             if (retPcsVal > 0 || retBonusVal > 0) {
-                                let retSubText = 'Net Delivered · -' + fmt(retPcsVal) + ' Ret';
+                                let retHtml = '<span style="font-size:.72rem; font-weight:700; color:#dc2626;">-' + fmt(retPcsVal) + ' Ret';
                                 if (retBonusVal > 0) {
-                                    retSubText += ' (-' + fmt(retBonusVal) + ' B)';
+                                    retHtml += ' <span style="color:#9333ea;">/ -' + fmt(retBonusVal) + ' B</span>';
                                 }
-                                $('#statAfterReturnQtySub').html(retSubText).attr('title', 'Gross Sold: ' + fmt(soldQtyVal) + ' | Gross Bonus: ' + fmt(bonusQtyVal) + ' | Returns: ' + fmt(retPcsVal) + ' | Net Delivered: ' + fmt(netSoldVal));
+                                retHtml += '</span><div class="stat-sub text-success opacity-75" style="margin-top:1px;">Net Delivered</div>';
+                                $('#statAfterReturnQtySub').html(retHtml).attr('title', 'Gross Sold: ' + fmt(soldQtyVal) + ' | Gross Bonus: ' + fmt(bonusQtyVal) + ' | Returns: ' + fmt(retPcsVal) + ' | Net Delivered: ' + fmt(netSoldVal));
                             } else {
-                                $('#statAfterReturnQtySub').text('Net Delivered Units').removeAttr('title');
+                                $('#statAfterReturnQtySub').html('<div class="stat-sub text-success opacity-75">Net Delivered Units</div>').removeAttr('title');
                             }
 
                             // Row 2 Discount Cards

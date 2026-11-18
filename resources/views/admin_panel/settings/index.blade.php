@@ -50,6 +50,11 @@
                                     <i class="fas fa-calculator"></i> Accounting
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="doctor-funds-tab" data-toggle="tab" href="#doctor_funds" role="tab">
+                                    <i class="fas fa-user-md text-success"></i> Doctor Fund
+                                </a>
+                            </li>
                         </ul>
 
                         @php
@@ -122,7 +127,7 @@
 
                                 <!-- Accounting Tab -->
                                 <div class="tab-pane fade" id="accounting" role="tabpanel">
-                                    @if (isset($settings['accounting']))
+                                    @if (isset($settings['accounting']) && count($settings['accounting']) > 0)
                                         @foreach ($settings['accounting'] as $setting)
                                             <div class="form-group">
                                                 <label>{{ $setting['label'] }}</label>
@@ -134,6 +139,64 @@
                                                 @endif
                                             </div>
                                         @endforeach
+                                    @else
+                                        <div class="p-4 text-center border rounded bg-light my-3">
+                                            <i class="fas fa-calculator text-muted fa-2x mb-2"></i>
+                                            <p class="text-muted mb-2">No general accounting parameters are currently configured.</p>
+                                            <p class="mb-0">
+                                                To configure the <strong>Doctor Fund Dedicated Bank Account</strong>, please click here:
+                                                <a href="javascript:void(0)" onclick="$('#doctor-funds-tab').tab('show');" class="btn btn-sm btn-outline-success ml-2">
+                                                    <i class="fas fa-user-md mr-1"></i> Open Doctor Fund Settings
+                                                </a>
+                                            </p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <!-- Doctor Fund Tab -->
+                                <div class="tab-pane fade" id="doctor_funds" role="tabpanel">
+                                    <div class="alert alert-light border mb-4" style="border-left: 4px solid #059669 !important;">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-hand-holding-medical text-success fa-2x mr-3"></i>
+                                            <div>
+                                                <h6 class="font-weight-bold mb-1 text-dark">Doctor Fund & Zone Ledger Settings</h6>
+                                                <p class="text-muted mb-0 small">Manage default dedicated bank account and preferences for the isolated Doctor Fund module.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if (isset($settings['doctor_funds']))
+                                        @foreach ($settings['doctor_funds'] as $setting)
+                                            <div class="form-group">
+                                                <label class="font-weight-bold text-dark">{{ $setting['label'] }}</label>
+                                                <div class="input-group" style="max-width: 650px;">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text"><i class="fas fa-university text-muted"></i></span>
+                                                    </div>
+                                                    <input type="text" list="df_account_suggestions" name="settings[{{ $setting['key'] }}]"
+                                                        class="form-control" value="{{ $setting['value'] }}" {{ !$canEditSettings ? 'disabled' : '' }}
+                                                        placeholder="e.g. SHAHZAIB RANA or Meezan Doctor Fund">
+                                                </div>
+                                                <datalist id="df_account_suggestions">
+                                                    <option value="SHAHZAIB RANA">
+                                                    <option value="Doctor Promotion Fund Account">
+                                                    <option value="Meezan Bank - Doctor Fund">
+                                                    <option value="Cash in Hand">
+                                                    <option value="Bank Alfalah - Doctor Fund">
+                                                    <option value="Habib Bank Limited (HBL)">
+                                                </datalist>
+                                                @if ($setting['description'])
+                                                    <small class="form-text text-muted mt-2">
+                                                        <i class="fas fa-check-circle text-success mr-1"></i>
+                                                        {{ $setting['description'] }}. This account name will automatically pre-fill on all Receiving and Investment vouchers.
+                                                    </small>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="alert alert-warning">
+                                            No Doctor Fund settings found.
+                                        </div>
                                     @endif
                                 </div>
                             </div>

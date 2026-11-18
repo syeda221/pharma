@@ -11,7 +11,7 @@ class PermissionController extends Controller
 {
     public function index()
     {
-        foreach (['stock.adjust.view', 'stock.adjust.create', 'stock.adjust.edit', 'stock.adjust.delete'] as $permName) {
+        foreach (['stock.adjust.view', 'stock.adjust.create', 'stock.adjust.edit', 'stock.adjust.delete', 'doctor.funds.view', 'doctor.funds.create', 'doctor.funds.delete'] as $permName) {
             Permission::firstOrCreate(['name' => $permName]);
         }
         $permissions = Permission::orderBy('name',"ASC")->get();
