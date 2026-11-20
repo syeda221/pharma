@@ -312,13 +312,11 @@
                                     <i class="bi bi-lock-fill text-success"></i> Fixed
                                 </span>
                             </label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light text-muted border-end-0" style="border-radius: 8px 0 0 8px; border-color: var(--rv-border);">
-                                    <i class="bi bi-bank2 text-success"></i>
-                                </span>
-                                <input type="text" name="bank_account_name" id="bank_account_name" class="rv-input border-start-0"
+                            <div style="position: relative;">
+                                <i class="bi bi-bank2 text-success" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1.05rem; pointer-events: none; z-index: 2;"></i>
+                                <input type="text" name="bank_account_name" id="bank_account_name" class="rv-input"
                                     value="{{ $fundAccountName ?: 'SHAHZAIB RANA' }}" readonly
-                                    style="background-color: #f8fafc !important; cursor: not-allowed; font-weight: 700; color: #0f172a; border-radius: 0 8px 8px 0;"
+                                    style="background-color: #f8fafc !important; cursor: not-allowed; font-weight: 700; color: #0f172a; padding-left: 38px;"
                                     title="Doctor Fund Dedicated Account (Locked: SHAHZAIB RANA)">
                             </div>
                             <small class="text-muted" style="font-size: 11px;">
