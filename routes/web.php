@@ -689,3 +689,18 @@ Route::get('/setup-storage-link', function () {
         'details' => $results
     ]);
 })->middleware('auth');
+
+// Universal File Serving Route for /storage/ (Guarantees image & slip loading on live cPanel/shared hosting)
+Route::get('/storage/{path}', function ($path) {
+    $filePath = storage_path('app/public/' . $path);
+    if (!file_exists($filePath)) {
+        abort(404, 'File not found');
+    }
+    
+    $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
+    
+    return response()->file($filePath, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=604800',
+    ]);
+})->where('path', '.*');
