@@ -642,3 +642,50 @@ Route::prefix('doctor-funds')->middleware('auth')->name('doctor-funds.')->group(
     Route::get('/customer-balance/{customerId}', [\App\Http\Controllers\DoctorFundController::class, 'getCustomerBalance'])->name('customer.balance');
     Route::post('/settings', [\App\Http\Controllers\DoctorFundController::class, 'saveSettings'])->name('settings.save');
 });
+
+// Storage Symlink Helper Route (for Live / cPanel environments)
+Route::get('/setup-storage-link', function () {
+    if (!auth()->check()) {
+        return redirect()->route('login');
+    }
+    
+    $results = [];
+    
+    // 1. Ensure storage/app/public directory exists
+    $storagePublic = storage_path('app/public');
+    if (!file_exists($storagePublic)) {
+        mkdir($storagePublic, 0775, true);
+        $results[] = "Created directory: " . $storagePublic;
+    }
+
+    // 2. Ensure doctor_funds and customer_receipts subdirectories exist
+    $dfDir = $storagePublic . '/doctor_funds';
+    if (!file_exists($dfDir)) {
+        mkdir($dfDir, 0775, true);
+        $results[] = "Created directory: " . $dfDir;
+    }
+
+    $crDir = $storagePublic . '/customer_receipts';
+    if (!file_exists($crDir)) {
+        mkdir($crDir, 0775, true);
+        $results[] = "Created directory: " . $crDir;
+    }
+
+    // 3. Run artisan storage:link
+    try {
+        \Illuminate\Support\Facades\Artisan::call('storage:link');
+        $results[] = "Artisan storage:link output: " . trim(\Illuminate\Support\Facades\Artisan::output());
+    } catch (\Exception $e) {
+        $results[] = "Artisan storage:link error: " . $e->getMessage();
+    }
+
+    // 4. Also create root storage symlink if running directly from root without public/
+    $rootStorageLink = base_path('public/storage');
+    $results[] = "Target public/storage: " . (file_exists($rootStorageLink) ? "Exists" : "Not found");
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Storage setup executed.',
+        'details' => $results
+    ]);
+})->middleware('auth');
