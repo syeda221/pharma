@@ -141,7 +141,10 @@ class DoctorFundController extends Controller
         $bankAccounts = Account::orderBy('title', 'asc')->get();
 
         // Load saved fund account name setting
-        $fundAccountName = \App\Models\Setting::get('doctor_fund_account_name', 'Doctor Promotion Fund Account');
+        $fundAccountName = \App\Models\Setting::get('doctor_fund_account_name', 'SHAHZAIB RANA');
+        if (empty($fundAccountName) || $fundAccountName === 'Doctor Promotion Fund Account') {
+            $fundAccountName = 'SHAHZAIB RANA';
+        }
 
         // Recent receiving vouchers for history table
         $recentReceivings = DoctorFundTransaction::with(['zone', 'customer'])
@@ -211,11 +214,12 @@ class DoctorFundController extends Controller
                 }
             }
 
+            $defaultAccount = \App\Models\Setting::get('doctor_fund_account_name', 'SHAHZAIB RANA') ?: 'SHAHZAIB RANA';
             DoctorFundTransaction::create([
                 'voucher_no'        => $voucherNo,
                 'type'              => 'receiving',
                 'account_id'        => $request->account_id,
-                'bank_account_name' => $request->bank_account_name ?: 'Doctor Promotion Fund Account',
+                'bank_account_name' => $request->bank_account_name ?: $defaultAccount,
                 'zone_id'           => $request->zone_id,
                 'customer_id'       => $request->customer_id,
                 'amount'            => $request->amount,
@@ -263,7 +267,10 @@ class DoctorFundController extends Controller
         $bankAccounts = Account::orderBy('title', 'asc')->get();
 
         // Load saved fund account name setting
-        $fundAccountName = \App\Models\Setting::get('doctor_fund_account_name', 'Doctor Promotion Fund Account');
+        $fundAccountName = \App\Models\Setting::get('doctor_fund_account_name', 'SHAHZAIB RANA');
+        if (empty($fundAccountName) || $fundAccountName === 'Doctor Promotion Fund Account') {
+            $fundAccountName = 'SHAHZAIB RANA';
+        }
 
         // Recent investment vouchers for history table
         $recentInvestments = DoctorFundTransaction::with(['zone', 'customer'])
@@ -333,11 +340,12 @@ class DoctorFundController extends Controller
                 }
             }
 
+            $defaultAccount = \App\Models\Setting::get('doctor_fund_account_name', 'SHAHZAIB RANA') ?: 'SHAHZAIB RANA';
             DoctorFundTransaction::create([
                 'voucher_no'        => $voucherNo,
                 'type'              => 'investment',
                 'account_id'        => $request->account_id,
-                'bank_account_name' => $request->bank_account_name ?: 'Doctor Promotion Fund Account',
+                'bank_account_name' => $request->bank_account_name ?: $defaultAccount,
                 'zone_id'           => $request->zone_id,
                 'customer_id'       => $request->customer_id,
                 'amount'            => $request->amount,
@@ -492,8 +500,16 @@ class DoctorFundController extends Controller
             'doctor_fund_account_name' => 'required|string|max:200',
         ]);
 
-        \App\Models\Setting::where('key', 'doctor_fund_account_name')
-            ->update(['value' => $request->doctor_fund_account_name]);
+        \App\Models\Setting::updateOrCreate(
+            ['key' => 'doctor_fund_account_name'],
+            [
+                'value'       => $request->doctor_fund_account_name,
+                'type'        => 'string',
+                'group'       => 'doctor_funds',
+                'label'       => 'Doctor Fund Account Name',
+                'description' => 'Dedicated account name used for Doctor Fund recoveries and investments'
+            ]
+        );
 
         Cache::forget('setting_doctor_fund_account_name');
 

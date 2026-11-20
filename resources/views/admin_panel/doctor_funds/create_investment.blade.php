@@ -294,8 +294,24 @@
                             <input type="date" name="transaction_date" class="iv-input" value="{{ date('Y-m-d') }}" required>
                         </div>
                         <div class="col-md-3">
-                            <label class="iv-label">Dedicated Bank Account</label>
-                            <input type="text" name="bank_account_name" id="bank_account_name_inv" class="iv-input" value="{{ $fundAccountName }}" placeholder="e.g. Meezan Bank - Doctor Fund">
+                            <label class="iv-label d-flex justify-content-between align-items-center">
+                                <span>Dedicated Bank Account <span class="text-danger">*</span></span>
+                                <span class="badge bg-light text-secondary border px-1" style="font-size: 10px; font-weight: 600;">
+                                    <i class="bi bi-lock-fill text-danger"></i> Fixed
+                                </span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0" style="border-radius: 8px 0 0 8px; border-color: var(--iv-border);">
+                                    <i class="bi bi-bank2 text-danger"></i>
+                                </span>
+                                <input type="text" name="bank_account_name" id="bank_account_name_inv" class="iv-input border-start-0"
+                                    value="{{ $fundAccountName ?: 'SHAHZAIB RANA' }}" readonly
+                                    style="background-color: #f8fafc !important; cursor: not-allowed; font-weight: 700; color: #0f172a; border-radius: 0 8px 8px 0;"
+                                    title="Doctor Fund Dedicated Account (Locked: SHAHZAIB RANA)">
+                            </div>
+                            <small class="text-muted" style="font-size: 11px;">
+                                <i class="bi bi-shield-check text-success"></i> Fixed Account (SHAHZAIB RANA)
+                            </small>
                         </div>
                         <div class="col-md-3">
                             <label class="iv-label">Payment Mode <span class="text-danger">*</span></label>
